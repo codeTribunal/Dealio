@@ -1,0 +1,22 @@
+{
+  "name": "uzbek-crm-bot",
+  "version": "1.0.0",
+  "description": "Uzbek CRM Telegram bot",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@grammyjs/conversations": "^1.2.0",
+    "axios": "^1.7.0",
+    "dotenv": "^17.4.2",
+    "grammy": "^1.30.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

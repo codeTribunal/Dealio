@@ -1,0 +1,435 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Business {
+  id           String    @id @default(cuid())
+  name         String
+  description  String?
+  photoUrl     String?
+  mode         Mode[]
+  language     Language  @default(UZBEK)
+  cardNumber   String?
+  cardBank     CardBank?
+  botToken              String?   @unique
+  botUsername           String?   @unique
+  workingHours          Json?
+  ownerTelegramChatId   String?
+  fcmToken              String?
+  ownerId               String    @unique
+  owner        User      @relation(fields: [ownerId], references: [id])
+
+  customers         Customer[]
+  products          Product[]
+  orders            Order[]
+  services          Service[]
+  staff             Staff[]
+  appointments      Appointment[]
+  projects          Project[]
+  tags              CustomerTag[]
+  reminders         Reminder[]
+  customFields      BusinessCustomField[]
+  stages            CustomerStage[]
+  checkoutQuestions CheckoutQuestion[]
+  deviceTokens      DeviceToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DeviceToken {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  token      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([businessId, token])
+  @@index([businessId])
+}
+
+model User {
+  id        String    @id @default(cuid())
+  phone     String    @unique
+  business  Business?
+  createdAt DateTime  @default(now())
+}
+
+model Customer {
+  id                 String    @id @default(cuid())
+  businessId         String
+  business           Business  @relation(fields: [businessId], references: [id])
+  telegramUserId     String?
+  telegramUsername   String?
+  name               String
+  phone              String?
+  birthday           DateTime?
+  notes              String?
+  customFields       Json?
+  currentStageId     String?
+  currentStage       CustomerStage? @relation(fields: [currentStageId], references: [id])
+  languagePreference Language  @default(UZBEK)
+  deletedAt          DateTime?
+
+  orders       Order[]
+  appointments Appointment[]
+  projects     Project[]
+  tags         CustomerTag[]
+  reminders    Reminder[]
+  fieldValues  CustomerFieldValue[]
+
+  createdAt         DateTime @default(now())
+  lastInteractionAt DateTime @default(now())
+
+  @@unique([businessId, telegramUserId])
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id])
+  name        String
+  description String?
+  price       Int
+  photos      String[]
+  stockQty    Int?
+  unlimited   Boolean   @default(false)
+  variants    Json?
+  prepTime    String?
+  active      Boolean   @default(true)
+  deletedAt   DateTime?
+
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id              String         @id @default(cuid())
+  businessId      String
+  business        Business       @relation(fields: [businessId], references: [id])
+  customerId      String
+  customer        Customer       @relation(fields: [customerId], references: [id])
+  orderNumber     Int
+  items           OrderItem[]
+  total           Int
+  deliveryMethod  DeliveryMethod
+  deliveryAddress String?
+  deliveryDate    DateTime?
+  notes           String?
+  internalNotes   String?
+  customAnswers   Json?
+  paymentStatus   PaymentStatus  @default(PENDING)
+  orderStatus     OrderStatus    @default(NEW)
+  timeline        Json[]
+  deletedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessId, orderNumber])
+  @@index([customerId])
+  @@index([businessId])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Int
+  variant   Json?
+}
+
+model Service {
+  id              String    @id @default(cuid())
+  businessId      String
+  business        Business  @relation(fields: [businessId], references: [id])
+  name            String
+  durationMinutes Int
+  price           Int
+  active          Boolean   @default(true)
+  deletedAt       DateTime?
+
+  staffServices StaffService[]
+  appointments  Appointment[]
+
+  createdAt DateTime @default(now())
+}
+
+model Staff {
+  id             String    @id @default(cuid())
+  businessId     String
+  business       Business  @relation(fields: [businessId], references: [id])
+  name           String
+  telegramHandle String?
+  workingHours   Json?
+  daysOff        DateTime[]
+  deletedAt      DateTime?
+
+  staffServices StaffService[]
+  appointments  Appointment[]
+
+  createdAt DateTime @default(now())
+}
+
+model StaffService {
+  staffId   String
+  staff     Staff   @relation(fields: [staffId], references: [id])
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id])
+
+  @@id([staffId, serviceId])
+}
+
+model Appointment {
+  id            String             @id @default(cuid())
+  businessId    String
+  business      Business           @relation(fields: [businessId], references: [id])
+  customerId    String
+  customer      Customer           @relation(fields: [customerId], references: [id])
+  serviceId     String
+  service       Service            @relation(fields: [serviceId], references: [id])
+  staffId       String?
+  staff         Staff?             @relation(fields: [staffId], references: [id])
+  startTime     DateTime
+  endTime       DateTime
+  price         Int
+  notes         String?
+  paymentType   ServicePaymentType @default(AT_APPOINTMENT)
+  paymentStatus PaymentStatus      @default(PENDING)
+  status        AppointmentStatus  @default(REQUESTED)
+  reminderSent  Boolean            @default(false)
+  deletedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([businessId])
+  @@index([startTime])
+}
+
+model Project {
+  id           String        @id @default(cuid())
+  businessId   String
+  business     Business      @relation(fields: [businessId], references: [id])
+  customerId   String
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  name         String
+  description  String?
+  paymentTerms String?
+  totalPrice   Int
+  startDate    DateTime?
+  deadline     DateTime?
+  status       ProjectStatus @default(PROPOSAL_SENT)
+  deletedAt    DateTime?
+
+  milestones Milestone[]
+  invoices   Invoice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([customerId])
+}
+
+model Milestone {
+  id        String          @id @default(cuid())
+  projectId String
+  project   Project         @relation(fields: [projectId], references: [id])
+  name      String
+  dueDate   DateTime?
+  amount    Int
+  status    MilestoneStatus @default(PENDING)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  projectId     String
+  project       Project       @relation(fields: [projectId], references: [id])
+  invoiceNumber String        @unique
+  lineItems     Json[]
+  total         Int
+  dueDate       DateTime?
+  status        InvoiceStatus @default(UNPAID)
+
+  createdAt DateTime @default(now())
+}
+
+model CustomerTag {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  label      String
+  color      String   @default("#6366F1")
+  createdAt  DateTime @default(now())
+}
+
+model Reminder {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  note       String
+  dueDate    DateTime
+  done       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}
+
+model BusinessCustomField {
+  id         String    @id @default(cuid())
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id])
+  name       String
+  fieldType  FieldType @default(TEXT)
+  order      Int       @default(0)
+  deletedAt  DateTime?
+
+  values CustomerFieldValue[]
+
+  createdAt DateTime @default(now())
+}
+
+model CustomerFieldValue {
+  id       String              @id @default(cuid())
+  customerId String
+  customer   Customer            @relation(fields: [customerId], references: [id])
+  fieldId  String
+  field    BusinessCustomField @relation(fields: [fieldId], references: [id])
+  value    String
+
+  @@unique([customerId, fieldId])
+}
+
+model CustomerStage {
+  id         String    @id @default(cuid())
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id])
+  name       String
+  color      String    @default("#6366F1")
+  order      Int       @default(0)
+  deletedAt  DateTime?
+
+  customers Customer[]
+
+  createdAt DateTime @default(now())
+}
+
+model CheckoutQuestion {
+  id         String    @id @default(cuid())
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id])
+  question   String
+  required   Boolean   @default(false)
+  order      Int       @default(0)
+  deletedAt  DateTime?
+
+  createdAt DateTime @default(now())
+}
+
+enum Mode {
+  PRODUCTS
+  SERVICES
+  FREELANCE
+}
+
+enum Language {
+  UZBEK
+  RUSSIAN
+}
+
+enum CardBank {
+  UZCARD
+  HUMO
+}
+
+enum DeliveryMethod {
+  PICKUP
+  DELIVERY
+}
+
+enum PaymentStatus {
+  PENDING
+  PAYMENT_RECEIVED
+  CONFIRMED
+}
+
+enum OrderStatus {
+  NEW
+  PREPARING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum AppointmentStatus {
+  REQUESTED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum ServicePaymentType {
+  AT_APPOINTMENT
+  IN_ADVANCE
+}
+
+enum ProjectStatus {
+  PROPOSAL_SENT
+  IN_PROGRESS
+  REVIEW
+  COMPLETED
+  CANCELLED
+}
+
+enum MilestoneStatus {
+  PENDING
+  SUBMITTED_FOR_REVIEW
+  APPROVED
+  PAYMENT_RECEIVED
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PAID
+}
+
+enum FieldType {
+  TEXT
+  NUMBER
+  DATE
+  YESNO
+}

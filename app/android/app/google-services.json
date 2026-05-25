@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "876727032554",
+    "project_id": "uzb-crm",
+    "storage_bucket": "uzb-crm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:876727032554:android:49638080cf6993d1a11593",
+        "android_client_info": {
+          "package_name": "com.example.uzbek_crm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLw0tFOG2oZfHRHGlEffDCeYMdEf0XDfs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
