@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Bot } from 'grammy';
 import { MyContext } from '../lib/types.js';
+import { getBotUsername } from '../lib/botContext.js';
 import { formatUZS, formatDateTZ, formatTimeTZ } from '../lib/format.js';
 
 const client = axios.create({
@@ -11,8 +12,6 @@ const client = axios.create({
   },
   timeout: 10_000,
 });
-
-const BOT_TOKEN = process.env.BOT_TOKEN ?? '';
 
 interface ReminderAppointment {
   id: string;
@@ -38,7 +37,7 @@ async function fetchDueReminders(): Promise<ReminderAppointment[]> {
 
   const res = await client.get('/api/v1/bot/due-reminders', {
     params: {
-      botToken: BOT_TOKEN,
+      botUsername: getBotUsername(),
       from: in24h.toISOString(),
       to: in25h.toISOString(),
     },
@@ -48,7 +47,7 @@ async function fetchDueReminders(): Promise<ReminderAppointment[]> {
 
 async function markReminderSent(appointmentId: string): Promise<void> {
   await client.post('/api/v1/bot/mark-reminder-sent', {
-    botToken: BOT_TOKEN,
+    botUsername: getBotUsername(),
     appointmentId,
   });
 }
@@ -90,15 +89,15 @@ async function processReminders(bot: Bot<MyContext>): Promise<void> {
   }
 }
 
-// Register a text handler to catch "CANCEL" replies to reminders
 export function registerCancelReplyHandler(bot: Bot<MyContext>): void {
   bot.hears(/^CANCEL$/i, async (ctx) => {
     const telegramUserId = String(ctx.from?.id ?? '');
     if (!telegramUserId) return;
 
     try {
-      // Find the customer's nearest upcoming appointment and cancel it
-      const res = await client.get(`/api/v1/bot/customer-appointments/${BOT_TOKEN}/${telegramUserId}`);
+      const res = await client.get(
+        `/api/v1/bot/customer-appointments/${getBotUsername()}/${telegramUserId}`,
+      );
       const appointments: Array<{ id: string; startTime: string; service: { name: string } }> = res.data;
 
       if (appointments.length === 0) {
@@ -108,7 +107,7 @@ export function registerCancelReplyHandler(bot: Bot<MyContext>): void {
 
       const next = appointments[0];
       await client.post('/api/v1/bot/cancel-appointment', {
-        botToken: BOT_TOKEN,
+        botUsername: getBotUsername(),
         appointmentId: next.id,
       });
 
@@ -129,7 +128,6 @@ export function runReminderJob(bot: Bot<MyContext>): void {
 
   const ONE_HOUR = 60 * 60_000;
 
-  // Run immediately on startup, then every hour
   processReminders(bot).catch((err) => console.error('[reminders] Initial run failed:', err));
 
   setInterval(() => {

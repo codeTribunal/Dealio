@@ -99,7 +99,8 @@ export default function OrdersPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider">
+        {/* Desktop header */}
+        <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider">
           <div className="col-span-1">#</div>
           <div className="col-span-3">Customer</div>
           <div className="col-span-4">Items</div>
@@ -138,53 +139,70 @@ export default function OrdersPage() {
           </div>
         ) : (
           (orders ?? []).map((order) => (
-            <Link
-              key={order.id}
-              href={`/orders/${order.id}`}
-              className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors items-center cursor-pointer last:border-b-0"
-            >
-              <div className="col-span-1">
-                <p className="text-sm font-bold text-gray-900">#{order.orderNumber}</p>
-              </div>
+            <div key={order.id}>
+              {/* Mobile card */}
+              <Link
+                href={`/orders/${order.id}`}
+                className="md:hidden block px-4 py-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-bold text-gray-900">#{order.orderNumber}</span>
+                  <ActivityBadge status={order.orderStatus} type="order" />
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-700">{order.customer.name}</p>
+                  <p className="text-sm font-semibold text-gray-900">{formatUZS(order.total)}</p>
+                </div>
+              </Link>
 
-              <div className="col-span-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700 flex-shrink-0">
-                    {getInitials(order.customer.name)}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{order.customer.name}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {order.customer.telegramUsername
-                        ? `@${order.customer.telegramUsername}`
-                        : order.customer.phone || '—'}
-                    </p>
+              {/* Desktop row */}
+              <Link
+                href={`/orders/${order.id}`}
+                className="hidden md:grid grid-cols-12 gap-4 px-6 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors items-center cursor-pointer last:border-b-0"
+              >
+                <div className="col-span-1">
+                  <p className="text-sm font-bold text-gray-900">#{order.orderNumber}</p>
+                </div>
+
+                <div className="col-span-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700 flex-shrink-0">
+                      {getInitials(order.customer.name)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{order.customer.name}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {order.customer.telegramUsername
+                          ? `@${order.customer.telegramUsername}`
+                          : order.customer.phone || '—'}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="col-span-4">
-                <p className="text-sm text-gray-700">
-                  {order.items.length === 0
-                    ? '—'
-                    : `${order.items[0].product.name} × ${order.items[0].quantity}${
-                        order.items.length > 1 ? ` + ${order.items.length - 1} more` : ''
-                      }`}
-                </p>
-              </div>
+                <div className="col-span-4">
+                  <p className="text-sm text-gray-700">
+                    {order.items.length === 0
+                      ? '—'
+                      : `${order.items[0].product.name} × ${order.items[0].quantity}${
+                          order.items.length > 1 ? ` + ${order.items.length - 1} more` : ''
+                        }`}
+                  </p>
+                </div>
 
-              <div className="col-span-2">
-                <p className="text-sm font-semibold text-gray-900">{formatUZS(order.total)}</p>
-              </div>
+                <div className="col-span-2">
+                  <p className="text-sm font-semibold text-gray-900">{formatUZS(order.total)}</p>
+                </div>
 
-              <div className="col-span-1">
-                <ActivityBadge status={order.orderStatus} type="order" />
-              </div>
+                <div className="col-span-1">
+                  <ActivityBadge status={order.orderStatus} type="order" />
+                </div>
 
-              <div className="col-span-1">
-                <ActivityBadge status={order.paymentStatus} type="payment" />
-              </div>
-            </Link>
+                <div className="col-span-1">
+                  <ActivityBadge status={order.paymentStatus} type="payment" />
+                </div>
+              </Link>
+            </div>
           ))
         )}
       </div>

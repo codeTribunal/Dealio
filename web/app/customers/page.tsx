@@ -57,11 +57,11 @@ export default function CustomersPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider">
-          <div className="col-span-4">Customer</div>
-          <div className="col-span-2">Orders</div>
-          <div className="col-span-3">Total spent</div>
-          <div className="col-span-3">Last active</div>
+        <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <div className="col-span-4 md:col-span-4">Customer</div>
+          <div className="col-span-2 hidden md:block">Orders</div>
+          <div className="col-span-3 hidden md:block">Total spent</div>
+          <div className="col-span-3 hidden md:block">Last active</div>
         </div>
 
         {loading ? (

@@ -5,6 +5,7 @@ import { sendError } from '../lib/errors.js';
 import { allocateOrderNumber } from '../services/orderNumber.js';
 import { sendTelegramMessage } from '../lib/telegram.js';
 import { sendPushToAll } from '../lib/push.js';
+import { getBotToken, hasBotToken } from '../lib/getBotToken.js';
 
 function verifyBotSecret(request: FastifyRequest, reply: FastifyReply): boolean {
   const secret = request.headers['x-bot-secret'];
@@ -15,8 +16,18 @@ function verifyBotSecret(request: FastifyRequest, reply: FastifyReply): boolean 
   return true;
 }
 
+// All bot routes identify a business by its botUsername (the @handle, not the token)
+async function findBusinessByUsername(botUsername: string, reply: FastifyReply) {
+  const business = await prisma.business.findUnique({ where: { botUsername } });
+  if (!business) {
+    sendError(reply, 404, 'Business not found');
+    return null;
+  }
+  return business;
+}
+
 const upsertCustomerBody = z.object({
-  botToken: z.string(),
+  botUsername: z.string(),
   telegramUserId: z.string(),
   telegramUsername: z.string().optional(),
   name: z.string().min(1),
@@ -25,7 +36,7 @@ const upsertCustomerBody = z.object({
 });
 
 const createBotOrderBody = z.object({
-  botToken: z.string(),
+  botUsername: z.string(),
   customerId: z.string(),
   items: z.array(
     z.object({
@@ -43,23 +54,23 @@ const createBotOrderBody = z.object({
 });
 
 const paymentReceivedBody = z.object({
-  botToken: z.string(),
+  botUsername: z.string(),
   orderId: z.string(),
 });
 
 const confirmPaymentBody = z.object({
-  botToken: z.string(),
+  botUsername: z.string(),
   orderId: z.string(),
 });
 
 export default async function botRoutes(app: FastifyInstance) {
-  // GET /bot/checkout-questions/:botToken — get active questions for checkout flow
-  app.get('/bot/checkout-questions/:botToken', async (request, reply) => {
+  // GET /bot/checkout-questions/:botUsername
+  app.get('/bot/checkout-questions/:botUsername', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
-    const { botToken } = request.params as { botToken: string };
-    const business = await prisma.business.findUnique({ where: { botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const { botUsername } = request.params as { botUsername: string };
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
 
     const questions = await prisma.checkoutQuestion.findMany({
       where: { businessId: business.id, deletedAt: null },
@@ -69,13 +80,13 @@ export default async function botRoutes(app: FastifyInstance) {
     return reply.send(questions);
   });
 
-  // GET /bot/catalog/:botToken — public, called by bot to show products
-  app.get('/bot/catalog/:botToken', async (request, reply) => {
+  // GET /bot/catalog/:botUsername
+  app.get('/bot/catalog/:botUsername', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
-    const { botToken } = request.params as { botToken: string };
-    const business = await prisma.business.findUnique({ where: { botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const { botUsername } = request.params as { botUsername: string };
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
 
     const products = await prisma.product.findMany({
       where: { businessId: business.id, active: true, deletedAt: null },
@@ -92,20 +103,23 @@ export default async function botRoutes(app: FastifyInstance) {
       },
       orderBy: { createdAt: 'asc' },
     });
-    return reply.send({ business: { name: business.name, language: business.language, mode: business.mode }, products });
+    return reply.send({
+      business: { name: business.name, language: business.language, mode: business.mode },
+      products,
+    });
   });
 
-  // POST /bot/customers — upsert customer by Telegram user ID
+  // POST /bot/customers
   app.post('/bot/customers', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
     const parsed = upsertCustomerBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const { botToken, telegramUserId, telegramUsername, name, phone, languagePreference } = parsed.data;
+    const { botUsername, telegramUserId, telegramUsername, name, phone, languagePreference } = parsed.data;
 
-    const business = await prisma.business.findUnique({ where: { botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
 
     const customer = await prisma.customer.upsert({
       where: { businessId_telegramUserId: { businessId: business.id, telegramUserId } },
@@ -127,17 +141,17 @@ export default async function botRoutes(app: FastifyInstance) {
     return reply.send(customer);
   });
 
-  // POST /bot/orders — create order from bot checkout
+  // POST /bot/orders
   app.post('/bot/orders', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
     const parsed = createBotOrderBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const { botToken, customerId, items, deliveryMethod, deliveryAddress, deliveryDate, notes, customAnswers } = parsed.data;
+    const { botUsername, customerId, items, deliveryMethod, deliveryAddress, deliveryDate, notes, customAnswers } = parsed.data;
 
-    const business = await prisma.business.findUnique({ where: { botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
 
     const customer = await prisma.customer.findFirst({
       where: { id: customerId, businessId: business.id, deletedAt: null },
@@ -182,13 +196,11 @@ export default async function botRoutes(app: FastifyInstance) {
       },
     });
 
-    // Update lastInteractionAt
     await prisma.customer.update({
       where: { id: customerId },
       data: { lastInteractionAt: new Date() },
     });
 
-    // Notify business owner
     const firstItemName = order.items[0]?.product.name ?? 'items';
     sendPushToAll(
       business.id,
@@ -211,17 +223,17 @@ export default async function botRoutes(app: FastifyInstance) {
     });
   });
 
-  // POST /bot/payment-received — customer tapped "I have paid"
+  // POST /bot/payment-received
   app.post('/bot/payment-received', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
     const parsed = paymentReceivedBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const { botToken, orderId } = parsed.data;
+    const { botUsername, orderId } = parsed.data;
 
-    const business = await prisma.business.findUnique({ where: { botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
 
     const order = await prisma.order.findFirst({
       where: { id: orderId, businessId: business.id, deletedAt: null },
@@ -243,7 +255,6 @@ export default async function botRoutes(app: FastifyInstance) {
       },
     });
 
-    // Notify business owner via push
     sendPushToAll(
       business.id,
       'Payment notification',
@@ -264,18 +275,18 @@ export default async function botRoutes(app: FastifyInstance) {
     });
   });
 
-  // POST /bot/set-owner-chat — link the owner's Telegram chat ID to their business
+  // POST /bot/set-owner-chat
   app.post('/bot/set-owner-chat', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
     const parsed = z.object({
-      botToken: z.string(),
+      botUsername: z.string(),
       ownerTelegramChatId: z.string(),
     }).safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const business = await prisma.business.findUnique({ where: { botToken: parsed.data.botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const business = await findBusinessByUsername(parsed.data.botUsername, reply);
+    if (!business) return;
 
     await prisma.business.update({
       where: { id: business.id },
@@ -284,14 +295,14 @@ export default async function botRoutes(app: FastifyInstance) {
     return reply.send({ ok: true });
   });
 
-  // GET /bot/customer-orders/:botToken/:telegramUserId — list a customer's orders
-  app.get('/bot/customer-orders/:botToken/:telegramUserId', async (request, reply) => {
+  // GET /bot/customer-orders/:botUsername/:telegramUserId
+  app.get('/bot/customer-orders/:botUsername/:telegramUserId', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
-    const { botToken, telegramUserId } = request.params as { botToken: string; telegramUserId: string };
+    const { botUsername, telegramUserId } = request.params as { botUsername: string; telegramUserId: string };
 
-    const business = await prisma.business.findUnique({ where: { botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
 
     const customer = await prisma.customer.findFirst({
       where: { businessId: business.id, telegramUserId, deletedAt: null },
@@ -316,13 +327,13 @@ export default async function botRoutes(app: FastifyInstance) {
     return reply.send(orders);
   });
 
-  // GET /bot/services/:botToken — list active services for booking
-  app.get('/bot/services/:botToken', async (request, reply) => {
+  // GET /bot/services/:botUsername
+  app.get('/bot/services/:botUsername', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
-    const { botToken } = request.params as { botToken: string };
-    const business = await prisma.business.findUnique({ where: { botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const { botUsername } = request.params as { botUsername: string };
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
 
     const services = await prisma.service.findMany({
       where: { businessId: business.id, active: true, deletedAt: null },
@@ -339,24 +350,29 @@ export default async function botRoutes(app: FastifyInstance) {
     });
 
     return reply.send({
-      business: { name: business.name, language: business.language, cardNumber: business.cardNumber, cardBank: business.cardBank },
+      business: {
+        name: business.name,
+        language: business.language,
+        cardNumber: business.cardNumber,
+        cardBank: business.cardBank,
+      },
       services,
     });
   });
 
-  // GET /bot/availability/:botToken — get available slots
-  app.get('/bot/availability/:botToken', async (request, reply) => {
+  // GET /bot/availability/:botUsername
+  app.get('/bot/availability/:botUsername', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
-    const { botToken } = request.params as { botToken: string };
+    const { botUsername } = request.params as { botUsername: string };
     const query = request.query as Record<string, string>;
 
     if (!query.serviceId || !query.date) {
       return sendError(reply, 400, 'serviceId and date are required');
     }
 
-    const business = await prisma.business.findUnique({ where: { botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
 
     const service = await prisma.service.findFirst({
       where: { id: query.serviceId, businessId: business.id, active: true, deletedAt: null },
@@ -376,7 +392,7 @@ export default async function botRoutes(app: FastifyInstance) {
     return reply.send(slots);
   });
 
-  // POST /bot/appointments — create appointment from bot
+  // POST /bot/appointments
   app.post('/bot/appointments', async (request, reply) => {
     console.log('[bot/appointments] request received, body:', JSON.stringify(request.body));
 
@@ -386,7 +402,7 @@ export default async function botRoutes(app: FastifyInstance) {
     }
 
     const parsed = z.object({
-      botToken: z.string(),
+      botUsername: z.string(),
       customerId: z.string(),
       serviceId: z.string(),
       staffId: z.string().optional(),
@@ -399,29 +415,22 @@ export default async function botRoutes(app: FastifyInstance) {
       return sendError(reply, 400, parsed.error.issues[0].message);
     }
 
-    const { botToken, customerId, serviceId, staffId, startTime, notes, paymentType } = parsed.data;
-    console.log('[bot/appointments] looking up business for botToken:', botToken.slice(0, 8) + '...');
+    const { botUsername, customerId, serviceId, staffId, startTime, notes, paymentType } = parsed.data;
+    console.log('[bot/appointments] looking up business for botUsername:', botUsername);
 
-    const business = await prisma.business.findUnique({ where: { botToken } });
+    const business = await findBusinessByUsername(botUsername, reply);
     if (!business) {
       console.log('[bot/appointments] business not found');
-      return sendError(reply, 404, 'Business not found');
+      return;
     }
-    console.log('[bot/appointments] business found:', business.id, '— fetching customer and service');
+    console.log('[bot/appointments] business found:', business.id);
 
     const [customer, service] = await Promise.all([
       prisma.customer.findFirst({ where: { id: customerId, businessId: business.id, deletedAt: null } }),
       prisma.service.findFirst({ where: { id: serviceId, businessId: business.id, active: true, deletedAt: null } }),
     ]);
-    if (!customer) {
-      console.log('[bot/appointments] customer not found:', customerId);
-      return sendError(reply, 404, 'Customer not found');
-    }
-    if (!service) {
-      console.log('[bot/appointments] service not found:', serviceId);
-      return sendError(reply, 404, 'Service not found');
-    }
-    console.log('[bot/appointments] customer:', customer.id, 'service:', service.id, '— creating appointment');
+    if (!customer) return sendError(reply, 404, 'Customer not found');
+    if (!service) return sendError(reply, 404, 'Service not found');
 
     const start = new Date(startTime);
     const end = new Date(start.getTime() + service.durationMinutes * 60_000);
@@ -444,14 +453,12 @@ export default async function botRoutes(app: FastifyInstance) {
         staff: { select: { id: true, name: true } },
       },
     });
-    console.log('[bot/appointments] appointment created:', appointment.id, '— updating customer lastInteractionAt');
 
     await prisma.customer.update({
       where: { id: customerId },
       data: { lastInteractionAt: new Date() },
     });
 
-    // Notify business owner
     const dateStr = start.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' });
     sendPushToAll(
       business.id,
@@ -466,30 +473,26 @@ export default async function botRoutes(app: FastifyInstance) {
       appointment,
       paymentInstructions:
         paymentType === 'IN_ADVANCE' && business.cardNumber
-          ? {
-              cardNumber: business.cardNumber,
-              cardBank: business.cardBank,
-              amount: service.price,
-            }
+          ? { cardNumber: business.cardNumber, cardBank: business.cardBank, amount: service.price }
           : null,
       ownerTelegramChatId: business.ownerTelegramChatId,
     });
   });
 
-  // POST /bot/cancel-appointment — customer replied CANCEL to reminder
+  // POST /bot/cancel-appointment
   app.post('/bot/cancel-appointment', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
     const parsed = z.object({
-      botToken: z.string(),
+      botUsername: z.string(),
       appointmentId: z.string(),
     }).safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const { botToken, appointmentId } = parsed.data;
+    const { botUsername, appointmentId } = parsed.data;
 
-    const business = await prisma.business.findUnique({ where: { botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
 
     const appointment = await prisma.appointment.findFirst({
       where: { id: appointmentId, businessId: business.id, deletedAt: null },
@@ -506,12 +509,11 @@ export default async function botRoutes(app: FastifyInstance) {
       data: { status: 'CANCELLED' },
     });
 
-    // Notify business owner
     sendPushToAll(
       business.id,
       'Appointment cancelled',
       `${appointment.customer.name} cancelled their ${appointment.service.name} appointment`,
-      { type: 'appointment', appointmentId: appointmentId },
+      { type: 'appointment', appointmentId },
     ).catch((err: unknown) => console.error('[push] cancel-appointment notify failed:', err));
 
     return reply.send({
@@ -523,14 +525,14 @@ export default async function botRoutes(app: FastifyInstance) {
     });
   });
 
-  // GET /bot/customer-appointments/:botToken/:telegramUserId — list upcoming appointments
-  app.get('/bot/customer-appointments/:botToken/:telegramUserId', async (request, reply) => {
+  // GET /bot/customer-appointments/:botUsername/:telegramUserId
+  app.get('/bot/customer-appointments/:botUsername/:telegramUserId', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
-    const { botToken, telegramUserId } = request.params as { botToken: string; telegramUserId: string };
+    const { botUsername, telegramUserId } = request.params as { botUsername: string; telegramUserId: string };
 
-    const business = await prisma.business.findUnique({ where: { botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
 
     const customer = await prisma.customer.findFirst({
       where: { businessId: business.id, telegramUserId, deletedAt: null },
@@ -561,17 +563,17 @@ export default async function botRoutes(app: FastifyInstance) {
     return reply.send(appointments);
   });
 
-  // GET /bot/due-reminders — appointments needing reminder in the next window
+  // GET /bot/due-reminders
   app.get('/bot/due-reminders', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
     const query = request.query as Record<string, string>;
-    if (!query.botToken || !query.from || !query.to) {
-      return sendError(reply, 400, 'botToken, from, and to are required');
+    if (!query.botUsername || !query.from || !query.to) {
+      return sendError(reply, 400, 'botUsername, from, and to are required');
     }
 
-    const business = await prisma.business.findUnique({ where: { botToken: query.botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const business = await findBusinessByUsername(query.botUsername, reply);
+    if (!business) return;
 
     const appointments = await prisma.appointment.findMany({
       where: {
@@ -588,7 +590,6 @@ export default async function botRoutes(app: FastifyInstance) {
       },
     });
 
-    // Attach business info needed for the reminder message
     const result = appointments.map((a) => ({
       ...a,
       business: {
@@ -600,18 +601,18 @@ export default async function botRoutes(app: FastifyInstance) {
     return reply.send(result);
   });
 
-  // POST /bot/mark-reminder-sent — mark a reminder as sent
+  // POST /bot/mark-reminder-sent
   app.post('/bot/mark-reminder-sent', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
     const parsed = z.object({
-      botToken: z.string(),
+      botUsername: z.string(),
       appointmentId: z.string(),
     }).safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const business = await prisma.business.findUnique({ where: { botToken: parsed.data.botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const business = await findBusinessByUsername(parsed.data.botUsername, reply);
+    if (!business) return;
 
     await prisma.appointment.update({
       where: { id: parsed.data.appointmentId },
@@ -620,14 +621,14 @@ export default async function botRoutes(app: FastifyInstance) {
     return reply.send({ ok: true });
   });
 
-  // GET /bot/projects/:botToken/:telegramUserId — get client's active projects
-  app.get('/bot/projects/:botToken/:telegramUserId', async (request, reply) => {
+  // GET /bot/projects/:botUsername/:telegramUserId
+  app.get('/bot/projects/:botUsername/:telegramUserId', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
-    const { botToken, telegramUserId } = request.params as { botToken: string; telegramUserId: string };
+    const { botUsername, telegramUserId } = request.params as { botUsername: string; telegramUserId: string };
 
-    const business = await prisma.business.findUnique({ where: { botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
 
     const customer = await prisma.customer.findFirst({
       where: { businessId: business.id, telegramUserId, deletedAt: null },
@@ -659,21 +660,21 @@ export default async function botRoutes(app: FastifyInstance) {
     return reply.send({ business: { name: business.name, language: business.language }, projects });
   });
 
-  // POST /bot/milestone-review — client approves a milestone from the bot
+  // POST /bot/milestone-review
   app.post('/bot/milestone-review', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
     const parsed = z.object({
-      botToken: z.string(),
+      botUsername: z.string(),
       milestoneId: z.string(),
       approved: z.boolean(),
     }).safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const { botToken, milestoneId, approved } = parsed.data;
+    const { botUsername, milestoneId, approved } = parsed.data;
 
-    const business = await prisma.business.findUnique({ where: { botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
 
     const milestone = await prisma.milestone.findFirst({
       where: { id: milestoneId, deletedAt: null, project: { businessId: business.id, deletedAt: null } },
@@ -702,13 +703,13 @@ export default async function botRoutes(app: FastifyInstance) {
       const customerName = milestone.project.customer.name;
       const amount = updated.amount.toLocaleString('uz-UZ').replace(/,/g, ' ');
 
-      if (business.botToken && business.ownerTelegramChatId) {
+      if (hasBotToken(business) && business.ownerTelegramChatId) {
         const text =
           `✅ <b>${customerName}</b> has approved '<b>${updated.name}</b>'.\n\n` +
           `Project: ${milestone.project.name}\n` +
           `Amount: ${amount} UZS\n\n` +
           `You can now mark payment as received in the app.`;
-        sendTelegramMessage(business.botToken, business.ownerTelegramChatId, text).catch(
+        sendTelegramMessage(getBotToken(business), business.ownerTelegramChatId, text).catch(
           (err: unknown) => console.error('[telegram] milestone approval notify failed:', err),
         );
       }
@@ -729,21 +730,21 @@ export default async function botRoutes(app: FastifyInstance) {
     });
   });
 
-  // POST /bot/accept-proposal — client accepts a project proposal from the bot
+  // POST /bot/accept-proposal
   app.post('/bot/accept-proposal', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
     const parsed = z.object({
-      botToken: z.string(),
+      botUsername: z.string(),
       projectId: z.string(),
       telegramUserId: z.string(),
     }).safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const { botToken, projectId, telegramUserId } = parsed.data;
+    const { botUsername, projectId, telegramUserId } = parsed.data;
 
-    const business = await prisma.business.findUnique({ where: { botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
 
     const project = await prisma.project.findFirst({
       where: { id: projectId, businessId: business.id, deletedAt: null },
@@ -751,7 +752,6 @@ export default async function botRoutes(app: FastifyInstance) {
     });
     if (!project) return sendError(reply, 404, 'Project not found');
 
-    // Verify the caller is the project's customer
     if (project.customer.telegramUserId !== telegramUserId) {
       return sendError(reply, 403, 'Forbidden');
     }
@@ -764,7 +764,6 @@ export default async function botRoutes(app: FastifyInstance) {
       data: { status: 'IN_PROGRESS' },
     });
 
-    // Notify owner via push and Telegram
     const customerName = project.customer.name;
 
     sendPushToAll(
@@ -774,11 +773,11 @@ export default async function botRoutes(app: FastifyInstance) {
       { type: 'project', projectId: project.id },
     ).catch((err: unknown) => console.error('[push] accept-proposal notify failed:', err));
 
-    if (business.botToken && business.ownerTelegramChatId) {
+    if (hasBotToken(business) && business.ownerTelegramChatId) {
       const text =
         `✅ <b>${customerName}</b> accepted the proposal for <b>${project.name}</b>.\n\n` +
         `The project is now in progress.`;
-      sendTelegramMessage(business.botToken, business.ownerTelegramChatId, text).catch(
+      sendTelegramMessage(getBotToken(business), business.ownerTelegramChatId, text).catch(
         (err: unknown) => console.error('[telegram] accept-proposal notify failed:', err),
       );
     }
@@ -788,23 +787,22 @@ export default async function botRoutes(app: FastifyInstance) {
     });
   });
 
-  // POST /bot/message — customer sent a free-text message via the bot
-  // Forward to owner via Telegram only — no database write
+  // POST /bot/message
   app.post('/bot/message', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
     const parsed = z.object({
-      botToken: z.string(),
+      botUsername: z.string(),
       telegramUserId: z.string(),
       text: z.string().min(1).max(4096),
       telegramMessageId: z.string().optional(),
     }).safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const { botToken, telegramUserId, text } = parsed.data;
+    const { botUsername, telegramUserId, text } = parsed.data;
 
-    const business = await prisma.business.findUnique({ where: { botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
 
     const customer = await prisma.customer.findFirst({
       where: { businessId: business.id, telegramUserId, deletedAt: null },
@@ -816,10 +814,9 @@ export default async function botRoutes(app: FastifyInstance) {
       data: { lastInteractionAt: new Date() },
     });
 
-    // Forward to owner via Telegram — no database write
-    if (business.botToken && business.ownerTelegramChatId) {
+    if (hasBotToken(business) && business.ownerTelegramChatId) {
       sendTelegramMessage(
-        business.botToken,
+        getBotToken(business),
         business.ownerTelegramChatId,
         `💬 ${customer.name}: ${text}`,
       ).catch((err: unknown) => console.error('[telegram] message forward failed:', err));
@@ -828,17 +825,17 @@ export default async function botRoutes(app: FastifyInstance) {
     return reply.send({ ok: true });
   });
 
-  // POST /bot/confirm-payment — owner tapped "Mark as paid" in Telegram
+  // POST /bot/confirm-payment
   app.post('/bot/confirm-payment', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
 
     const parsed = confirmPaymentBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const { botToken, orderId } = parsed.data;
+    const { botUsername, orderId } = parsed.data;
 
-    const business = await prisma.business.findUnique({ where: { botToken } });
-    if (!business) return sendError(reply, 404, 'Business not found');
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
 
     const order = await prisma.order.findFirst({
       where: { id: orderId, businessId: business.id, deletedAt: null },

@@ -10,13 +10,13 @@ const client = axios.create({
   timeout: 10_000,
 });
 
-export async function getCatalog(botToken: string): Promise<{ business: ApiBusiness; products: ApiProduct[] }> {
-  const res = await client.get(`/api/v1/bot/catalog/${botToken}`);
+export async function getCatalog(botUsername: string): Promise<{ business: ApiBusiness; products: ApiProduct[] }> {
+  const res = await client.get(`/api/v1/bot/catalog/${botUsername}`);
   return res.data;
 }
 
 export async function upsertCustomer(data: {
-  botToken: string;
+  botUsername: string;
   telegramUserId: string;
   telegramUsername?: string;
   name: string;
@@ -27,7 +27,7 @@ export async function upsertCustomer(data: {
 }
 
 export async function createOrder(data: {
-  botToken: string;
+  botUsername: string;
   customerId: string;
   items: Array<{ productId: string; quantity: number; price: number; variant?: Record<string, unknown> }>;
   deliveryMethod: 'PICKUP' | 'DELIVERY';
@@ -39,17 +39,17 @@ export async function createOrder(data: {
   return res.data;
 }
 
-export async function getCheckoutQuestions(botToken: string): Promise<Array<{
+export async function getCheckoutQuestions(botUsername: string): Promise<Array<{
   id: string;
   question: string;
   required: boolean;
   order: number;
 }>> {
-  const res = await client.get(`/api/v1/bot/checkout-questions/${botToken}`);
+  const res = await client.get(`/api/v1/bot/checkout-questions/${botUsername}`);
   return res.data;
 }
 
-export async function notifyPaymentReceived(botToken: string, orderId: string): Promise<{
+export async function notifyPaymentReceived(botUsername: string, orderId: string): Promise<{
   order: { id: string; orderNumber: number; paymentStatus: string };
   notification: {
     ownerTelegramChatId: string | null;
@@ -60,38 +60,38 @@ export async function notifyPaymentReceived(botToken: string, orderId: string): 
     customerName: string;
   };
 }> {
-  const res = await client.post('/api/v1/bot/payment-received', { botToken, orderId });
+  const res = await client.post('/api/v1/bot/payment-received', { botUsername, orderId });
   return res.data;
 }
 
-export async function confirmPayment(botToken: string, orderId: string): Promise<{
+export async function confirmPayment(botUsername: string, orderId: string): Promise<{
   order: { id: string; orderNumber: number; paymentStatus: string };
   customerTelegramUserId: string | null;
   customerName: string;
 }> {
-  const res = await client.post('/api/v1/bot/confirm-payment', { botToken, orderId });
+  const res = await client.post('/api/v1/bot/confirm-payment', { botUsername, orderId });
   return res.data;
 }
 
-export async function getCustomerOrders(botToken: string, telegramUserId: string): Promise<ApiOrder[]> {
-  const res = await client.get(`/api/v1/bot/customer-orders/${botToken}/${telegramUserId}`);
+export async function getCustomerOrders(botUsername: string, telegramUserId: string): Promise<ApiOrder[]> {
+  const res = await client.get(`/api/v1/bot/customer-orders/${botUsername}/${telegramUserId}`);
   return res.data;
 }
 
-export async function getServices(botToken: string): Promise<{ business: ApiBusiness & { cardNumber?: string; cardBank?: string }; services: ApiService[] }> {
-  const res = await client.get(`/api/v1/bot/services/${botToken}`);
+export async function getServices(botUsername: string): Promise<{ business: ApiBusiness & { cardNumber?: string; cardBank?: string }; services: ApiService[] }> {
+  const res = await client.get(`/api/v1/bot/services/${botUsername}`);
   return res.data;
 }
 
-export async function getAvailability(botToken: string, serviceId: string, date: string, staffId?: string): Promise<ApiSlot[]> {
+export async function getAvailability(botUsername: string, serviceId: string, date: string, staffId?: string): Promise<ApiSlot[]> {
   const params: Record<string, string> = { serviceId, date };
   if (staffId) params.staffId = staffId;
-  const res = await client.get(`/api/v1/bot/availability/${botToken}`, { params });
+  const res = await client.get(`/api/v1/bot/availability/${botUsername}`, { params });
   return res.data;
 }
 
 export async function createAppointment(data: {
-  botToken: string;
+  botUsername: string;
   customerId: string;
   serviceId: string;
   staffId?: string;
@@ -111,25 +111,25 @@ export async function createAppointment(data: {
   return res.data;
 }
 
-export async function cancelAppointment(botToken: string, appointmentId: string): Promise<void> {
-  await client.post('/api/v1/bot/cancel-appointment', { botToken, appointmentId });
+export async function cancelAppointment(botUsername: string, appointmentId: string): Promise<void> {
+  await client.post('/api/v1/bot/cancel-appointment', { botUsername, appointmentId });
 }
 
-export async function getCustomerAppointments(botToken: string, telegramUserId: string): Promise<ApiAppointment[]> {
-  const res = await client.get(`/api/v1/bot/customer-appointments/${botToken}/${telegramUserId}`);
+export async function getCustomerAppointments(botUsername: string, telegramUserId: string): Promise<ApiAppointment[]> {
+  const res = await client.get(`/api/v1/bot/customer-appointments/${botUsername}/${telegramUserId}`);
   return res.data;
 }
 
 export async function getCustomerProjects(
-  botToken: string,
+  botUsername: string,
   telegramUserId: string,
 ): Promise<{ business: ApiBusiness; projects: ApiProject[] }> {
-  const res = await client.get(`/api/v1/bot/projects/${botToken}/${telegramUserId}`);
+  const res = await client.get(`/api/v1/bot/projects/${botUsername}/${telegramUserId}`);
   return res.data;
 }
 
 export async function saveCustomerMessage(data: {
-  botToken: string;
+  botUsername: string;
   telegramUserId: string;
   text: string;
   telegramMessageId?: string;
@@ -142,7 +142,7 @@ export async function saveCustomerMessage(data: {
 }
 
 export async function approveMilestone(
-  botToken: string,
+  botUsername: string,
   milestoneId: string,
   approved: boolean,
 ): Promise<{
@@ -151,6 +151,6 @@ export async function approveMilestone(
   projectName: string;
   approved: boolean;
 }> {
-  const res = await client.post('/api/v1/bot/milestone-review', { botToken, milestoneId, approved });
+  const res = await client.post('/api/v1/bot/milestone-review', { botUsername, milestoneId, approved });
   return res.data;
 }

@@ -10,6 +10,8 @@ import type {
   AppointmentsResponse,
   AnalyticsData,
   ProjectsResponse,
+  StaffMember,
+  Service,
 } from '@/types'
 
 const api = axios.create({
@@ -225,4 +227,43 @@ export async function markInvoicePaid(
   invoiceId: string
 ): Promise<void> {
   await api.patch(`/projects/${projectId}/invoices/${invoiceId}`, { status: 'PAID' })
+}
+
+export async function getStaff(): Promise<StaffMember[]> {
+  const res = await api.get('/staff')
+  const data = res.data
+  return Array.isArray(data) ? data :
+         Array.isArray(data?.staff) ? data.staff : []
+}
+
+export async function createStaff(data: {
+  name: string
+  telegramHandle?: string
+  serviceIds: string[]
+}): Promise<StaffMember> {
+  const res = await api.post('/staff', data)
+  return res.data
+}
+
+export async function updateStaff(
+  id: string,
+  data: {
+    name: string
+    telegramHandle?: string
+    serviceIds: string[]
+  }
+): Promise<StaffMember> {
+  const res = await api.patch(`/staff/${id}`, data)
+  return res.data
+}
+
+export async function deleteStaff(id: string): Promise<void> {
+  await api.delete(`/staff/${id}`)
+}
+
+export async function getServices(): Promise<Service[]> {
+  const res = await api.get('/services')
+  const data = res.data
+  return Array.isArray(data) ? data :
+         Array.isArray(data?.services) ? data.services : []
 }

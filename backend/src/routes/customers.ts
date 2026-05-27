@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { getBusinessOrFail } from '../lib/businessFromUser.js';
 import { sendError } from '../lib/errors.js';
+import { getBotToken, hasBotToken } from '../lib/getBotToken.js';
 
 const updateNotesBody = z.object({
   notes: z.string().max(2000),
@@ -302,16 +303,18 @@ export default async function customerRoutes(app: FastifyInstance) {
     if (!customer.telegramUserId) {
       return sendError(reply, 400, 'Customer has no Telegram account');
     }
-    if (!business.botToken) {
+    if (!hasBotToken(business)) {
       return sendError(reply, 400, 'Bot not configured for this business');
     }
 
     const parsed = sendMessageBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
+    const token = getBotToken(business);
+
     // Send via Telegram Bot API
     const tgRes = await fetch(
-      `https://api.telegram.org/bot${business.botToken}/sendMessage`,
+      `https://api.telegram.org/bot${token}/sendMessage`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

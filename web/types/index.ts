@@ -202,6 +202,37 @@ export interface ProjectsResponse {
   total: number
 }
 
+export interface StaffMember {
+  id: string
+  name: string
+  telegramHandle: string | null
+  createdAt: string
+  staffServices: {
+    service: {
+      id: string
+      name: string
+      durationMinutes: number
+      price: number
+    }
+  }[]
+}
+
+export interface StaffResponse {
+  staff: StaffMember[]
+}
+
+export interface Service {
+  id: string
+  name: string
+  durationMinutes: number
+  price: number
+  active: boolean
+}
+
+export interface ServicesResponse {
+  services: Service[]
+}
+
 export interface AnalyticsData {
   revenueThisMonth: number
   revenueLastMonth: number

@@ -162,7 +162,7 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
     super.dispose();
   }
 
-  void _onChanged(String value) {
+  void _onSearchChanged(String value) {
     _debounce?.cancel();
     if (value.trim().length < 2) {
       setState(() {
@@ -206,121 +206,136 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          height: 46,
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Row(
-            children: [
-              Icon(Icons.search, size: 20, color: Colors.grey[500]),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  focusNode: _focusNode,
-                  onChanged: _onChanged,
-                  decoration: InputDecoration(
-                    hintText: 'Search customers…',
-                    hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  style: const TextStyle(fontSize: 14),
-                ),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-              if (_searchController.text.isNotEmpty)
-                GestureDetector(
-                  onTap: _clearSearch,
-                  child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
-                ),
             ],
+          ),
+          child: TextField(
+            controller: _searchController,
+            focusNode: _focusNode,
+            onChanged: (value) => _onSearchChanged(value),
+            style: const TextStyle(
+              fontSize: 15,
+              color: Color(0xFF111827),
+              fontWeight: FontWeight.w400,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Search customers...',
+              hintStyle: TextStyle(
+                fontSize: 15,
+                color: Colors.grey.shade400,
+                fontWeight: FontWeight.w400,
+              ),
+              prefixIcon: Icon(
+                Icons.search_rounded,
+                color: Colors.grey.shade400,
+                size: 22,
+              ),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.close_rounded,
+                          color: Colors.grey.shade400, size: 20),
+                      onPressed: () {
+                        _searchController.clear();
+                        _onSearchChanged('');
+                      },
+                    )
+                  : null,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 14),
+            ),
           ),
         ),
         if (_isSearching)
           Container(
-            constraints: const BoxConstraints(maxHeight: 280),
+            constraints: const BoxConstraints(maxHeight: 320),
             margin: const EdgeInsets.only(top: 4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: _loading
-                ? const SizedBox(
-                    height: 80,
-                    child: Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  )
-                : _searchResults.isEmpty
+            child: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(16),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: _loading
                     ? const SizedBox(
                         height: 80,
                         child: Center(
-                          child: Text(
-                            'No customers found',
-                            style: TextStyle(color: Colors.grey, fontSize: 14),
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       )
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        padding: EdgeInsets.zero,
-                        itemCount: _searchResults.length,
-                        itemBuilder: (ctx, i) {
-                          final result = _searchResults[i];
-                          final subtitle = result.telegramUsername != null
-                              ? '@${result.telegramUsername}'
-                              : result.phone ?? 'No contact info';
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: primary.withValues(alpha: 0.1),
+                    : _searchResults.isEmpty
+                        ? const SizedBox(
+                            height: 80,
+                            child: Center(
                               child: Text(
-                                result.name.isNotEmpty
-                                    ? result.name[0].toUpperCase()
-                                    : '?',
-                                style: TextStyle(
-                                  color: primary,
-                                  fontWeight: FontWeight.bold,
+                                'No customers found',
+                                style:
+                                    TextStyle(color: Colors.grey, fontSize: 14),
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            padding: EdgeInsets.zero,
+                            itemCount: _searchResults.length,
+                            itemBuilder: (ctx, i) {
+                              final result = _searchResults[i];
+                              final subtitle = result.telegramUsername != null
+                                  ? '@${result.telegramUsername}'
+                                  : result.phone ?? 'No contact info';
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor:
+                                      primary.withValues(alpha: 0.1),
+                                  child: Text(
+                                    result.name.isNotEmpty
+                                        ? result.name[0].toUpperCase()
+                                        : '?',
+                                    style: TextStyle(
+                                      color: primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                            title: Text(
-                              result.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            subtitle: Text(
-                              subtitle,
-                              style: TextStyle(
-                                color: Colors.grey[500],
-                                fontSize: 12,
-                              ),
-                            ),
-                            trailing: Text(
-                              '${result.orderCount} orders',
-                              style: TextStyle(
-                                color: Colors.grey[500],
-                                fontSize: 12,
-                              ),
-                            ),
-                            onTap: () {
-                              _clearSearch();
-                              context.push('/customers/${result.id}');
+                                title: Text(
+                                  result.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  subtitle,
+                                  style: TextStyle(
+                                    color: Colors.grey[500],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                trailing: Text(
+                                  '${result.orderCount} orders',
+                                  style: TextStyle(
+                                    color: Colors.grey[500],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                onTap: () {
+                                  _clearSearch();
+                                  context.push('/customers/${result.id}');
+                                },
+                              );
                             },
-                          );
-                        },
-                      ),
+                          ),
+              ),
+            ),
           ),
       ],
     );

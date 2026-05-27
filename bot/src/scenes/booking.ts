@@ -2,9 +2,8 @@ import { InlineKeyboard } from 'grammy';
 import { type Conversation } from '@grammyjs/conversations';
 import { MyContext, ApiService, ApiSlot } from '../lib/types.js';
 import { upsertCustomer, getServices, getAvailability, createAppointment } from '../lib/api.js';
+import { getBotUsername } from '../lib/botContext.js';
 import { formatUZS, formatDateWeekdayTZ, toTashkentDateStr } from '../lib/format.js';
-
-const BOT_TOKEN = process.env.BOT_TOKEN ?? '';
 
 export type MyConversation = Conversation<MyContext>;
 
@@ -27,7 +26,7 @@ async function getDatesWithSlots(serviceId: string, staffId?: string): Promise<s
     const d = new Date(today);
     d.setDate(today.getDate() + i);
     const dateStr = toTashkentDateStr(d);
-    const slots = await getAvailability(BOT_TOKEN, serviceId, dateStr, staffId);
+    const slots = await getAvailability(getBotUsername(), serviceId, dateStr, staffId);
     if (slots.length > 0) results.push(dateStr);
   }
   return results;
@@ -39,7 +38,7 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
 
   let data: Awaited<ReturnType<typeof getServices>>;
   try {
-    data = await conversation.external(() => getServices(BOT_TOKEN));
+    data = await conversation.external(() => getServices(getBotUsername()));
   } catch {
     await ctx.reply('Could not load services. Please try again later.');
     return;
@@ -152,7 +151,7 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
   // ── Step 5: Select time slot ──────────────────────────────────
   let slots: ApiSlot[];
   try {
-    slots = await conversation.external(() => getAvailability(BOT_TOKEN, serviceId, selectedDate, staffId));
+    slots = await conversation.external(() => getAvailability(getBotUsername(), serviceId, selectedDate, staffId));
   } catch {
     await ctx.reply('Could not load time slots. Please try again later.');
     return;
@@ -277,7 +276,7 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
   try {
     const customer = await conversation.external(() =>
       upsertCustomer({
-        botToken: BOT_TOKEN,
+        botUsername: getBotUsername(),
         telegramUserId: String(ctx.from!.id),
         telegramUsername: ctx.from?.username,
         name,
@@ -288,7 +287,7 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
 
     result = await conversation.external(() =>
       createAppointment({
-        botToken: BOT_TOKEN,
+        botUsername: getBotUsername(),
         customerId,
         serviceId,
         staffId,

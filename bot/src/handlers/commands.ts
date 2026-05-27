@@ -1,11 +1,10 @@
 import { InlineKeyboard } from 'grammy';
 import { MyContext, ApiOrder, ApiAppointment } from '../lib/types.js';
 import { getCatalog, getCustomerOrders, getCustomerAppointments } from '../lib/api.js';
+import { getBotUsername } from '../lib/botContext.js';
 import { formatUZS, formatDateTZ, formatTimeTZ } from '../lib/format.js';
 import { showCatalog } from '../scenes/catalog.js';
 import { showProjects } from '../scenes/project.js';
-
-const BOT_TOKEN = process.env.BOT_TOKEN ?? '';
 
 const ORDER_STATUS_EMOJI: Record<string, string> = {
   NEW: '🆕',
@@ -33,10 +32,9 @@ export function registerCommandHandlers(bot: import('grammy').Bot<MyContext>) {
   bot.command('start', async (ctx) => {
     const name = ctx.from?.first_name ?? 'there';
 
-    // Read the business mode from the catalog endpoint (single call, always available)
     let mode: string[] = ['PRODUCTS'];
     try {
-      const data = await getCatalog(BOT_TOKEN);
+      const data = await getCatalog(getBotUsername());
       if (data.business.mode.length > 0) mode = data.business.mode;
     } catch {
       // fallback to PRODUCTS
@@ -107,7 +105,6 @@ export function registerCommandHandlers(bot: import('grammy').Bot<MyContext>) {
     await ctx.conversation.enter('bookingConversation');
   });
 
-  // "I have paid" for appointment (pay-in-advance)
   bot.callbackQuery(/^appt_paid:(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
     await ctx.reply('Thank you! The business has been notified of your payment. Your appointment is being confirmed.');
@@ -123,7 +120,7 @@ async function showOrders(ctx: MyContext) {
 
   let orders: ApiOrder[];
   try {
-    orders = await getCustomerOrders(BOT_TOKEN, telegramUserId);
+    orders = await getCustomerOrders(getBotUsername(), telegramUserId);
   } catch {
     await ctx.reply('Could not load orders. Please try again later.');
     return;
@@ -158,7 +155,7 @@ async function showAppointments(ctx: MyContext) {
 
   let appointments: ApiAppointment[];
   try {
-    appointments = await getCustomerAppointments(BOT_TOKEN, telegramUserId);
+    appointments = await getCustomerAppointments(getBotUsername(), telegramUserId);
   } catch {
     await ctx.reply('Could not load appointments. Please try again later.');
     return;

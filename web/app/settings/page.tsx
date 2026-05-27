@@ -155,7 +155,7 @@ export default function SettingsPage() {
 
   return (
     <AuthLayout title="Settings">
-      <div className="max-w-2xl space-y-6">
+      <div className="max-w-2xl w-full space-y-6">
 
         {/* Business Profile */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6">

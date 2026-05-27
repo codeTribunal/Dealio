@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/auth.js';
 import { getBusinessOrFail } from '../lib/businessFromUser.js';
 import { sendError } from '../lib/errors.js';
 import { sendTelegramMessage } from '../lib/telegram.js';
+import { getBotToken, hasBotToken } from '../lib/getBotToken.js';
 
 const createProjectBody = z.object({
   customerId: z.string(),
@@ -252,7 +253,7 @@ export default async function projectRoutes(app: FastifyInstance) {
       });
 
       // Notify the client via Telegram when the owner submits a milestone for review
-      if (parsed.data.status === 'SUBMITTED_FOR_REVIEW' && business.botToken) {
+      if (parsed.data.status === 'SUBMITTED_FOR_REVIEW' && hasBotToken(business)) {
         const customer = await prisma.customer.findFirst({
           where: { id: project.customerId, deletedAt: null },
           select: { telegramUserId: true },
@@ -266,7 +267,7 @@ export default async function projectRoutes(app: FastifyInstance) {
             `Amount: ${amount} UZS\n\n` +
             `Reply /projects to view and approve.`;
 
-          sendTelegramMessage(business.botToken, customer.telegramUserId, text).catch(
+          sendTelegramMessage(getBotToken(business), customer.telegramUserId, text).catch(
             (err: unknown) => console.error('[telegram] milestone review notify failed:', err),
           );
         }

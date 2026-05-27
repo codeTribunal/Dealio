@@ -4,6 +4,28 @@ import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { getBusinessOrFail } from '../lib/businessFromUser.js';
 import { sendError } from '../lib/errors.js';
+import { encryptBotToken } from '../lib/crypto.js';
+
+// Fields returned to the app owner — never includes any token fields
+const SAFE_BUSINESS_SELECT = {
+  id: true,
+  name: true,
+  description: true,
+  photoUrl: true,
+  mode: true,
+  language: true,
+  cardNumber: true,
+  cardBank: true,
+  botUsername: true,
+  workingHours: true,
+  ownerTelegramChatId: true,
+  ownerId: true,
+  plan: true,
+  planExpiresAt: true,
+  suspendedAt: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 const createBusinessBody = z.object({
   name: z.string().min(1).max(100),
@@ -36,10 +58,23 @@ const updatePaymentBody = z.object({
   cardBank: z.enum(['UZCARD', 'HUMO']),
 });
 
+function buildTokenData(botToken: string | undefined) {
+  if (!botToken) return {};
+  const { encrypted, iv, tag } = encryptBotToken(botToken);
+  return {
+    botTokenEncrypted: encrypted,
+    botTokenIv: iv,
+    botTokenTag: tag,
+  };
+}
+
 export default async function businessRoutes(app: FastifyInstance) {
   app.get('/business', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
-    if (!business) return;
+    const business = await prisma.business.findUnique({
+      where: { ownerId: request.user.userId },
+      select: SAFE_BUSINESS_SELECT,
+    });
+    if (!business) return sendError(reply, 404, 'Business not found. Complete onboarding first.');
     return reply.send(business);
   });
 
@@ -52,11 +87,15 @@ export default async function businessRoutes(app: FastifyInstance) {
     const parsed = createBusinessBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
+    const { botToken, ...rest } = parsed.data;
+
     const business = await prisma.business.create({
       data: {
-        ...parsed.data,
+        ...rest,
+        ...buildTokenData(botToken),
         ownerId: request.user.userId,
       },
+      select: SAFE_BUSINESS_SELECT,
     });
     return reply.status(201).send(business);
   });
@@ -68,9 +107,15 @@ export default async function businessRoutes(app: FastifyInstance) {
     const parsed = updateBusinessBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
+    const { botToken, ...rest } = parsed.data;
+
     const updated = await prisma.business.update({
       where: { id: business.id },
-      data: parsed.data,
+      data: {
+        ...rest,
+        ...buildTokenData(botToken),
+      },
+      select: SAFE_BUSINESS_SELECT,
     });
     return reply.send(updated);
   });

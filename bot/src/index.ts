@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { Bot, session } from 'grammy';
 import { conversations, createConversation } from '@grammyjs/conversations';
 import { MyContext, SessionData } from './lib/types.js';
+import { setBotUsername, getBotUsername } from './lib/botContext.js';
 import { registerCatalogHandlers } from './scenes/catalog.js';
 import { checkoutConversation } from './scenes/checkout.js';
 import { bookingConversation } from './scenes/booking.js';
@@ -43,10 +44,8 @@ bot.callbackQuery('checkout', async (ctx) => {
 });
 
 // Free-text message catch-all — save to inbox and notify owner
-// Runs after all conversations and command handlers, so it only fires for unhandled text
 bot.on('message:text', async (ctx) => {
   const text = ctx.message.text;
-  // Commands are handled above — skip them here
   if (text.startsWith('/')) return;
 
   const telegramUserId = String(ctx.from?.id ?? '');
@@ -54,7 +53,7 @@ bot.on('message:text', async (ctx) => {
 
   try {
     const result = await saveCustomerMessage({
-      botToken: BOT_TOKEN,
+      botUsername: getBotUsername(),
       telegramUserId,
       text,
       telegramMessageId: String(ctx.message.message_id),
@@ -83,6 +82,11 @@ bot.catch((err) => {
 // ── Start ────────────────────────────────────────────────────────
 async function main() {
   console.log('Starting bot (long polling)...');
+
+  // Fetch bot info so we have the username before any handlers run
+  await bot.init();
+  setBotUsername(bot.botInfo.username);
+  console.log(`Bot username resolved: @${bot.botInfo.username}`);
 
   // Start reminder cron job — runs every hour
   runReminderJob(bot);

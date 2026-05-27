@@ -1,9 +1,8 @@
 import { InlineKeyboard } from 'grammy';
 import { MyContext } from '../lib/types.js';
 import { notifyPaymentReceived, confirmPayment } from '../lib/api.js';
+import { getBotUsername } from '../lib/botContext.js';
 import { formatUZS } from '../lib/format.js';
-
-const BOT_TOKEN = process.env.BOT_TOKEN ?? '';
 
 export function registerOwnerHandlers(bot: import('grammy').Bot<MyContext>) {
   // Customer taps "I have paid"
@@ -14,7 +13,7 @@ export function registerOwnerHandlers(bot: import('grammy').Bot<MyContext>) {
 
     let result: Awaited<ReturnType<typeof notifyPaymentReceived>>;
     try {
-      result = await notifyPaymentReceived(BOT_TOKEN, orderId);
+      result = await notifyPaymentReceived(getBotUsername(), orderId);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       if (msg === 'Payment already confirmed') {
@@ -26,11 +25,9 @@ export function registerOwnerHandlers(bot: import('grammy').Bot<MyContext>) {
       return;
     }
 
-    // Remove the "I have paid" button so it can't be tapped again
     await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() });
     await ctx.reply('✅ Thank you! We have received your payment notification.\n\nThe store owner will confirm it shortly.');
 
-    // Notify the owner via Telegram
     const { notification } = result;
     if (notification.ownerTelegramChatId) {
       try {
@@ -58,7 +55,7 @@ export function registerOwnerHandlers(bot: import('grammy').Bot<MyContext>) {
 
     let result: Awaited<ReturnType<typeof confirmPayment>>;
     try {
-      result = await confirmPayment(BOT_TOKEN, orderId);
+      result = await confirmPayment(getBotUsername(), orderId);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       if (msg === 'Payment already confirmed') {
@@ -70,11 +67,9 @@ export function registerOwnerHandlers(bot: import('grammy').Bot<MyContext>) {
       return;
     }
 
-    // Update the notification message
     await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() });
     await ctx.reply(`✅ Payment confirmed for order. Customer has been notified.`);
 
-    // Notify the customer
     if (result.customerTelegramUserId) {
       try {
         await bot.api.sendMessage(
@@ -88,7 +83,7 @@ export function registerOwnerHandlers(bot: import('grammy').Bot<MyContext>) {
     }
   });
 
-  // Owner registration — lets the owner link their Telegram chat ID to their business
+  // Owner registration — links their Telegram chat ID to their business
   bot.command('register_owner', async (ctx) => {
     const secret = ctx.match?.trim();
     if (!secret || secret !== process.env.BOT_MANAGER_SECRET) {
@@ -102,12 +97,11 @@ export function registerOwnerHandlers(bot: import('grammy').Bot<MyContext>) {
       return;
     }
 
-    // Update business ownerTelegramChatId via the backend
     try {
       const axios = await import('axios');
       await axios.default.patch(
         `${process.env.BACKEND_URL ?? 'http://localhost:3000'}/api/v1/bot/set-owner-chat`,
-        { botToken: BOT_TOKEN, ownerTelegramChatId: chatId },
+        { botUsername: getBotUsername(), ownerTelegramChatId: chatId },
         { headers: { 'x-bot-secret': process.env.BOT_MANAGER_SECRET ?? '' } },
       );
       await ctx.reply(

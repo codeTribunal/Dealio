@@ -2,9 +2,8 @@ import { InlineKeyboard } from 'grammy';
 import { type Conversation } from '@grammyjs/conversations';
 import { MyContext } from '../lib/types.js';
 import { upsertCustomer, createOrder, getCheckoutQuestions } from '../lib/api.js';
+import { getBotUsername } from '../lib/botContext.js';
 import { formatUZS, buildOrderSummary } from '../lib/format.js';
-
-const BOT_TOKEN = process.env.BOT_TOKEN ?? '';
 
 export type MyConversation = Conversation<MyContext>;
 
@@ -86,7 +85,7 @@ export async function checkoutConversation(conversation: MyConversation, ctx: My
 
   // ── Step 4b: Custom checkout questions ────────────────────────
   const customAnswers: Record<string, string> = {};
-  const questions = await conversation.external(() => getCheckoutQuestions(BOT_TOKEN));
+  const questions = await conversation.external(() => getCheckoutQuestions(getBotUsername()));
 
   for (const q of questions) {
     await ctx.reply(q.required ? `${q.question} *` : q.question);
@@ -94,7 +93,6 @@ export async function checkoutConversation(conversation: MyConversation, ctx: My
     const answer = ansCtx.message?.text?.trim() ?? '';
     if (q.required && answer.length === 0) {
       await ctx.reply('This field is required. Please provide an answer.');
-      // Ask again
       const retryCtx = await conversation.waitFor('message:text');
       customAnswers[q.id] = retryCtx.message?.text?.trim() ?? '';
     } else {
@@ -132,7 +130,7 @@ export async function checkoutConversation(conversation: MyConversation, ctx: My
   try {
     const customer = await conversation.external(() =>
       upsertCustomer({
-        botToken: BOT_TOKEN,
+        botUsername: getBotUsername(),
         telegramUserId: String(ctx.from!.id),
         telegramUsername: ctx.from?.username,
         name,
@@ -143,7 +141,7 @@ export async function checkoutConversation(conversation: MyConversation, ctx: My
 
     result = await conversation.external(() =>
       createOrder({
-        botToken: BOT_TOKEN,
+        botUsername: getBotUsername(),
         customerId,
         items: cart.map((i) => ({
           productId: i.productId,
@@ -158,13 +156,11 @@ export async function checkoutConversation(conversation: MyConversation, ctx: My
     );
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
-    // Log full error so it appears in the bot process output
     console.error('[checkout] order creation failed:', e);
     await ctx.reply(`Something went wrong creating your order: ${msg}`);
     return;
   }
 
-  // Clear the cart
   ctx.session.cart = [];
   ctx.session.customerId = customerId;
 

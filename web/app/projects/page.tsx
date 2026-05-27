@@ -263,7 +263,7 @@ export default function ProjectsPage() {
             className="flex-1 bg-black/30"
             onClick={() => setSelectedProject(null)}
           />
-          <div className="w-full max-w-xl bg-white h-full flex flex-col shadow-xl">
+          <div className="relative z-50 w-full md:max-w-xl bg-white shadow-2xl flex flex-col h-full overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
               <div>
                 <p className="text-lg font-bold text-gray-900">

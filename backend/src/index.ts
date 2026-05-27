@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import corsPlugin from './plugins/cors.js';
 import jwtPlugin from './plugins/jwt.js';
 import rateLimitPlugin from './plugins/rateLimit.js';
+import helmetPlugin from './plugins/helmet.js';
 import authRoutes from './routes/auth.js';
 import businessRoutes from './routes/business.js';
 import productRoutes from './routes/products.js';
@@ -20,6 +21,7 @@ import appointmentRoutes from './routes/appointments.js';
 import projectRoutes from './routes/projects.js';
 import proposalRoutes from './routes/proposals.js';
 import deviceTokenRoutes from './routes/device-token.js';
+import internalRoutes from './routes/internal.js';
 import { prisma } from './lib/prisma.js';
 
 const app = Fastify({
@@ -33,6 +35,7 @@ const app = Fastify({
 });
 
 async function bootstrap() {
+  await app.register(helmetPlugin);
   await app.register(corsPlugin);
   await app.register(jwtPlugin);
   await app.register(rateLimitPlugin);
@@ -55,6 +58,7 @@ async function bootstrap() {
   await app.register(projectRoutes, { prefix: '/api/v1' });
   await app.register(proposalRoutes, { prefix: '/api/v1' });
   await app.register(deviceTokenRoutes, { prefix: '/api/v1' });
+  await app.register(internalRoutes, { prefix: '/api/v1' });
 
   app.get('/health', async () => ({ status: 'ok' }));
 

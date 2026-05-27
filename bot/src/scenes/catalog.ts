@@ -1,9 +1,8 @@
 import { InlineKeyboard } from 'grammy';
 import { MyContext, ApiProduct } from '../lib/types.js';
 import { getCatalog } from '../lib/api.js';
+import { getBotUsername } from '../lib/botContext.js';
 import { formatUZS, buildCartSummary } from '../lib/format.js';
-
-const BOT_TOKEN = process.env.BOT_TOKEN ?? '';
 
 export function registerCatalogHandlers(bot: import('grammy').Bot<MyContext>) {
   // "Browse catalog" button → show product list
@@ -51,7 +50,7 @@ export function registerCatalogHandlers(bot: import('grammy').Bot<MyContext>) {
 export async function showCatalog(ctx: MyContext) {
   let catalog: { products: ApiProduct[] };
   try {
-    catalog = await getCatalog(BOT_TOKEN);
+    catalog = await getCatalog(getBotUsername());
   } catch {
     await ctx.reply('Could not load catalog. Please try again later.');
     return;
@@ -78,7 +77,7 @@ export async function showCatalog(ctx: MyContext) {
 async function showProduct(ctx: MyContext, productId: string) {
   let catalog: { products: ApiProduct[] };
   try {
-    catalog = await getCatalog(BOT_TOKEN);
+    catalog = await getCatalog(getBotUsername());
   } catch {
     await ctx.reply('Could not load product. Please try again later.');
     return;
@@ -141,7 +140,7 @@ async function showProduct(ctx: MyContext, productId: string) {
 async function addToCart(ctx: MyContext, productId: string, qty: number) {
   let catalog: { products: ApiProduct[] };
   try {
-    catalog = await getCatalog(BOT_TOKEN);
+    catalog = await getCatalog(getBotUsername());
   } catch {
     await ctx.reply('Could not add to cart. Please try again.');
     return;

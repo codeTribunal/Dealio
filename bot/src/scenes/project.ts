@@ -1,9 +1,8 @@
 import { InlineKeyboard } from 'grammy';
 import { MyContext, ApiProject } from '../lib/types.js';
 import { getCustomerProjects, approveMilestone } from '../lib/api.js';
+import { getBotUsername } from '../lib/botContext.js';
 import { formatUZS, formatDateTZ } from '../lib/format.js';
-
-const BOT_TOKEN = process.env.BOT_TOKEN ?? '';
 
 const STATUS_LABEL: Record<string, string> = {
   PROPOSAL_SENT: '📋 Proposal sent',
@@ -86,7 +85,7 @@ export async function showProjects(ctx: MyContext): Promise<void> {
 
   let result: { projects: ApiProject[] };
   try {
-    result = await getCustomerProjects(BOT_TOKEN, telegramUserId);
+    result = await getCustomerProjects(getBotUsername(), telegramUserId);
   } catch {
     await ctx.reply('Could not load projects. Please try again later.');
     return;
@@ -125,7 +124,7 @@ export function registerProjectHandlers(bot: import('grammy').Bot<MyContext>): v
     await ctx.answerCallbackQuery();
     const milestoneId = ctx.match[1];
     try {
-      const result = await approveMilestone(BOT_TOKEN, milestoneId, true);
+      const result = await approveMilestone(getBotUsername(), milestoneId, true);
       await ctx.reply(
         `✅ You have approved <b>${result.milestone.name}</b>. The owner has been notified.`,
         { parse_mode: 'HTML' },
@@ -139,7 +138,7 @@ export function registerProjectHandlers(bot: import('grammy').Bot<MyContext>): v
     await ctx.answerCallbackQuery();
     const milestoneId = ctx.match[1];
     try {
-      const result = await approveMilestone(BOT_TOKEN, milestoneId, false);
+      const result = await approveMilestone(getBotUsername(), milestoneId, false);
       await ctx.reply(
         `🔄 Changes requested for <b>${result.milestone.name}</b>. The owner has been notified.`,
         { parse_mode: 'HTML' },

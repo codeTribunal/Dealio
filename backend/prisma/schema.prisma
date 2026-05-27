@@ -16,13 +16,23 @@ model Business {
   language     Language  @default(UZBEK)
   cardNumber   String?
   cardBank     CardBank?
-  botToken              String?   @unique
   botUsername           String?   @unique
   workingHours          Json?
   ownerTelegramChatId   String?
   fcmToken              String?
   ownerId               String    @unique
   owner        User      @relation(fields: [ownerId], references: [id])
+
+  // Subscription
+  plan            Plan      @default(FREE)
+  planExpiresAt   DateTime?
+  suspendedAt     DateTime?
+  suspendedReason String?
+
+  // Bot token — stored encrypted, never plain text in production
+  botTokenEncrypted String?
+  botTokenIv        String?
+  botTokenTag       String?
 
   customers         Customer[]
   products          Product[]
@@ -432,4 +442,10 @@ enum FieldType {
   NUMBER
   DATE
   YESNO
+}
+
+enum Plan {
+  FREE
+  PRO
+  BUSINESS
 }

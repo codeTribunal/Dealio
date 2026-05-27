@@ -91,7 +91,7 @@ export default function AppointmentsPage() {
 
   return (
     <AuthLayout title="Appointments">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSelectedDate(addDays(selectedDate, -1))}
@@ -124,7 +124,7 @@ export default function AppointmentsPage() {
           )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {STATUS_FILTERS.map(({ label, value }) => (
             <button
               key={value}
@@ -216,7 +216,7 @@ export default function AppointmentsPage() {
             className="flex-1 bg-black/30"
             onClick={() => setSelectedAppointment(null)}
           />
-          <div className="w-full max-w-md bg-white h-full overflow-y-auto flex flex-col shadow-xl">
+          <div className="relative z-50 w-full md:max-w-lg bg-white shadow-2xl flex flex-col h-full overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div>
                 <p className="text-lg font-bold text-gray-900">
