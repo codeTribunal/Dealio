@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/models/appointment.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
+import '../../shared/utils/status_labels.dart';
 import 'appointments_provider.dart';
 
 const _statusColor = {
@@ -20,6 +22,7 @@ class AppointmentCalendarScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final notifier = ref.read(appointmentsProvider.notifier);
     final apptAsync = ref.watch(appointmentsProvider);
     final selectedDay = notifier.filter.selectedDate;
@@ -28,12 +31,12 @@ class AppointmentCalendarScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Appointments'),
+        title: Text(l.appointmentsTitle),
         actions: [
           if (!isToday)
             TextButton(
               onPressed: () => notifier.selectDate(today),
-              child: const Text('Today'),
+              child: Text(l.commonToday),
             ),
         ],
       ),
@@ -68,7 +71,7 @@ class AppointmentCalendarScreen extends ConsumerWidget {
                     child: Column(
                       children: [
                         Text(
-                          _dayLabel(selectedDay, today),
+                          _dayLabel(l, selectedDay, today),
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -114,13 +117,13 @@ class AppointmentCalendarScreen extends ConsumerWidget {
                             size: 56, color: Colors.grey[300]),
                         const SizedBox(height: 16),
                         Text(
-                          'No appointments on this day',
+                          l.apptEmpty,
                           style: TextStyle(
                               color: Colors.grey[500], fontSize: 15),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Use the + button to add one',
+                          l.apptEmptyHint,
                           style: TextStyle(
                               color: Colors.grey[400], fontSize: 12),
                         ),
@@ -147,21 +150,16 @@ class AppointmentCalendarScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: open create appointment bottom sheet
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Create appointment coming soon')),
-          );
-        },
+        onPressed: () => context.push('/appointments/new'),
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  String _dayLabel(DateTime d, DateTime today) {
-    if (_isSameDay(d, today)) return 'Today';
-    if (_isSameDay(d, today.add(const Duration(days: 1)))) return 'Tomorrow';
-    if (_isSameDay(d, today.subtract(const Duration(days: 1)))) return 'Yesterday';
+  String _dayLabel(AppLocalizations l, DateTime d, DateTime today) {
+    if (_isSameDay(d, today)) return l.commonToday;
+    if (_isSameDay(d, today.add(const Duration(days: 1)))) return l.apptTomorrow;
+    if (_isSameDay(d, today.subtract(const Duration(days: 1)))) return l.commonYesterday;
     return DateFormat('EEEE').format(d);
   }
 
@@ -177,11 +175,11 @@ class _AppointmentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final color = _statusColor[appointment.status] ?? const Color(0xFF6B7280);
     final start = appointment.startTime.toLocal();
-    final timeLabel =
-        '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}';
-    final durationLabel = '${appointment.service.durationMinutes} min';
+    final timeLabel = formatTime(start);
+    final durationLabel = l.durationMinutes(appointment.service.durationMinutes);
     final staffLabel =
         appointment.staff != null ? ' · ${appointment.staff!.name}' : '';
 
@@ -276,21 +274,12 @@ class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        _label(status),
+        appointmentStatusLabel(AppLocalizations.of(context)!, status),
         style:
             TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
       ),
     );
   }
-
-  String _label(String s) => switch (s) {
-        'REQUESTED' => 'Requested',
-        'CONFIRMED' => 'Confirmed',
-        'COMPLETED' => 'Done',
-        'CANCELLED' => 'Cancelled',
-        'NO_SHOW' => 'No-show',
-        _ => s,
-      };
 }
 
 class _ErrorView extends StatelessWidget {
@@ -308,7 +297,7 @@ class _ErrorView extends StatelessWidget {
           const SizedBox(height: 12),
           Text(message, textAlign: TextAlign.center),
           const SizedBox(height: 16),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
+          TextButton(onPressed: onRetry, child: Text(AppLocalizations.of(context)!.buttonRetry)),
         ],
       ),
     );

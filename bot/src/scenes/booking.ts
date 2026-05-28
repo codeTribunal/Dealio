@@ -1,15 +1,13 @@
 import { InlineKeyboard } from 'grammy';
 import { type Conversation } from '@grammyjs/conversations';
 import { MyContext, ApiService, ApiSlot } from '../lib/types.js';
-import { upsertCustomer, getServices, getAvailability, createAppointment } from '../lib/api.js';
-import { getBotUsername } from '../lib/botContext.js';
-import { formatUZS, formatDateWeekdayTZ, toTashkentDateStr } from '../lib/format.js';
+import { upsertCustomer, getServices, getAvailability, createAppointment, SuspendedError } from '../lib/api.js';
+import { formatDateWeekdayTZ, toTashkentDateStr } from '../lib/format.js';
+import { t, formatMoney, type Lang } from '../lib/i18n.js';
 
 export type MyConversation = Conversation<MyContext>;
 
 function formatDateLabel(dateStr: string): string {
-  // dateStr is YYYY-MM-DD in Tashkent time; parse it as a local noon to avoid
-  // any UTC midnight drift, then format with the explicit timezone.
   const d = new Date(dateStr + 'T12:00:00');
   return formatDateWeekdayTZ(d);
 }
@@ -19,34 +17,46 @@ function formatSlotTime(slot: ApiSlot): string {
 }
 
 // Returns next 14 days as YYYY-MM-DD strings in Tashkent local time
-async function getDatesWithSlots(serviceId: string, staffId?: string): Promise<string[]> {
+async function getDatesWithSlots(
+  botUsername: string,
+  serviceId: string,
+  staffId?: string,
+): Promise<string[]> {
   const results: string[] = [];
   const today = new Date();
   for (let i = 0; i < 14; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
     const dateStr = toTashkentDateStr(d);
-    const slots = await getAvailability(getBotUsername(), serviceId, dateStr, staffId);
+    const slots = await getAvailability(botUsername, serviceId, dateStr, staffId);
     if (slots.length > 0) results.push(dateStr);
   }
   return results;
 }
 
 export async function bookingConversation(conversation: MyConversation, ctx: MyContext) {
+  // Capture at conversation entry — used in all conversation.external() closures below
+  const botUsername = ctx.botUsername;
+  const lang: Lang = ctx.session.lang ?? 'UZBEK';
+
   // ── Step 1: Load services ─────────────────────────────────────
-  await ctx.reply('⏳ Loading services...');
+  await ctx.reply(t(lang, 'loadingServices'));
 
   let data: Awaited<ReturnType<typeof getServices>>;
   try {
-    data = await conversation.external(() => getServices(getBotUsername()));
-  } catch {
-    await ctx.reply('Could not load services. Please try again later.');
+    data = await conversation.external(() => getServices(botUsername));
+  } catch (err) {
+    if (err instanceof SuspendedError) {
+      await ctx.reply(t(lang, 'suspended'));
+      return;
+    }
+    await ctx.reply(t(lang, 'servicesLoadError'));
     return;
   }
 
   const { services } = data;
   if (services.length === 0) {
-    await ctx.reply('No services are available for booking at the moment.');
+    await ctx.reply(t(lang, 'noServices'));
     return;
   }
 
@@ -55,30 +65,30 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
   for (const svc of services) {
     serviceKeyboard
       .text(
-        `${svc.name} — ${svc.durationMinutes} min — ${formatUZS(svc.price)}`,
+        `${svc.name} — ${svc.durationMinutes} ${t(lang, 'minShort')} — ${formatMoney(lang, svc.price)}`,
         `svc:${svc.id}`,
       )
       .row();
   }
-  serviceKeyboard.text('❌ Cancel', 'booking_cancel');
+  serviceKeyboard.text(t(lang, 'cancel'), 'booking_cancel');
 
-  await ctx.reply('Which service would you like to book?', { reply_markup: serviceKeyboard });
+  await ctx.reply(t(lang, 'chooseService'), { reply_markup: serviceKeyboard });
 
   const svcCtx = await conversation.waitForCallbackQuery(
-    ['booking_cancel', ...services.map((s) => `svc:${s.id}`)],
+    ['booking_cancel', ...services.map((s: ApiService) => `svc:${s.id}`)],
     { otherwise: (c) => c.answerCallbackQuery() },
   );
   await svcCtx.answerCallbackQuery();
 
   if (svcCtx.callbackQuery.data === 'booking_cancel') {
-    await ctx.reply('Booking cancelled.');
+    await ctx.reply(t(lang, 'bookingCancelled'));
     return;
   }
 
   const serviceId = svcCtx.callbackQuery.data.replace('svc:', '');
-  const service = services.find((s) => s.id === serviceId)!;
+  const service = services.find((s: ApiService) => s.id === serviceId)!;
 
-  await ctx.reply(`✅ Service: <b>${service.name}</b>`, { parse_mode: 'HTML' });
+  await ctx.reply(t(lang, 'selected', { label: t(lang, 'labelService'), value: service.name }), { parse_mode: 'HTML' });
 
   // ── Step 3: Select staff (if multiple available) ──────────────
   const staffList = service.staffServices.map((ss) => ss.staff);
@@ -87,12 +97,12 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
 
   if (staffList.length > 1) {
     const staffKeyboard = new InlineKeyboard();
-    staffKeyboard.text('Any available', 'staff:any').row();
+    staffKeyboard.text(t(lang, 'anyStaff'), 'staff:any').row();
     for (const s of staffList) {
       staffKeyboard.text(s.name, `staff:${s.id}`).row();
     }
 
-    await ctx.reply('Choose a staff member:', { reply_markup: staffKeyboard });
+    await ctx.reply(t(lang, 'chooseStaff'), { reply_markup: staffKeyboard });
 
     const staffCtx = await conversation.waitForCallbackQuery(
       ['staff:any', ...staffList.map((s) => `staff:${s.id}`)],
@@ -103,7 +113,7 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
     if (staffCtx.callbackQuery.data !== 'staff:any') {
       staffId = staffCtx.callbackQuery.data.replace('staff:', '');
       staffName = staffList.find((s) => s.id === staffId)?.name;
-      await ctx.reply(`✅ Staff: <b>${staffName}</b>`, { parse_mode: 'HTML' });
+      await ctx.reply(t(lang, 'selected', { label: t(lang, 'labelStaff'), value: staffName ?? '' }), { parse_mode: 'HTML' });
     }
   } else if (staffList.length === 1) {
     staffId = staffList[0].id;
@@ -111,18 +121,24 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
   }
 
   // ── Step 4: Select date ───────────────────────────────────────
-  await ctx.reply('⏳ Checking available dates...');
+  await ctx.reply(t(lang, 'checkingDates'));
 
   let availableDates: string[];
   try {
-    availableDates = await conversation.external(() => getDatesWithSlots(serviceId, staffId));
-  } catch {
-    await ctx.reply('Could not load availability. Please try again later.');
+    availableDates = await conversation.external(() =>
+      getDatesWithSlots(botUsername, serviceId, staffId),
+    );
+  } catch (err) {
+    if (err instanceof SuspendedError) {
+      await ctx.reply(t(lang, 'suspended'));
+      return;
+    }
+    await ctx.reply(t(lang, 'availabilityLoadError'));
     return;
   }
 
   if (availableDates.length === 0) {
-    await ctx.reply('No available slots in the next 14 days. Please contact us directly.');
+    await ctx.reply(t(lang, 'noSlots14'));
     return;
   }
 
@@ -130,9 +146,9 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
   for (const d of availableDates) {
     dateKeyboard.text(formatDateLabel(d), `date:${d}`).row();
   }
-  dateKeyboard.text('❌ Cancel', 'booking_cancel');
+  dateKeyboard.text(t(lang, 'cancel'), 'booking_cancel');
 
-  await ctx.reply('Choose a date:', { reply_markup: dateKeyboard });
+  await ctx.reply(t(lang, 'chooseDate'), { reply_markup: dateKeyboard });
 
   const dateCtx = await conversation.waitForCallbackQuery(
     ['booking_cancel', ...availableDates.map((d) => `date:${d}`)],
@@ -141,24 +157,30 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
   await dateCtx.answerCallbackQuery();
 
   if (dateCtx.callbackQuery.data === 'booking_cancel') {
-    await ctx.reply('Booking cancelled.');
+    await ctx.reply(t(lang, 'bookingCancelled'));
     return;
   }
 
   const selectedDate = dateCtx.callbackQuery.data.replace('date:', '');
-  await ctx.reply(`✅ Date: <b>${formatDateLabel(selectedDate)}</b>`, { parse_mode: 'HTML' });
+  await ctx.reply(t(lang, 'selected', { label: t(lang, 'labelDate'), value: formatDateLabel(selectedDate) }), { parse_mode: 'HTML' });
 
   // ── Step 5: Select time slot ──────────────────────────────────
   let slots: ApiSlot[];
   try {
-    slots = await conversation.external(() => getAvailability(getBotUsername(), serviceId, selectedDate, staffId));
-  } catch {
-    await ctx.reply('Could not load time slots. Please try again later.');
+    slots = await conversation.external(() =>
+      getAvailability(botUsername, serviceId, selectedDate, staffId),
+    );
+  } catch (err) {
+    if (err instanceof SuspendedError) {
+      await ctx.reply(t(lang, 'suspended'));
+      return;
+    }
+    await ctx.reply(t(lang, 'slotsLoadError'));
     return;
   }
 
   if (slots.length === 0) {
-    await ctx.reply('No slots available on this date. Please choose a different day.');
+    await ctx.reply(t(lang, 'noSlots'));
     return;
   }
 
@@ -166,9 +188,9 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
   for (const slot of slots) {
     slotKeyboard.text(formatSlotTime(slot), `slot:${slot.startTime}`).row();
   }
-  slotKeyboard.text('❌ Cancel', 'booking_cancel');
+  slotKeyboard.text(t(lang, 'cancel'), 'booking_cancel');
 
-  await ctx.reply('Choose a time:', { reply_markup: slotKeyboard });
+  await ctx.reply(t(lang, 'chooseTime'), { reply_markup: slotKeyboard });
 
   const slotData = slots.map((s) => `slot:${s.startTime}`);
   const slotCtx = await conversation.waitForCallbackQuery(
@@ -178,13 +200,13 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
   await slotCtx.answerCallbackQuery();
 
   if (slotCtx.callbackQuery.data === 'booking_cancel') {
-    await ctx.reply('Booking cancelled.');
+    await ctx.reply(t(lang, 'bookingCancelled'));
     return;
   }
 
   const startTime = slotCtx.callbackQuery.data.replace('slot:', '');
   const selectedSlot = slots.find((s) => s.startTime === startTime)!;
-  await ctx.reply(`✅ Time: <b>${formatSlotTime(selectedSlot)}</b>`, { parse_mode: 'HTML' });
+  await ctx.reply(t(lang, 'selected', { label: t(lang, 'labelTime'), value: formatSlotTime(selectedSlot) }), { parse_mode: 'HTML' });
 
   // ── Step 6: Collect name ──────────────────────────────────────
   const tgName = ctx.from?.first_name
@@ -192,28 +214,28 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
     : null;
 
   const nameKeyboard = tgName
-    ? new InlineKeyboard().text(`Use: ${tgName}`, 'use_tg_name_booking')
+    ? new InlineKeyboard().text(t(lang, 'useThisName', { name: tgName }), 'use_tg_name_booking')
     : undefined;
 
-  await ctx.reply('Your name?', { reply_markup: nameKeyboard });
+  await ctx.reply(t(lang, 'askNameQ'), { reply_markup: nameKeyboard });
 
   let name: string;
   const nameCtx = await conversation.waitFor(['message:text', 'callback_query:data']);
   if (nameCtx.callbackQuery?.data === 'use_tg_name_booking') {
     name = tgName ?? 'Customer';
     await nameCtx.answerCallbackQuery();
-    await nameCtx.reply(`Name: <b>${name}</b>`, { parse_mode: 'HTML' });
+    await nameCtx.reply(t(lang, 'nameSetLabel', { name }), { parse_mode: 'HTML' });
   } else if (nameCtx.message?.text) {
     name = nameCtx.message.text.trim();
   } else {
-    await ctx.reply('Please enter your name as text.');
+    await ctx.reply(t(lang, 'enterNameText'));
     return;
   }
 
   // ── Step 7: Collect phone ─────────────────────────────────────
-  await ctx.reply('Your phone number?', {
+  await ctx.reply(t(lang, 'askPhoneShort'), {
     reply_markup: {
-      keyboard: [[{ text: '📱 Share my contact', request_contact: true }]],
+      keyboard: [[{ text: t(lang, 'shareContact'), request_contact: true }]],
       resize_keyboard: true,
       one_time_keyboard: true,
     },
@@ -224,51 +246,51 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
   if (phoneCtx.message?.contact) {
     phone = phoneCtx.message.contact.phone_number;
     if (!phone.startsWith('+')) phone = '+' + phone;
-    await phoneCtx.reply(`Phone: <b>${phone}</b>`, {
+    await phoneCtx.reply(t(lang, 'phoneSetLabel', { phone }), {
       parse_mode: 'HTML',
       reply_markup: { remove_keyboard: true },
     });
   } else if (phoneCtx.message?.text) {
     phone = phoneCtx.message.text.trim();
-    await phoneCtx.reply(`Phone: <b>${phone}</b>`, {
+    await phoneCtx.reply(t(lang, 'phoneSetLabel', { phone }), {
       parse_mode: 'HTML',
       reply_markup: { remove_keyboard: true },
     });
   } else {
-    await ctx.reply('Please enter your phone number.', { reply_markup: { remove_keyboard: true } });
+    await ctx.reply(t(lang, 'enterPhoneText'), { reply_markup: { remove_keyboard: true } });
     return;
   }
 
   // ── Step 8: Confirm ───────────────────────────────────────────
-  const confirmText =
-    `<b>Booking Summary</b>\n\n` +
-    `📋 <b>Service:</b> ${service.name}\n` +
-    (staffName ? `👤 <b>Staff:</b> ${staffName}\n` : '') +
-    `📅 <b>Date:</b> ${formatDateLabel(selectedDate)}\n` +
-    `🕐 <b>Time:</b> ${formatSlotTime(selectedSlot)}\n` +
-    `⏱ <b>Duration:</b> ${service.durationMinutes} min\n` +
-    `💰 <b>Price:</b> ${formatUZS(service.price)}\n\n` +
-    `<b>Name:</b> ${name}\n` +
-    `<b>Phone:</b> ${phone}`;
+  const confirmText = t(lang, 'bookingSummaryFull', {
+    service: service.name,
+    staffLine: staffName ? t(lang, 'bookingStaffLine', { staff: staffName }) : '',
+    date: formatDateLabel(selectedDate),
+    time: formatSlotTime(selectedSlot),
+    duration: service.durationMinutes,
+    price: formatMoney(lang, service.price),
+    name,
+    phone,
+  });
 
   await ctx.reply(confirmText, {
     parse_mode: 'HTML',
     reply_markup: new InlineKeyboard()
-      .text('✅ Confirm booking', 'confirm_booking')
+      .text(t(lang, 'confirmBooking'), 'confirm_booking')
       .row()
-      .text('❌ Cancel', 'booking_cancel'),
+      .text(t(lang, 'cancel'), 'booking_cancel'),
   });
 
   const confirmCtx = await conversation.waitForCallbackQuery(['confirm_booking', 'booking_cancel']);
   await confirmCtx.answerCallbackQuery();
 
   if (confirmCtx.callbackQuery.data === 'booking_cancel') {
-    await ctx.reply('Booking cancelled.');
+    await ctx.reply(t(lang, 'bookingCancelled'));
     return;
   }
 
   // ── Step 9: Create booking via API ────────────────────────────
-  await ctx.reply('⏳ Creating your booking...');
+  await ctx.reply(t(lang, 'creatingBooking'));
 
   let result: Awaited<ReturnType<typeof createAppointment>>;
   let customerId: string;
@@ -276,7 +298,7 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
   try {
     const customer = await conversation.external(() =>
       upsertCustomer({
-        botUsername: getBotUsername(),
+        botUsername,
         telegramUserId: String(ctx.from!.id),
         telegramUsername: ctx.from?.username,
         name,
@@ -287,7 +309,7 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
 
     result = await conversation.external(() =>
       createAppointment({
-        botUsername: getBotUsername(),
+        botUsername,
         customerId,
         serviceId,
         staffId,
@@ -296,9 +318,13 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
       }),
     );
   } catch (e: unknown) {
+    if (e instanceof SuspendedError) {
+      await ctx.reply(t(lang, 'suspended'));
+      return;
+    }
     const msg = e instanceof Error ? e.message : String(e);
     console.error('[booking] appointment creation failed:', e);
-    await ctx.reply(`Something went wrong creating your booking: ${msg}`);
+    await ctx.reply(t(lang, 'bookingCreateError', { msg }));
     return;
   }
 
@@ -309,24 +335,28 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
   // ── Step 10: Confirmation message ─────────────────────────────
   if (paymentInstructions) {
     await ctx.reply(
-      `✅ <b>Booking confirmed!</b>\n\n` +
-        `To secure your spot, please transfer <b>${formatUZS(paymentInstructions.amount)}</b> to:\n\n` +
-        `<code>${paymentInstructions.cardNumber}</code>\n` +
-        `Bank: <b>${paymentInstructions.cardBank}</b>\n\n` +
-        `After transferring, tap the button below:`,
+      t(lang, 'bookingConfirmedPayment', {
+        amount: formatMoney(lang, paymentInstructions.amount),
+        card: paymentInstructions.cardNumber,
+        bank: paymentInstructions.cardBank,
+      }),
       {
         parse_mode: 'HTML',
-        reply_markup: new InlineKeyboard().text('✅ I have paid', `appt_paid:${appointment.id}`),
+        reply_markup: new InlineKeyboard().text(t(lang, 'iHavePaid'), `appt_paid:${appointment.id}`),
       },
     );
   } else {
     await ctx.reply(
-      `✅ <b>Booking confirmed!</b>\n\n` +
-        `📋 ${appointment.service.name}\n` +
-        `📅 ${formatDateLabel(selectedDate)} at ${selectedSlot.startLabel}\n` +
-        `💰 ${formatUZS(appointment.price)} — pay at appointment\n\n` +
-        `We look forward to seeing you! Reply CANCEL before your appointment if you need to cancel.`,
+      t(lang, 'bookingConfirmedNoPayment', {
+        service: appointment.service.name,
+        date: formatDateLabel(selectedDate),
+        time: selectedSlot.startLabel,
+        price: formatMoney(lang, appointment.price),
+      }),
       { parse_mode: 'HTML' },
     );
   }
+
+  // ownerTelegramChatId is available for future use (e.g. notify owner)
+  void ownerTelegramChatId;
 }

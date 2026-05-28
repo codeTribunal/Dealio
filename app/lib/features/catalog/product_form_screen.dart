@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class ProductFormScreen extends ConsumerStatefulWidget {
   final String? productId;
@@ -21,7 +22,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   final _priceCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _stockCtrl = TextEditingController();
-  final _prepCtrl = TextEditingController();
+
+  String _prepTimeValue = '';
+  String _prepTimeUnit = 'hours';
 
   bool _unlimited = false;
   bool _active = true;
@@ -41,7 +44,6 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     _priceCtrl.dispose();
     _descCtrl.dispose();
     _stockCtrl.dispose();
-    _prepCtrl.dispose();
     super.dispose();
   }
 
@@ -58,7 +60,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       _priceCtrl.text = product.price.toString();
       _descCtrl.text = product.description ?? '';
       _stockCtrl.text = product.stockQty?.toString() ?? '';
-      _prepCtrl.text = product.prepTime ?? '';
+      if (product.prepTime != null) {
+        final parts = product.prepTime!.split(' ');
+        if (parts.length >= 2) {
+          _prepTimeValue = parts[0];
+          _prepTimeUnit = parts[1];
+        }
+      }
       setState(() {
         _unlimited = product.unlimited;
         _active = product.active;
@@ -92,7 +100,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
           backgroundColor: Colors.red,
         ),
       );
@@ -108,8 +116,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     };
     final desc = _descCtrl.text.trim();
     if (desc.isNotEmpty) data['description'] = desc;
-    final prep = _prepCtrl.text.trim();
-    if (prep.isNotEmpty) data['prepTime'] = prep;
+    if (_prepTimeValue.isNotEmpty) {
+      data['prepTime'] = '$_prepTimeValue $_prepTimeUnit';
+    }
     if (!_unlimited) {
       final stock = _stockCtrl.text.trim();
       if (stock.isNotEmpty) data['stockQty'] = int.parse(stock);
@@ -119,9 +128,12 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEditing ? 'Edit Product' : 'New Product'),
+        title: Text(widget.isEditing
+            ? l.productFormEditTitle
+            : l.productFormNewTitle),
         actions: [
           if (_saving)
             const Padding(
@@ -135,15 +147,15 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           else
             TextButton(
               onPressed: _save,
-              child: const Text('Save'),
+              child: Text(l.buttonSave),
             ),
         ],
       ),
-      body: _buildBody(),
+      body: _buildBody(l),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l) {
     if (_loadingProduct) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -159,7 +171,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
               Text(_loadError!, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               TextButton(
-                  onPressed: _loadProduct, child: const Text('Retry')),
+                  onPressed: _loadProduct, child: Text(l.buttonRetry)),
             ],
           ),
         ),
@@ -174,13 +186,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           // ── Name ──────────────────────────────────────────────
           TextFormField(
             controller: _nameCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Product name *',
-              hintText: 'e.g. Chocolate Cake',
+            decoration: InputDecoration(
+              labelText: l.productFormNameLabel,
+              hintText: l.productFormNameHint,
             ),
             textCapitalization: TextCapitalization.sentences,
             validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+                (v == null || v.trim().isEmpty) ? l.productFormNameRequired : null,
           ),
 
           const SizedBox(height: 16),
@@ -188,17 +200,17 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           // ── Price ─────────────────────────────────────────────
           TextFormField(
             controller: _priceCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Price *',
+            decoration: InputDecoration(
+              labelText: l.productFormPriceLabel,
               suffixText: 'UZS',
               hintText: '150000',
             ),
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             validator: (v) {
-              if (v == null || v.trim().isEmpty) return 'Price is required';
+              if (v == null || v.trim().isEmpty) return l.productFormPriceRequired;
               final n = int.tryParse(v.trim());
-              if (n == null || n <= 0) return 'Enter a valid price';
+              if (n == null || n <= 0) return l.productFormPriceInvalid;
               return null;
             },
           ),
@@ -208,9 +220,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           // ── Description ───────────────────────────────────────
           TextFormField(
             controller: _descCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Description',
-              hintText: 'Optional product description',
+            decoration: InputDecoration(
+              labelText: l.productFormDescLabel,
+              hintText: l.productFormDescHint,
             ),
             textCapitalization: TextCapitalization.sentences,
             maxLines: 3,
@@ -225,9 +237,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 child: TextFormField(
                   controller: _stockCtrl,
                   enabled: !_unlimited,
-                  decoration: const InputDecoration(
-                    labelText: 'Stock quantity',
-                    hintText: 'e.g. 10',
+                  decoration: InputDecoration(
+                    labelText: l.productFormStockLabel,
+                    hintText: l.productFormStockHint,
                   ),
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -235,7 +247,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     if (_unlimited) return null;
                     if (v != null && v.trim().isNotEmpty) {
                       final n = int.tryParse(v.trim());
-                      if (n == null || n < 0) return 'Enter 0 or more';
+                      if (n == null || n < 0) return l.productFormStockInvalid;
                     }
                     return null;
                   },
@@ -244,8 +256,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
               const SizedBox(width: 16),
               Column(
                 children: [
-                  const Text('Unlimited',
-                      style: TextStyle(fontSize: 12)),
+                  Text(l.stockUnlimited,
+                      style: const TextStyle(fontSize: 12)),
                   Switch(
                     value: _unlimited,
                     onChanged: (v) => setState(() {
@@ -261,12 +273,44 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           const SizedBox(height: 16),
 
           // ── Prep time ─────────────────────────────────────────
-          TextFormField(
-            controller: _prepCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Preparation time',
-              hintText: 'e.g. 1 day, 2 hours',
-            ),
+          Row(
+            children: [
+              SizedBox(
+                width: 80,
+                child: TextFormField(
+                  initialValue: _prepTimeValue,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: l.productFormTimeLabel,
+                    hintText: '2',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onChanged: (v) => setState(() => _prepTimeValue = v),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  // ignore: deprecated_member_use
+                  value: _prepTimeUnit,
+                  decoration: InputDecoration(
+                    labelText: l.productFormUnitLabel,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  items: [
+                    DropdownMenuItem(value: 'minutes', child: Text(l.prepUnitMinutes)),
+                    DropdownMenuItem(value: 'hours', child: Text(l.prepUnitHours)),
+                    DropdownMenuItem(value: 'days', child: Text(l.prepUnitDays)),
+                    DropdownMenuItem(value: 'weeks', child: Text(l.prepUnitWeeks)),
+                  ],
+                  onChanged: (v) => setState(() => _prepTimeUnit = v ?? 'hours'),
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 8),
@@ -274,11 +318,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           // ── Active toggle ─────────────────────────────────────
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Active'),
+            title: Text(l.commonActive),
             subtitle: Text(
-              _active
-                  ? 'Product is visible in the bot catalog'
-                  : 'Product is hidden from customers',
+              _active ? l.productFormActiveOn : l.productFormActiveOff,
               style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
             value: _active,
@@ -292,7 +334,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
             onPressed: _saving ? null : _save,
             style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14)),
-            child: Text(widget.isEditing ? 'Save changes' : 'Create product'),
+            child: Text(widget.isEditing ? l.buttonSaveChanges : l.productFormCreate),
           ),
 
           const SizedBox(height: 32),

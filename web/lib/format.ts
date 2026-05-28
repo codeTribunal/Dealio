@@ -20,19 +20,38 @@ export function formatDateTime(dateString: string): string {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   })
 }
 
-export function formatRelativeTime(dateString: string): string {
+export function formatTime(dateString: string): string {
+  const date = new Date(dateString)
+  return date.toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
+type TFn = (key: string, params?: Record<string, string | number>) => string
+
+export function formatRelativeTime(dateString: string, t?: TFn): string {
   const date = new Date(dateString)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
-  if (diffDays === 0) return 'Today'
-  if (diffDays === 1) return 'Yesterday'
-  if (diffDays < 7) return `${diffDays}d ago`
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`
+  if (!t) {
+    if (diffDays === 0) return 'Today'
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 7) return `${diffDays}d ago`
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`
+    return formatDate(dateString)
+  }
+  if (diffDays === 0) return t('common.today')
+  if (diffDays === 1) return t('common.yesterday')
+  if (diffDays < 7) return t('common.daysAgo', { count: diffDays })
+  if (diffDays < 30) return t('common.weeksAgo', { count: Math.floor(diffDays / 7) })
   return formatDate(dateString)
 }
 

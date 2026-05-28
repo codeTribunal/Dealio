@@ -41,5 +41,16 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- url_launcher: open calendar subscription links (Google Calendar over
+             https, Apple Calendar over webcal://). Required for canLaunchUrl on
+             Android 11+ (API 30+) package visibility. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="webcal"/>
+        </intent>
     </queries>
 </manifest>

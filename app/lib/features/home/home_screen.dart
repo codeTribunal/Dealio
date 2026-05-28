@@ -8,8 +8,11 @@ import 'package:intl/intl.dart';
 import '../../core/api/api_service.dart';
 import '../../core/auth/auth_notifier.dart';
 import '../../core/models/customer.dart';
+import '../../core/providers/business_provider.dart';
 import '../../core/models/order.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
+import '../../shared/utils/status_labels.dart';
 import 'home_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -17,6 +20,7 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final homeAsync = ref.watch(homeProvider);
     final auth = ref.watch(authNotifierProvider);
 
@@ -26,12 +30,12 @@ class HomeScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.bar_chart_outlined),
-            tooltip: 'Analytics',
+            tooltip: l.navAnalytics,
             onPressed: () => context.push('/analytics'),
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
+            tooltip: l.navSettings,
             onPressed: () => context.push('/settings'),
           ),
         ],
@@ -86,7 +90,7 @@ class HomeScreen extends ConsumerWidget {
                 // Needs attention
                 if (data.hasAttentionItems) ...[
                   _SectionHeader(
-                    title: 'Needs attention',
+                    title: l.homeNeedsAttention,
                     count: data.overdueReminders.length +
                         data.dormantCustomers.length,
                     color: Colors.orange,
@@ -103,7 +107,7 @@ class HomeScreen extends ConsumerWidget {
 
                 // Today's activity — unified feed
                 _SectionHeader(
-                  title: "Today's activity",
+                  title: l.homeTodaysActivity,
                   count: activityItems.length,
                   color: Theme.of(context).colorScheme.primary,
                 ),
@@ -200,6 +204,7 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final primary = Theme.of(context).colorScheme.primary;
 
     return Column(
@@ -229,7 +234,7 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
               fontWeight: FontWeight.w400,
             ),
             decoration: InputDecoration(
-              hintText: 'Search customers...',
+              hintText: l.homeSearchHint,
               hintStyle: TextStyle(
                 fontSize: 15,
                 color: Colors.grey.shade400,
@@ -273,13 +278,13 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
                         ),
                       )
                     : _searchResults.isEmpty
-                        ? const SizedBox(
+                        ? SizedBox(
                             height: 80,
                             child: Center(
                               child: Text(
-                                'No customers found',
-                                style:
-                                    TextStyle(color: Colors.grey, fontSize: 14),
+                                l.homeNoCustomersFound,
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 14),
                               ),
                             ),
                           )
@@ -291,7 +296,7 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
                               final result = _searchResults[i];
                               final subtitle = result.telegramUsername != null
                                   ? '@${result.telegramUsername}'
-                                  : result.phone ?? 'No contact info';
+                                  : result.phone ?? l.homeNoContactInfo;
                               return ListTile(
                                 leading: CircleAvatar(
                                   backgroundColor:
@@ -321,7 +326,7 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
                                   ),
                                 ),
                                 trailing: Text(
-                                  '${result.orderCount} orders',
+                                  l.homeOrdersCount(result.orderCount),
                                   style: TextStyle(
                                     color: Colors.grey[500],
                                     fontSize: 12,
@@ -349,43 +354,20 @@ class _QuickActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final business = ref.watch(authNotifierProvider).state?.business;
-    final mode = business?.mode ?? [];
-    final hasFreelance = mode.contains('FREELANCE');
+    final l = AppLocalizations.of(context)!;
+    final business = ref.watch(businessProvider).valueOrNull;
+    final modes = business?.mode ?? [];
 
-    final buttons =
-        <({String label, IconData icon, String route, int badge})>[
-      (
-        label: 'Customers',
-        icon: Icons.people_outline,
-        route: '/customers',
-        badge: 0
-      ),
-      (
-        label: 'Orders',
-        icon: Icons.receipt_outlined,
-        route: '/orders',
-        badge: 0
-      ),
-      (
-        label: 'Appointments',
-        icon: Icons.calendar_month_outlined,
-        route: '/appointments',
-        badge: 0
-      ),
-      if (hasFreelance)
-        (
-          label: 'Projects',
-          icon: Icons.work_outline,
-          route: '/projects',
-          badge: 0
-        ),
-      (
-        label: 'Catalog',
-        icon: Icons.inventory_2_outlined,
-        route: '/catalog',
-        badge: 0
-      ),
+    final buttons = <({String label, IconData icon, String route, int badge})>[
+      (label: l.navCustomers, icon: Icons.people_outline, route: '/customers', badge: 0),
+      if (modes.contains('PRODUCTS'))
+        (label: l.navOrders, icon: Icons.receipt_outlined, route: '/orders', badge: 0),
+      if (modes.contains('SERVICES'))
+        (label: l.navAppointments, icon: Icons.calendar_month_outlined, route: '/appointments', badge: 0),
+      if (modes.contains('FREELANCE'))
+        (label: l.navProjects, icon: Icons.work_outline, route: '/projects', badge: 0),
+      if (modes.contains('PRODUCTS'))
+        (label: l.navCatalog, icon: Icons.inventory_2_outlined, route: '/catalog', badge: 0),
     ];
 
     // 4 buttons → 2 per row (2+2); 5+ buttons → 3 per row
@@ -556,6 +538,7 @@ class _ReminderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final isOverdue = reminder.isOverdue;
 
     return Card(
@@ -605,7 +588,7 @@ class _ReminderCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                isOverdue ? 'Overdue' : 'Today',
+                isOverdue ? l.homeOverdue : l.commonToday,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -627,6 +610,7 @@ class _DormantCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
@@ -664,7 +648,7 @@ class _DormantCard extends StatelessWidget {
                           fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                     Text(
-                      '${customer.orderCount} order${customer.orderCount != 1 ? 's' : ''}',
+                      l.homeOrdersCount(customer.orderCount),
                       style: TextStyle(
                           color: Colors.grey[500], fontSize: 11),
                     ),
@@ -672,7 +656,7 @@ class _DormantCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '${customer.daysSince}d silent',
+                l.homeDaysSilent(customer.daysSince),
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
@@ -730,6 +714,7 @@ class _OrderActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final color =
         _statusColor[order.orderStatus] ?? const Color(0xFF6B7280);
     final firstItem =
@@ -752,7 +737,7 @@ class _OrderActivityCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
-          order.orderStatus,
+          orderStatusLabel(l, order.orderStatus),
           style: TextStyle(
               color: color, fontSize: 11, fontWeight: FontWeight.w600),
         ),
@@ -768,6 +753,7 @@ class _AppointmentActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final time = DateFormat('HH:mm').format(appt.startTime.toLocal());
     return _activityCard(
       context: context,
@@ -775,7 +761,7 @@ class _AppointmentActivityCard extends StatelessWidget {
       iconColor: Colors.green,
       title: appt.customerName,
       subtitle: '${appt.serviceName} • $time',
-      trailing: Text('Appointment',
+      trailing: Text(l.homeBadgeAppointment,
           style: TextStyle(color: Colors.grey[600], fontSize: 12)),
       onTap: () => context.push('/appointments'),
     );
@@ -788,14 +774,15 @@ class _CancellationActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return _activityCard(
       context: context,
       icon: Icons.cancel_outlined,
       iconColor: Colors.red,
       title: appt.customerName,
-      subtitle: '${appt.serviceName} — cancelled',
-      trailing: const Text('Cancelled',
-          style: TextStyle(color: Colors.red, fontSize: 12)),
+      subtitle: l.homeActivityCancelled(appt.serviceName),
+      trailing: Text(l.appointmentStatusCancelled,
+          style: const TextStyle(color: Colors.red, fontSize: 12)),
       onTap: () => context.push('/appointments'),
     );
   }
@@ -807,13 +794,14 @@ class _ProjectActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return _activityCard(
       context: context,
       icon: Icons.work_outline,
       iconColor: Colors.purple,
       title: project.name,
-      subtitle: 'New project • ${project.customerName}',
-      trailing: Text('Project',
+      subtitle: l.homeActivityNewProject(project.customerName),
+      trailing: Text(l.homeBadgeProject,
           style: TextStyle(color: Colors.grey[600], fontSize: 12)),
       onTap: () => context.push('/projects/${project.id}'),
     );
@@ -826,13 +814,14 @@ class _MilestoneActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return _activityCard(
       context: context,
       icon: Icons.check_circle_outline,
       iconColor: Colors.orange,
       title: milestone.milestoneName,
-      subtitle: 'Approved • ${milestone.projectName}',
-      trailing: Text('Milestone',
+      subtitle: l.homeActivityMilestoneApproved(milestone.projectName),
+      trailing: Text(l.homeBadgeMilestone,
           style: TextStyle(color: Colors.grey[600], fontSize: 12)),
       onTap: () => context.push('/projects/${milestone.projectId}'),
     );
@@ -853,7 +842,7 @@ class _EmptyActivity extends StatelessWidget {
           Icon(Icons.inbox_outlined, size: 40, color: Colors.grey[300]),
           const SizedBox(height: 8),
           Text(
-            'No activity today',
+            AppLocalizations.of(context)!.homeNoActivity,
             style: TextStyle(color: Colors.grey[500], fontSize: 13),
           ),
         ],
@@ -879,7 +868,7 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(onPressed: onRetry, child: Text(AppLocalizations.of(context)!.buttonRetry)),
           ],
         ),
       ),

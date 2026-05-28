@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { isAuthenticated } from '@/lib/auth'
+import { useBusiness } from '@/lib/businessContext'
+import { useI18n, enumToCode, hasLocaleCookie } from '@/lib/i18n/i18nContext'
 import Sidebar from './Sidebar'
 import { Menu, X } from 'lucide-react'
 
@@ -15,6 +17,8 @@ export default function AuthLayout({
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [checked, setChecked] = useState(false)
+  const { business } = useBusiness()
+  const { setLocale } = useI18n()
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -23,6 +27,14 @@ export default function AuthLayout({
       setChecked(true)
     }
   }, [router])
+
+  // Sync dashboard language to the business language on first load, unless the
+  // user has already picked a language manually (cookie set).
+  useEffect(() => {
+    if (business && !hasLocaleCookie()) {
+      setLocale(enumToCode(business.language))
+    }
+  }, [business, setLocale])
 
   if (!checked) return null
 

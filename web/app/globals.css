@@ -26,3 +26,12 @@ body {
     text-wrap: balance;
   }
 }
+
+/* Force 24h on any native time inputs (backup; the appointment form uses
+   locale-independent number inputs instead). */
+input[type="time"]::-webkit-datetime-edit-ampm-field {
+  display: none;
+}
+input[type="time"] {
+  -webkit-appearance: none;
+}

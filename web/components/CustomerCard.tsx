@@ -1,5 +1,7 @@
+'use client'
 import Link from 'next/link'
 import { formatUZS, formatRelativeTime, getInitials } from '@/lib/format'
+import { useI18n } from '@/lib/i18n/i18nContext'
 import type { Customer } from '@/types'
 
 interface CustomerCardProps {
@@ -7,6 +9,7 @@ interface CustomerCardProps {
 }
 
 export default function CustomerCard({ customer }: CustomerCardProps) {
+  const { t } = useI18n()
   return (
     <Link
       href={`/customers/${customer.id}`}
@@ -33,7 +36,7 @@ export default function CustomerCard({ customer }: CustomerCardProps) {
           <p className="text-sm text-gray-900 font-medium">
             {!customer.totalOrders
               ? '—'
-              : `${customer.totalOrders} order${customer.totalOrders === 1 ? '' : 's'}`}
+              : t('customers.ordersCount', { count: customer.totalOrders })}
           </p>
         </div>
 
@@ -47,7 +50,7 @@ export default function CustomerCard({ customer }: CustomerCardProps) {
         {/* Last active — always visible, right aligned on mobile */}
         <div className="md:col-span-3 text-right md:text-left flex-shrink-0 ml-4 md:ml-0">
           <p className="text-sm text-gray-500">
-            {formatRelativeTime(customer.lastInteractionAt)}
+            {formatRelativeTime(customer.lastInteractionAt, t)}
           </p>
         </div>
       </div>

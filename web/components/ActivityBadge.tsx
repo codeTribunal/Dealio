@@ -1,9 +1,5 @@
-import {
-  formatOrderStatus,
-  formatPaymentStatus,
-  formatAppointmentStatus,
-  formatProjectStatus,
-} from '@/lib/format'
+'use client'
+import { useI18n } from '@/lib/i18n/i18nContext'
 
 interface ActivityBadgeProps {
   status: string
@@ -41,22 +37,20 @@ const projectColors: Record<string, string> = {
 }
 
 export default function ActivityBadge({ status, type }: ActivityBadgeProps) {
+  const { t } = useI18n()
   let colorClass = 'bg-gray-50 text-gray-700'
-  let label = status
 
   if (type === 'order') {
     colorClass = orderColors[status] || colorClass
-    label = formatOrderStatus(status)
   } else if (type === 'payment') {
     colorClass = paymentColors[status] || colorClass
-    label = formatPaymentStatus(status)
   } else if (type === 'appointment') {
     colorClass = appointmentColors[status] || colorClass
-    label = formatAppointmentStatus(status)
   } else if (type === 'project') {
     colorClass = projectColors[status] || colorClass
-    label = formatProjectStatus(status)
   }
+
+  const label = t(`status.${status}`)
 
   return (
     <span

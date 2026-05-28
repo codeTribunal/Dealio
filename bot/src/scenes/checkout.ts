@@ -1,18 +1,21 @@
 import { InlineKeyboard } from 'grammy';
 import { type Conversation } from '@grammyjs/conversations';
 import { MyContext } from '../lib/types.js';
-import { upsertCustomer, createOrder, getCheckoutQuestions } from '../lib/api.js';
-import { getBotUsername } from '../lib/botContext.js';
-import { formatUZS, buildOrderSummary } from '../lib/format.js';
+import { upsertCustomer, createOrder, getCheckoutQuestions, SuspendedError } from '../lib/api.js';
+import { buildOrderSummary } from '../lib/format.js';
+import { t, formatMoney, type Lang } from '../lib/i18n.js';
 
 export type MyConversation = Conversation<MyContext>;
 
 export async function checkoutConversation(conversation: MyConversation, ctx: MyContext) {
+  // Capture at conversation entry — available in all conversation.external() closures below
+  const botUsername = ctx.botUsername;
   const cart = ctx.session.cart;
+  const lang: Lang = ctx.session.lang ?? 'UZBEK';
 
   if (cart.length === 0) {
-    await ctx.reply('Your cart is empty. Browse the catalog first!', {
-      reply_markup: new InlineKeyboard().text('🛍 Browse catalog', 'catalog'),
+    await ctx.reply(t(lang, 'cartEmptyCheckout'), {
+      reply_markup: new InlineKeyboard().text(t(lang, 'browseCatalog'), 'catalog'),
     });
     return;
   }
@@ -23,28 +26,28 @@ export async function checkoutConversation(conversation: MyConversation, ctx: My
     : null;
 
   const nameKeyboard = tgName
-    ? new InlineKeyboard().text(`Use: ${tgName}`, 'use_tg_name')
+    ? new InlineKeyboard().text(t(lang, 'useThisName', { name: tgName }), 'use_tg_name')
     : undefined;
 
-  await ctx.reply('What is your name?', { reply_markup: nameKeyboard });
+  await ctx.reply(t(lang, 'askNameQ'), { reply_markup: nameKeyboard });
 
   let name: string;
   const nameCtx = await conversation.waitFor(['message:text', 'callback_query:data']);
   if (nameCtx.callbackQuery?.data === 'use_tg_name') {
     name = tgName ?? 'Customer';
     await nameCtx.answerCallbackQuery();
-    await nameCtx.reply(`Name: <b>${name}</b>`, { parse_mode: 'HTML' });
+    await nameCtx.reply(t(lang, 'nameSetLabel', { name }), { parse_mode: 'HTML' });
   } else if (nameCtx.message?.text) {
     name = nameCtx.message.text.trim();
   } else {
-    await ctx.reply('Please enter your name as text.');
+    await ctx.reply(t(lang, 'enterNameText'));
     return;
   }
 
   // ── Step 2: Phone ─────────────────────────────────────────────
-  await ctx.reply('Your phone number? (e.g. +998901234567)\n\nOr tap the button below:', {
+  await ctx.reply(t(lang, 'askPhoneFull'), {
     reply_markup: {
-      keyboard: [[{ text: '📱 Share my contact', request_contact: true }]],
+      keyboard: [[{ text: t(lang, 'shareContact'), request_contact: true }]],
       resize_keyboard: true,
       one_time_keyboard: true,
     },
@@ -55,20 +58,20 @@ export async function checkoutConversation(conversation: MyConversation, ctx: My
   if (phoneCtx.message?.contact) {
     phone = phoneCtx.message.contact.phone_number;
     if (!phone.startsWith('+')) phone = '+' + phone;
-    await phoneCtx.reply(`Phone: <b>${phone}</b>`, { parse_mode: 'HTML', reply_markup: { remove_keyboard: true } });
+    await phoneCtx.reply(t(lang, 'phoneSetLabel', { phone }), { parse_mode: 'HTML', reply_markup: { remove_keyboard: true } });
   } else if (phoneCtx.message?.text) {
     phone = phoneCtx.message.text.trim();
-    await phoneCtx.reply(`Phone: <b>${phone}</b>`, { parse_mode: 'HTML', reply_markup: { remove_keyboard: true } });
+    await phoneCtx.reply(t(lang, 'phoneSetLabel', { phone }), { parse_mode: 'HTML', reply_markup: { remove_keyboard: true } });
   } else {
-    await ctx.reply('Please enter your phone number.', { reply_markup: { remove_keyboard: true } });
+    await ctx.reply(t(lang, 'enterPhoneText'), { reply_markup: { remove_keyboard: true } });
     return;
   }
 
   // ── Step 3: Delivery method ───────────────────────────────────
-  await ctx.reply('How would you like to receive your order?', {
+  await ctx.reply(t(lang, 'askDelivery'), {
     reply_markup: new InlineKeyboard()
-      .text('🏪 Pickup', 'delivery:PICKUP')
-      .text('🚚 Delivery', 'delivery:DELIVERY'),
+      .text(t(lang, 'pickup'), 'delivery:PICKUP')
+      .text(t(lang, 'delivery'), 'delivery:DELIVERY'),
   });
 
   const deliveryCtx = await conversation.waitForCallbackQuery(['delivery:PICKUP', 'delivery:DELIVERY']);
@@ -78,21 +81,21 @@ export async function checkoutConversation(conversation: MyConversation, ctx: My
   // ── Step 4: Address (if delivery) ─────────────────────────────
   let deliveryAddress: string | undefined;
   if (deliveryMethod === 'DELIVERY') {
-    await ctx.reply('Please enter your delivery address:');
+    await ctx.reply(t(lang, 'askAddress'));
     const addressCtx = await conversation.waitFor('message:text');
     deliveryAddress = addressCtx.message?.text?.trim();
   }
 
   // ── Step 4b: Custom checkout questions ────────────────────────
   const customAnswers: Record<string, string> = {};
-  const questions = await conversation.external(() => getCheckoutQuestions(getBotUsername()));
+  const questions = await conversation.external(() => getCheckoutQuestions(botUsername));
 
   for (const q of questions) {
     await ctx.reply(q.required ? `${q.question} *` : q.question);
     const ansCtx = await conversation.waitFor('message:text');
     const answer = ansCtx.message?.text?.trim() ?? '';
     if (q.required && answer.length === 0) {
-      await ctx.reply('This field is required. Please provide an answer.');
+      await ctx.reply(t(lang, 'fieldRequired'));
       const retryCtx = await conversation.waitFor('message:text');
       customAnswers[q.id] = retryCtx.message?.text?.trim() ?? '';
     } else {
@@ -101,28 +104,28 @@ export async function checkoutConversation(conversation: MyConversation, ctx: My
   }
 
   // ── Step 5: Confirm order ─────────────────────────────────────
-  const summary = buildOrderSummary(cart, name, phone, deliveryMethod, deliveryAddress);
+  const summary = buildOrderSummary(cart, name, phone, deliveryMethod, lang, deliveryAddress);
 
   await ctx.reply(summary, {
     parse_mode: 'HTML',
     reply_markup: new InlineKeyboard()
-      .text('✅ Confirm order', 'confirm_order')
+      .text(t(lang, 'confirmOrder'), 'confirm_order')
       .row()
-      .text('❌ Cancel', 'cancel_order'),
+      .text(t(lang, 'cancel'), 'cancel_order'),
   });
 
   const confirmCtx = await conversation.waitForCallbackQuery(['confirm_order', 'cancel_order']);
   await confirmCtx.answerCallbackQuery();
 
   if (confirmCtx.callbackQuery.data === 'cancel_order') {
-    await ctx.reply('Order cancelled. Your cart is still saved.', {
-      reply_markup: new InlineKeyboard().text('🛒 View cart', 'cart'),
+    await ctx.reply(t(lang, 'orderCancelledSaved'), {
+      reply_markup: new InlineKeyboard().text(t(lang, 'viewCart'), 'cart'),
     });
     return;
   }
 
   // ── Step 6: Create order via API ──────────────────────────────
-  await ctx.reply('⏳ Creating your order...');
+  await ctx.reply(t(lang, 'creatingOrder'));
 
   let result: Awaited<ReturnType<typeof createOrder>>;
   let customerId: string;
@@ -130,7 +133,7 @@ export async function checkoutConversation(conversation: MyConversation, ctx: My
   try {
     const customer = await conversation.external(() =>
       upsertCustomer({
-        botUsername: getBotUsername(),
+        botUsername,
         telegramUserId: String(ctx.from!.id),
         telegramUsername: ctx.from?.username,
         name,
@@ -141,7 +144,7 @@ export async function checkoutConversation(conversation: MyConversation, ctx: My
 
     result = await conversation.external(() =>
       createOrder({
-        botUsername: getBotUsername(),
+        botUsername,
         customerId,
         items: cart.map((i) => ({
           productId: i.productId,
@@ -155,9 +158,13 @@ export async function checkoutConversation(conversation: MyConversation, ctx: My
       }),
     );
   } catch (e: unknown) {
+    if (e instanceof SuspendedError) {
+      await ctx.reply(t(lang, 'suspended'));
+      return;
+    }
     const msg = e instanceof Error ? e.message : String(e);
     console.error('[checkout] order creation failed:', e);
-    await ctx.reply(`Something went wrong creating your order: ${msg}`);
+    await ctx.reply(t(lang, 'orderCreateError', { msg }));
     return;
   }
 
@@ -169,7 +176,7 @@ export async function checkoutConversation(conversation: MyConversation, ctx: My
   // ── Step 7: Payment instructions ─────────────────────────────
   if (!paymentInstructions) {
     await ctx.reply(
-      `✅ <b>Order #${order.orderNumber} placed!</b>\n\nWe will contact you to confirm payment.`,
+      t(lang, 'orderPlacedNoPayment', { number: order.orderNumber }),
       { parse_mode: 'HTML' },
     );
     return;
@@ -178,15 +185,15 @@ export async function checkoutConversation(conversation: MyConversation, ctx: My
   const { cardNumber, cardBank, amount, orderNumber } = paymentInstructions;
 
   await ctx.reply(
-    `✅ <b>Order #${orderNumber} placed!</b>\n\n` +
-      `Please transfer <b>${formatUZS(amount)}</b> to:\n\n` +
-      `<code>${cardNumber}</code>\n` +
-      `Bank: <b>${cardBank}</b>\n\n` +
-      `⚠️ Write <b>#${orderNumber}</b> in the payment comment.\n\n` +
-      `After transferring, tap the button below:`,
+    t(lang, 'orderPlacedPayment', {
+      number: orderNumber,
+      amount: formatMoney(lang, amount),
+      card: cardNumber,
+      bank: cardBank,
+    }),
     {
       parse_mode: 'HTML',
-      reply_markup: new InlineKeyboard().text('✅ I have paid', `paid:${order.id}`),
+      reply_markup: new InlineKeyboard().text(t(lang, 'iHavePaid'), `paid:${order.id}`),
     },
   );
 }

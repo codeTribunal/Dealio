@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/models/customer.dart' show Customer, CustomerStage;
+import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import 'customers_provider.dart';
 
@@ -24,11 +25,12 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final notifier = ref.read(customersProvider.notifier);
     final customersAsync = ref.watch(customersProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Customers')),
+      appBar: AppBar(title: Text(l.customersTitle)),
       body: Column(
         children: [
           // ── Search bar ────────────────────────────────────────
@@ -37,7 +39,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search by name, @handle or phone',
+                hintText: l.customersSearchHint,
                 prefixIcon: const Icon(Icons.search, size: 20),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
@@ -103,6 +105,7 @@ class _CustomerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Card(
       margin: EdgeInsets.zero,
       child: InkWell(
@@ -165,7 +168,7 @@ class _CustomerCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${customer.orderCount} order${customer.orderCount != 1 ? 's' : ''}',
+                    l.homeOrdersCount(customer.orderCount),
                     style: const TextStyle(
                         fontWeight: FontWeight.w500, fontSize: 12),
                   ),
@@ -235,6 +238,7 @@ class _EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -242,13 +246,13 @@ class _EmptyView extends StatelessWidget {
           Icon(Icons.people_outline, size: 56, color: Colors.grey[300]),
           const SizedBox(height: 12),
           Text(
-            hasFilter ? 'No customers match your search' : 'No customers yet',
+            hasFilter ? l.customersEmptyFiltered : l.customersEmpty,
             style: TextStyle(color: Colors.grey[600]),
           ),
           if (!hasFilter) ...[
             const SizedBox(height: 6),
             Text(
-              'Customers are added when they order through the bot',
+              l.customersEmptyHint,
               style: TextStyle(color: Colors.grey[400], fontSize: 12),
               textAlign: TextAlign.center,
             ),
@@ -276,7 +280,7 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(onPressed: onRetry, child: Text(AppLocalizations.of(context)!.buttonRetry)),
           ],
         ),
       ),

@@ -27,6 +27,8 @@ export interface SessionData {
   cart: CartItem[];
   customerId?: string;
   booking?: BookingState;
+  /** Cached customer language preference for this chat (UZBEK | RUSSIAN | ENGLISH). */
+  lang?: 'UZBEK' | 'RUSSIAN' | 'ENGLISH';
 }
 
 export interface ApiService {
@@ -76,7 +78,12 @@ export interface ApiAppointmentResult {
   ownerTelegramChatId: string | null;
 }
 
-export type MyContext = Context & ConversationFlavor & SessionFlavor<SessionData>;
+export type MyContext = Context &
+  ConversationFlavor &
+  SessionFlavor<SessionData> & {
+    businessId: string;
+    botUsername: string;
+  };
 
 export interface ApiProduct {
   id: string;
@@ -92,13 +99,14 @@ export interface ApiProduct {
 
 export interface ApiBusiness {
   name: string;
-  language: 'UZBEK' | 'RUSSIAN';
+  language: 'UZBEK' | 'RUSSIAN' | 'ENGLISH';
   mode: string[];
 }
 
 export interface ApiCustomer {
   id: string;
   name: string;
+  languagePreference?: 'UZBEK' | 'RUSSIAN' | 'ENGLISH' | null;
 }
 
 export interface ApiOrder {

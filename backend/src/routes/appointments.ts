@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/auth.js';
 import { getBusinessOrFail } from '../lib/businessFromUser.js';
 import { sendError } from '../lib/errors.js';
 import { computeAvailableSlots } from '../services/availability.js';
+import { checkAppointmentLimit } from '../middleware/checkLimits.js';
 
 const createAppointmentBody = z.object({
   customerId: z.string(),
@@ -59,7 +60,7 @@ export default async function appointmentRoutes(app: FastifyInstance) {
     return reply.send(appointments);
   });
 
-  app.post('/appointments', { preHandler: authenticate }, async (request, reply) => {
+  app.post('/appointments', { preHandler: [authenticate, checkAppointmentLimit()] }, async (request, reply) => {
     const business = await getBusinessOrFail(request.user.userId, reply);
     if (!business) return;
 

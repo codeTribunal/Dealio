@@ -10,7 +10,7 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    final token = _ref.read(authNotifierProvider).token;
+    final token = _ref.read(authNotifierProvider).state?.token;
     if (token != null) {
       options.headers['Authorization'] = 'Bearer $token';
     }

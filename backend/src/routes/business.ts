@@ -5,6 +5,8 @@ import { authenticate } from '../middleware/auth.js';
 import { getBusinessOrFail } from '../lib/businessFromUser.js';
 import { sendError } from '../lib/errors.js';
 import { encryptBotToken } from '../lib/crypto.js';
+import { generateCalendarToken } from '../lib/calendarToken.js';
+import { mergeReminderSettings } from '../lib/reminderDefaults.js';
 
 // Fields returned to the app owner — never includes any token fields
 const SAFE_BUSINESS_SELECT = {
@@ -17,6 +19,7 @@ const SAFE_BUSINESS_SELECT = {
   cardNumber: true,
   cardBank: true,
   botUsername: true,
+  calendarToken: true,
   workingHours: true,
   ownerTelegramChatId: true,
   ownerId: true,
@@ -31,7 +34,7 @@ const createBusinessBody = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
   mode: z.array(z.enum(['PRODUCTS', 'SERVICES', 'FREELANCE'])).min(1),
-  language: z.enum(['UZBEK', 'RUSSIAN']).optional(),
+  language: z.enum(['UZBEK', 'RUSSIAN', 'ENGLISH']).optional(),
   cardNumber: z.string().min(16).max(20).optional(),
   cardBank: z.enum(['UZCARD', 'HUMO']).optional(),
   ownerTelegramChatId: z.string().optional(),
@@ -44,7 +47,7 @@ const updateBusinessBody = z.object({
   description: z.string().max(500).optional(),
   photoUrl: z.string().url().optional(),
   mode: z.array(z.enum(['PRODUCTS', 'SERVICES', 'FREELANCE'])).min(1).optional(),
-  language: z.enum(['UZBEK', 'RUSSIAN']).optional(),
+  language: z.enum(['UZBEK', 'RUSSIAN', 'ENGLISH']).optional(),
   workingHours: z.record(z.any()).optional(),
   botToken: z.string().optional(),
   botUsername: z.string().optional(),
@@ -56,6 +59,17 @@ const updateBusinessBody = z.object({
 const updatePaymentBody = z.object({
   cardNumber: z.string().min(16).max(20),
   cardBank: z.enum(['UZCARD', 'HUMO']),
+});
+
+const reminderSettingsSchema = z.object({
+  appointmentEnabled: z.boolean().optional(),
+  appointmentHoursBefore: z.number().int().min(1).max(168).optional(),
+  appointmentSecondEnabled: z.boolean().optional(),
+  appointmentSecondHoursBefore: z.number().int().min(1).max(48).optional(),
+  deliveryEnabled: z.boolean().optional(),
+  deliveryHoursBefore: z.number().int().min(1).max(168).optional(),
+  deadlineEnabled: z.boolean().optional(),
+  deadlineHoursBefore: z.number().int().min(1).max(336).optional(),
 });
 
 function buildTokenData(botToken: string | undefined) {
@@ -160,5 +174,67 @@ export default async function businessRoutes(app: FastifyInstance) {
       botUsername: business.botUsername,
       botLink: `https://t.me/${business.botUsername}`,
     });
+  });
+
+  // POST /business/calendar-token
+  // Generates a new calendar token (or regenerates the existing one)
+  app.post('/business/calendar-token', { preHandler: authenticate }, async (request, reply) => {
+    const business = await getBusinessOrFail(request.user.userId, reply);
+    if (!business) return;
+
+    const newToken = generateCalendarToken();
+
+    const updated = await prisma.business.update({
+      where: { id: business.id },
+      data: { calendarToken: newToken },
+      select: { calendarToken: true },
+    });
+
+    return reply.send({ calendarToken: updated.calendarToken });
+  });
+
+  // DELETE /business/calendar-token
+  // Disables calendar sync by removing the token
+  app.delete('/business/calendar-token', { preHandler: authenticate }, async (request, reply) => {
+    const business = await getBusinessOrFail(request.user.userId, reply);
+    if (!business) return;
+
+    await prisma.business.update({
+      where: { id: business.id },
+      data: { calendarToken: null },
+    });
+
+    return reply.send({ success: true });
+  });
+
+  // GET /business/reminder-settings
+  // Owner reminder settings, merged with defaults for any missing keys.
+  app.get('/business/reminder-settings', { preHandler: authenticate }, async (request, reply) => {
+    const business = await getBusinessOrFail(request.user.userId, reply);
+    if (!business) return;
+
+    return reply.send(mergeReminderSettings(business.reminderSettings));
+  });
+
+  // PATCH /business/reminder-settings
+  // Partial update — merges the provided keys onto the stored settings.
+  app.patch('/business/reminder-settings', { preHandler: authenticate }, async (request, reply) => {
+    const business = await getBusinessOrFail(request.user.userId, reply);
+    if (!business) return;
+
+    const parsed = reminderSettingsSchema.safeParse(request.body);
+    if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
+
+    const merged = {
+      ...mergeReminderSettings(business.reminderSettings),
+      ...parsed.data,
+    };
+
+    await prisma.business.update({
+      where: { id: business.id },
+      data: { reminderSettings: merged },
+    });
+
+    return reply.send(merged);
   });
 }

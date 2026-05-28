@@ -1,33 +1,42 @@
 import { InlineKeyboard } from 'grammy';
 import { MyContext, ApiProject } from '../lib/types.js';
-import { getCustomerProjects, approveMilestone } from '../lib/api.js';
-import { getBotUsername } from '../lib/botContext.js';
-import { formatUZS, formatDateTZ } from '../lib/format.js';
+import { getCustomerProjects, approveMilestone, SuspendedError } from '../lib/api.js';
+import { formatDateTZ } from '../lib/format.js';
+import {
+  t,
+  formatMoney,
+  tProjectStatus,
+  tMilestoneStatus,
+  type Lang,
+} from '../lib/i18n.js';
+import { getLang } from '../lib/lang.js';
 
-const STATUS_LABEL: Record<string, string> = {
-  PROPOSAL_SENT: '📋 Proposal sent',
-  IN_PROGRESS: '🔧 In progress',
-  REVIEW: '🔍 In review',
-  COMPLETED: '✅ Completed',
-  CANCELLED: '❌ Cancelled',
+const STATUS_EMOJI: Record<string, string> = {
+  PROPOSAL_SENT: '📋',
+  IN_PROGRESS: '🔧',
+  REVIEW: '🔍',
+  COMPLETED: '✅',
+  CANCELLED: '❌',
 };
 
-const MILESTONE_STATUS_LABEL: Record<string, string> = {
-  PENDING: '⏳ Pending',
-  SUBMITTED_FOR_REVIEW: '🔍 Awaiting your review',
-  APPROVED: '✅ Approved',
-  PAYMENT_RECEIVED: '💰 Payment received',
+const MILESTONE_STATUS_EMOJI: Record<string, string> = {
+  PENDING: '⏳',
+  SUBMITTED_FOR_REVIEW: '🔍',
+  APPROVED: '✅',
+  PAYMENT_RECEIVED: '💰',
 };
 
-function formatProject(project: ApiProject): string {
+function formatProject(lang: Lang, project: ApiProject): string {
   const lines: string[] = [];
   lines.push(`<b>${project.name}</b>`);
-  lines.push(`Status: ${STATUS_LABEL[project.status] ?? project.status}`);
+  lines.push(
+    `${t(lang, 'labelStatus')}: ${STATUS_EMOJI[project.status] ?? ''} ${tProjectStatus(lang, project.status)}`,
+  );
 
   if (project.deadline) {
-    lines.push(`Deadline: ${formatDateTZ(project.deadline)}`);
+    lines.push(`${t(lang, 'labelDeadline')}: ${formatDateTZ(project.deadline)}`);
   }
-  lines.push(`Total: <b>${formatUZS(project.totalPrice)}</b>`);
+  lines.push(`${t(lang, 'labelTotalProject')}: <b>${formatMoney(lang, project.totalPrice)}</b>`);
 
   if (project.description) {
     lines.push('');
@@ -36,28 +45,28 @@ function formatProject(project: ApiProject): string {
 
   if (project.milestones.length > 0) {
     lines.push('');
-    lines.push('<b>Milestones:</b>');
+    lines.push(`<b>${t(lang, 'labelMilestones')}:</b>`);
     for (const m of project.milestones) {
-      const dueStr = m.dueDate ? ` • Due ${formatDateTZ(m.dueDate)}` : '';
-      lines.push(`  • ${m.name} — ${formatUZS(m.amount)}${dueStr}`);
-      lines.push(`    ${MILESTONE_STATUS_LABEL[m.status] ?? m.status}`);
+      const dueStr = m.dueDate ? ` • ${t(lang, 'dueShort', { date: formatDateTZ(m.dueDate) })}` : '';
+      lines.push(`  • ${m.name} — ${formatMoney(lang, m.amount)}${dueStr}`);
+      lines.push(`    ${MILESTONE_STATUS_EMOJI[m.status] ?? ''} ${tMilestoneStatus(lang, m.status)}`);
     }
   }
 
   if (project.invoices.length > 0) {
     lines.push('');
-    lines.push('<b>Invoices:</b>');
+    lines.push(`<b>${t(lang, 'labelInvoices')}:</b>`);
     for (const inv of project.invoices) {
-      const dueStr = inv.dueDate ? ` • Due ${formatDateTZ(inv.dueDate)}` : '';
-      const paid = inv.status === 'PAID' ? ' ✅' : ' ⏳ Unpaid';
-      lines.push(`  • ${inv.invoiceNumber} — ${formatUZS(inv.total)}${dueStr}${paid}`);
+      const dueStr = inv.dueDate ? ` • ${t(lang, 'dueShort', { date: formatDateTZ(inv.dueDate) })}` : '';
+      const paid = inv.status === 'PAID' ? ' ✅' : ` ⏳ ${t(lang, 'invoiceUnpaidShort')}`;
+      lines.push(`  • ${inv.invoiceNumber} — ${formatMoney(lang, inv.total)}${dueStr}${paid}`);
     }
   }
 
   return lines.join('\n');
 }
 
-function buildProjectKeyboard(project: ApiProject): InlineKeyboard {
+function buildProjectKeyboard(lang: Lang, project: ApiProject): InlineKeyboard {
   const kb = new InlineKeyboard();
 
   const pendingReview = project.milestones.filter(
@@ -67,40 +76,45 @@ function buildProjectKeyboard(project: ApiProject): InlineKeyboard {
     // Full milestone name as a label row; tapping it is a no-op
     kb.text(`📋 ${m.name}`, `ms_label:${m.id}`).row();
     // Approve and Request changes on a single row beneath the label
-    kb.text('✅ Approve', `approve_ms:${m.id}`)
-      .text('🔄 Request changes', `reject_ms:${m.id}`)
+    kb.text(t(lang, 'approveBtn'), `approve_ms:${m.id}`)
+      .text(t(lang, 'requestChangesBtn'), `reject_ms:${m.id}`)
       .row();
   }
 
-  kb.text('🔄 Refresh', 'refresh_projects');
+  kb.text(t(lang, 'refreshBtn'), 'refresh_projects');
   return kb;
 }
 
 export async function showProjects(ctx: MyContext): Promise<void> {
+  const lang = await getLang(ctx);
   const telegramUserId = String(ctx.from?.id ?? '');
   if (!telegramUserId) {
-    await ctx.reply('Could not identify you.');
+    await ctx.reply(t(lang, 'cantIdentify'));
     return;
   }
 
   let result: { projects: ApiProject[] };
   try {
-    result = await getCustomerProjects(getBotUsername(), telegramUserId);
-  } catch {
-    await ctx.reply('Could not load projects. Please try again later.');
+    result = await getCustomerProjects(ctx.botUsername, telegramUserId);
+  } catch (err) {
+    if (err instanceof SuspendedError) {
+      await ctx.reply(t(lang, 'suspended'));
+      return;
+    }
+    await ctx.reply(t(lang, 'projectsLoadError'));
     return;
   }
 
   const { projects } = result;
 
   if (projects.length === 0) {
-    await ctx.reply('You have no active projects.');
+    await ctx.reply(t(lang, 'noProjects'));
     return;
   }
 
   for (const project of projects) {
-    const text = formatProject(project);
-    const kb = buildProjectKeyboard(project);
+    const text = formatProject(lang, project);
+    const kb = buildProjectKeyboard(lang, project);
     await ctx.reply(text, { parse_mode: 'HTML', reply_markup: kb });
   }
 }
@@ -122,29 +136,39 @@ export function registerProjectHandlers(bot: import('grammy').Bot<MyContext>): v
 
   bot.callbackQuery(/^approve_ms:(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
+    const lang = await getLang(ctx);
     const milestoneId = ctx.match[1];
     try {
-      const result = await approveMilestone(getBotUsername(), milestoneId, true);
+      const result = await approveMilestone(ctx.botUsername, milestoneId, true);
       await ctx.reply(
-        `✅ You have approved <b>${result.milestone.name}</b>. The owner has been notified.`,
+        t(lang, 'milestoneApprovedMsg', { name: result.milestone.name }),
         { parse_mode: 'HTML' },
       );
-    } catch {
-      await ctx.reply('Could not approve milestone. Please try again.');
+    } catch (err) {
+      if (err instanceof SuspendedError) {
+        await ctx.reply(t(lang, 'suspended'));
+        return;
+      }
+      await ctx.reply(t(lang, 'milestoneApproveError'));
     }
   });
 
   bot.callbackQuery(/^reject_ms:(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
+    const lang = await getLang(ctx);
     const milestoneId = ctx.match[1];
     try {
-      const result = await approveMilestone(getBotUsername(), milestoneId, false);
+      const result = await approveMilestone(ctx.botUsername, milestoneId, false);
       await ctx.reply(
-        `🔄 Changes requested for <b>${result.milestone.name}</b>. The owner has been notified.`,
+        t(lang, 'milestoneRejectedMsg', { name: result.milestone.name }),
         { parse_mode: 'HTML' },
       );
-    } catch {
-      await ctx.reply('Could not send feedback. Please try again.');
+    } catch (err) {
+      if (err instanceof SuspendedError) {
+        await ctx.reply(t(lang, 'suspended'));
+        return;
+      }
+      await ctx.reply(t(lang, 'milestoneFeedbackError'));
     }
   });
 }

@@ -6,7 +6,9 @@ import 'package:intl/intl.dart';
 
 import '../../core/api/api_service.dart';
 import '../../core/models/project.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
+import '../../shared/utils/status_labels.dart';
 import 'projects_provider.dart';
 
 const _statusColor = {
@@ -17,20 +19,20 @@ const _statusColor = {
   'CANCELLED': Color(0xFFDC2626),
 };
 
-const _statusLabel = {
-  'PROPOSAL_SENT': 'Proposal sent',
-  'IN_PROGRESS': 'In progress',
-  'REVIEW': 'Review',
-  'COMPLETED': 'Completed',
-  'CANCELLED': 'Cancelled',
-};
-
-const _milestoneStatusLabel = {
-  'PENDING': 'Pending',
-  'SUBMITTED_FOR_REVIEW': 'Awaiting client review',
-  'APPROVED': 'Approved by client',
-  'PAYMENT_RECEIVED': 'Payment received',
-};
+String _milestoneStatusDetailLabel(AppLocalizations l, String status) {
+  switch (status) {
+    case 'PENDING':
+      return l.milestoneStatusPending;
+    case 'SUBMITTED_FOR_REVIEW':
+      return l.milestoneAwaitingReview;
+    case 'APPROVED':
+      return l.milestoneApprovedByClient;
+    case 'PAYMENT_RECEIVED':
+      return l.milestoneStatusPaymentReceived;
+    default:
+      return status;
+  }
+}
 
 const _milestoneStatusColor = {
   'PENDING': Color(0xFF6B7280),
@@ -39,12 +41,22 @@ const _milestoneStatusColor = {
   'PAYMENT_RECEIVED': Color(0xFF059669),
 };
 
-const _nextStatuses = [
-  ('IN_PROGRESS', 'Mark as in progress'),
-  ('REVIEW', 'Send for review'),
-  ('COMPLETED', 'Mark as completed'),
-  ('CANCELLED', 'Cancel project'),
-];
+const _nextStatusCodes = ['IN_PROGRESS', 'REVIEW', 'COMPLETED', 'CANCELLED'];
+
+String _nextStatusLabel(AppLocalizations l, String code) {
+  switch (code) {
+    case 'IN_PROGRESS':
+      return l.projectMarkInProgress;
+    case 'REVIEW':
+      return l.projectSendForReview;
+    case 'COMPLETED':
+      return l.projectMarkCompleted;
+    case 'CANCELLED':
+      return l.projectCancelProject;
+    default:
+      return code;
+  }
+}
 
 class ProjectDetailScreen extends ConsumerWidget {
   final String projectId;
@@ -52,18 +64,20 @@ class ProjectDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final projectAsync = ref.watch(projectDetailProvider(projectId));
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Project'),
+        title: Text(l.projectDetailTitle),
         actions: [
           projectAsync.when(
             data: (p) => PopupMenuButton<String>(
               onSelected: (v) => _onStatusSelected(context, ref, p, v),
-              itemBuilder: (_) => _nextStatuses
-                  .where((s) => s.$1 != p.status)
-                  .map((s) => PopupMenuItem(value: s.$1, child: Text(s.$2)))
+              itemBuilder: (_) => _nextStatusCodes
+                  .where((code) => code != p.status)
+                  .map((code) => PopupMenuItem(
+                      value: code, child: Text(_nextStatusLabel(l, code))))
                   .toList(),
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 12),
@@ -84,7 +98,7 @@ class ProjectDetailScreen extends ConsumerWidget {
               Text(e.toString()),
               TextButton(
                 onPressed: () => ref.read(projectDetailProvider(projectId).notifier).refresh(),
-                child: const Text('Retry'),
+                child: Text(l.buttonRetry),
               ),
             ],
           ),
@@ -114,8 +128,9 @@ class ProjectDetailScreen extends ConsumerWidget {
       BuildContext context, WidgetRef ref, Project project, String status) async {
     await ref.read(projectDetailProvider(projectId).notifier).updateStatus(status);
     if (context.mounted) {
+      final l = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Status updated to ${_statusLabel[status]}')),
+        SnackBar(content: Text(l.projectStatusUpdated(projectStatusLabel(l, status)))),
       );
     }
   }
@@ -127,8 +142,9 @@ class _HeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final color = _statusColor[project.status] ?? Colors.grey;
-    final label = _statusLabel[project.status] ?? project.status;
+    final label = projectStatusLabel(l, project.status);
 
     return Card(
       child: Padding(
@@ -164,37 +180,37 @@ class _HeaderCard extends StatelessWidget {
             const SizedBox(height: 12),
             _InfoRow(
               icon: Icons.person_outline,
-              label: 'Client',
+              label: l.projectClient,
               value: project.customer.name,
             ),
             if (project.customer.phone != null)
               _InfoRow(
                 icon: Icons.phone_outlined,
-                label: 'Phone',
+                label: l.projectPhone,
                 value: project.customer.phone!,
               ),
             _InfoRow(
               icon: Icons.payments_outlined,
-              label: 'Total',
+              label: l.commonTotal,
               value: formatUZS(project.totalPrice),
               bold: true,
             ),
             if (project.startDate != null)
               _InfoRow(
                 icon: Icons.play_arrow_outlined,
-                label: 'Start',
+                label: l.projectStart,
                 value: DateFormat('d MMM yyyy').format(project.startDate!),
               ),
             if (project.deadline != null)
               _InfoRow(
                 icon: Icons.flag_outlined,
-                label: 'Deadline',
+                label: l.projectDeadline,
                 value: DateFormat('d MMM yyyy').format(project.deadline!),
               ),
             if (project.description != null && project.description!.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
-                'Scope of work',
+                l.projectScope,
                 style: Theme.of(context)
                     .textTheme
                     .labelSmall
@@ -207,7 +223,7 @@ class _HeaderCard extends StatelessWidget {
                 project.paymentTerms!.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
-                'Payment terms',
+                l.projectPaymentTerms,
                 style: Theme.of(context)
                     .textTheme
                     .labelSmall
@@ -269,6 +285,7 @@ class _ShareProposalButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return OutlinedButton.icon(
       onPressed: () {
         // In production this would be the deployed backend URL
@@ -276,11 +293,11 @@ class _ShareProposalButton extends StatelessWidget {
         final link = '$baseUrl/${project.id}';
         Clipboard.setData(ClipboardData(text: link));
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Proposal link copied to clipboard')),
+          SnackBar(content: Text(l.projectProposalCopied)),
         );
       },
       icon: const Icon(Icons.share_outlined, size: 18),
-      label: const Text('Share proposal link'),
+      label: Text(l.projectShareProposal),
     );
   }
 }
@@ -293,13 +310,14 @@ class _MilestonesSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Text(
-              'Milestones',
+              l.projectMilestones,
               style: Theme.of(context)
                   .textTheme
                   .titleSmall
@@ -309,7 +327,7 @@ class _MilestonesSection extends ConsumerWidget {
             TextButton.icon(
               onPressed: () => context.push('/projects/${project.id}/milestone/new'),
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add'),
+              label: Text(l.buttonAdd),
               style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
             ),
           ],
@@ -319,7 +337,7 @@ class _MilestonesSection extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
-              'No milestones yet',
+              l.projectNoMilestones,
               style: TextStyle(color: Colors.grey[500], fontSize: 13),
             ),
           )
@@ -339,8 +357,9 @@ class _MilestoneCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final color = _milestoneStatusColor[milestone.status] ?? Colors.grey;
-    final label = _milestoneStatusLabel[milestone.status] ?? milestone.status;
+    final label = _milestoneStatusDetailLabel(l, milestone.status);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -390,7 +409,7 @@ class _MilestoneCard extends ConsumerWidget {
                   if (milestone.dueDate != null) ...[
                     const SizedBox(width: 8),
                     Text(
-                      'Due ${DateFormat('d MMM').format(milestone.dueDate!)}',
+                      l.projectDuePrefix(DateFormat('d MMM').format(milestone.dueDate!)),
                       style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                     ),
                   ],
@@ -406,18 +425,16 @@ class _MilestoneCard extends ConsumerWidget {
   }
 
   void _showResetDialog(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Reset milestone'),
-        content: Text(
-          'Reset "${milestone.name}" back to Pending?\n\n'
-          'This is for testing — the client will not be notified.',
-        ),
+        title: Text(l.projectResetMilestone),
+        content: Text(l.projectResetMilestoneBody(milestone.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(l.buttonCancel),
           ),
           FilledButton(
             onPressed: () {
@@ -426,7 +443,7 @@ class _MilestoneCard extends ConsumerWidget {
                   .read(projectDetailProvider(projectId).notifier)
                   .resetMilestoneToPending(milestone.id);
             },
-            child: const Text('Reset to pending'),
+            child: Text(l.projectResetToPending),
           ),
         ],
       ),
@@ -441,6 +458,7 @@ class _MilestoneActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final notifier = ref.read(projectDetailProvider(projectId).notifier);
 
     switch (milestone.status) {
@@ -451,7 +469,7 @@ class _MilestoneActions extends ConsumerWidget {
             onPressed: () async {
               await notifier.submitMilestone(milestone.id);
             },
-            child: const Text('Submit for client review'),
+            child: Text(l.projectSubmitForReview),
           ),
         );
       case 'SUBMITTED_FOR_REVIEW':
@@ -463,9 +481,9 @@ class _MilestoneActions extends ConsumerWidget {
               color: Colors.orange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text(
-              'Waiting for client approval',
-              style: TextStyle(fontSize: 12, color: Colors.orange),
+            child: Text(
+              l.projectWaitingApproval,
+              style: const TextStyle(fontSize: 12, color: Colors.orange),
             ),
           ),
         );
@@ -476,7 +494,7 @@ class _MilestoneActions extends ConsumerWidget {
             onPressed: () async {
               await notifier.markMilestonePaymentReceived(milestone.id);
             },
-            child: const Text('Mark payment received'),
+            child: Text(l.projectMarkPaymentReceived),
           ),
         );
       case 'PAYMENT_RECEIVED':
@@ -495,13 +513,14 @@ class _InvoicesSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Text(
-              'Invoices',
+              l.projectInvoices,
               style: Theme.of(context)
                   .textTheme
                   .titleSmall
@@ -511,7 +530,7 @@ class _InvoicesSection extends ConsumerWidget {
             TextButton.icon(
               onPressed: () => _showGenerateInvoiceDialog(context, ref),
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('Generate'),
+              label: Text(l.projectGenerate),
               style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
             ),
           ],
@@ -521,7 +540,7 @@ class _InvoicesSection extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
-              'No invoices yet',
+              l.projectNoInvoices,
               style: TextStyle(color: Colors.grey[500], fontSize: 13),
             ),
           )
@@ -548,6 +567,7 @@ class _InvoiceCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final isPaid = invoice.status == 'PAID';
 
     return Card(
@@ -575,7 +595,7 @@ class _InvoiceCard extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    isPaid ? 'Paid' : 'Unpaid',
+                    isPaid ? l.invoiceStatusPaid : l.invoiceStatusUnpaid,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -592,7 +612,7 @@ class _InvoiceCard extends ConsumerWidget {
             ),
             if (invoice.dueDate != null)
               Text(
-                'Due ${DateFormat('d MMM yyyy').format(invoice.dueDate!)}',
+                l.projectDuePrefix(DateFormat('d MMM yyyy').format(invoice.dueDate!)),
                 style: TextStyle(fontSize: 12, color: Colors.grey[500]),
               ),
             const SizedBox(height: 10),
@@ -604,12 +624,11 @@ class _InvoiceCard extends ConsumerWidget {
                     final link = '$baseUrl/${invoice.id}';
                     Clipboard.setData(ClipboardData(text: link));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Invoice link copied to clipboard')),
+                      SnackBar(content: Text(l.projectInvoiceCopied)),
                     );
                   },
                   icon: const Icon(Icons.share_outlined, size: 16),
-                  label: const Text('Share'),
+                  label: Text(l.buttonShare),
                   style: OutlinedButton.styleFrom(
                       visualDensity: VisualDensity.compact),
                 ),
@@ -623,7 +642,7 @@ class _InvoiceCard extends ConsumerWidget {
                     },
                     style: FilledButton.styleFrom(
                         visualDensity: VisualDensity.compact),
-                    child: const Text('Mark paid'),
+                    child: Text(l.projectMarkPaid),
                   ),
                 ],
               ],
@@ -662,15 +681,16 @@ class _GenerateInvoiceDialogState extends ConsumerState<_GenerateInvoiceDialog> 
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('Generate invoice'),
+      title: Text(l.projectGenerateInvoice),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: _descCtrl,
-              decoration: const InputDecoration(labelText: 'Description'),
+              decoration: InputDecoration(labelText: l.productFormDescLabel),
             ),
             const SizedBox(height: 8),
             Row(
@@ -679,7 +699,7 @@ class _GenerateInvoiceDialogState extends ConsumerState<_GenerateInvoiceDialog> 
                   width: 70,
                   child: TextField(
                     controller: _qtyCtrl,
-                    decoration: const InputDecoration(labelText: 'Qty'),
+                    decoration: InputDecoration(labelText: l.projectQty),
                     keyboardType: TextInputType.number,
                   ),
                 ),
@@ -687,7 +707,7 @@ class _GenerateInvoiceDialogState extends ConsumerState<_GenerateInvoiceDialog> 
                 Expanded(
                   child: TextField(
                     controller: _priceCtrl,
-                    decoration: const InputDecoration(labelText: 'Unit price (UZS)'),
+                    decoration: InputDecoration(labelText: l.projectUnitPrice),
                     keyboardType: TextInputType.number,
                   ),
                 ),
@@ -696,8 +716,9 @@ class _GenerateInvoiceDialogState extends ConsumerState<_GenerateInvoiceDialog> 
             const SizedBox(height: 8),
             TextField(
               controller: _dueDateCtrl,
-              decoration:
-                  const InputDecoration(labelText: 'Due date (YYYY-MM-DD)', hintText: 'Optional'),
+              decoration: InputDecoration(
+                  labelText: l.projectDueDateLabel,
+                  hintText: l.commonOptionalLabel),
             ),
           ],
         ),
@@ -705,11 +726,11 @@ class _GenerateInvoiceDialogState extends ConsumerState<_GenerateInvoiceDialog> 
       actions: [
         TextButton(
           onPressed: _saving ? null : () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l.buttonCancel),
         ),
         FilledButton(
           onPressed: _saving ? null : _submit,
-          child: const Text('Generate'),
+          child: Text(l.projectGenerate),
         ),
       ],
     );

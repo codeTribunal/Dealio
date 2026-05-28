@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/models/service.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import 'services_provider.dart';
 
@@ -11,10 +12,11 @@ class ServicesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final servicesAsync = ref.watch(servicesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Services')),
+      appBar: AppBar(title: Text(l.servicesTitle)),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/services/new'),
         child: const Icon(Icons.add),
@@ -31,7 +33,7 @@ class ServicesScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => ref.read(servicesProvider.notifier).refresh(),
-                  child: const Text('Retry'),
+                  child: Text(l.buttonRetry),
                 ),
               ],
             ),
@@ -39,8 +41,8 @@ class ServicesScreen extends ConsumerWidget {
         ),
         data: (services) {
           if (services.isEmpty) {
-            return const Center(
-              child: Text('No services yet. Tap + to add one.'),
+            return Center(
+              child: Text(l.servicesEmpty),
             );
           }
           return ListView.builder(
@@ -76,6 +78,7 @@ class _ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
@@ -96,7 +99,7 @@ class _ServiceCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${service.durationMinutes} min',
+                      l.durationMinutes(service.durationMinutes),
                       style:
                           TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),

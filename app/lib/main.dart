@@ -5,8 +5,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/locale/locale_provider.dart';
 import 'core/router/router.dart';
 import 'core/theme/app_theme.dart';
+import 'l10n/app_localizations.dart';
+import 'shared/utils/format.dart';
 
 // Handles FCM messages that arrive while the app is fully terminated.
 // Must be a top-level function.
@@ -138,22 +141,28 @@ class _AppState extends ConsumerState<App> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
+    final locale = ref.watch(localeProvider);
+    setCurrencyLocale(locale.languageCode);
 
     return MaterialApp.router(
       title: 'Uzbek CRM',
       theme: AppTheme.light,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      locale: locale,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        );
+      },
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('uz'),
-        Locale('ru'),
-        Locale('en'),
-      ],
+      supportedLocales: AppLocalizations.supportedLocales,
     );
   }
 }

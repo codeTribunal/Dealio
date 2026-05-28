@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api/api_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_text_field.dart';
 import 'projects_provider.dart';
@@ -52,8 +53,9 @@ class _MilestoneFormScreenState extends ConsumerState<MilestoneFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Add milestone')),
+      appBar: AppBar(title: Text(l.milestoneFormTitle)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -61,14 +63,14 @@ class _MilestoneFormScreenState extends ConsumerState<MilestoneFormScreen> {
           children: [
             AppTextField(
               controller: _nameCtrl,
-              label: 'Milestone name',
-              hint: 'e.g. Initial design mockups',
+              label: l.milestoneNameLabel,
+              hint: l.milestoneNameHint,
             ),
             const SizedBox(height: 16),
 
             AppTextField(
               controller: _amountCtrl,
-              label: 'Amount (UZS)',
+              label: l.milestoneAmountLabel,
               hint: '0',
               keyboardType: TextInputType.number,
             ),
@@ -76,8 +78,8 @@ class _MilestoneFormScreenState extends ConsumerState<MilestoneFormScreen> {
 
             AppTextField(
               controller: _dueDateCtrl,
-              label: 'Due date',
-              hint: 'Optional',
+              label: l.milestoneDueDateLabel,
+              hint: l.commonOptionalLabel,
               readOnly: true,
               keyboardType: TextInputType.none,
               suffixIcon: _dueDate == null
@@ -99,7 +101,7 @@ class _MilestoneFormScreenState extends ConsumerState<MilestoneFormScreen> {
             ],
 
             AppButton(
-              label: 'Add milestone',
+              label: l.milestoneAdd,
               loading: _saving,
               onPressed: _submit,
             ),
@@ -110,14 +112,15 @@ class _MilestoneFormScreenState extends ConsumerState<MilestoneFormScreen> {
   }
 
   Future<void> _submit() async {
+    final l = AppLocalizations.of(context)!;
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = 'Name is required');
+      setState(() => _error = l.productFormNameRequired);
       return;
     }
     final amount = int.tryParse(_amountCtrl.text.trim().replaceAll(RegExp(r'\s'), ''));
     if (amount == null) {
-      setState(() => _error = 'Enter a valid amount');
+      setState(() => _error = l.milestoneAmountInvalid);
       return;
     }
 

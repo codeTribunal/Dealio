@@ -3,4 +3,6 @@ class AppConfig {
     'API_BASE_URL',
     defaultValue: 'http://192.168.0.154:3000/api/v1',
   );
+
+  static const String privacyPolicyUrl = 'https://[yourdomain]/privacy';
 }

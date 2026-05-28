@@ -7,6 +7,7 @@ export interface Business {
   cardNumber: string | null
   cardBank: string | null
   botUsername: string | null
+  calendarToken?: string | null
 }
 
 export interface Customer {

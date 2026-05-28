@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/appointment.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
+import '../../shared/utils/status_labels.dart';
 import 'appointments_provider.dart';
 
 const _statusColor = {
@@ -19,10 +21,11 @@ class AppointmentDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final apptAsync = ref.watch(appointmentDetailProvider(appointmentId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Appointment')),
+      appBar: AppBar(title: Text(l.apptDetailTitle)),
       body: apptAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
@@ -36,7 +39,7 @@ class AppointmentDetailScreen extends ConsumerWidget {
               TextButton(
                 onPressed: () =>
                     ref.invalidate(appointmentDetailProvider(appointmentId)),
-                child: const Text('Retry'),
+                child: Text(l.buttonRetry),
               ),
             ],
           ),
@@ -137,6 +140,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final statusColor = _statusColor[_appt.status] ?? const Color(0xFF6B7280);
     final isTerminal = !_appt.isActive;
 
@@ -158,7 +162,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                 Icon(_statusIcon(_appt.status), color: statusColor, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  _statusLabel(_appt.status),
+                  appointmentStatusLabel(l, _appt.status),
                   style: TextStyle(
                     color: statusColor,
                     fontWeight: FontWeight.bold,
@@ -175,7 +179,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    _paymentLabel(_appt.paymentStatus),
+                    _paymentLabel(l, _appt.paymentStatus),
                     style: TextStyle(
                       fontSize: 11,
                       color: _appt.paymentStatus == 'CONFIRMED'
@@ -193,7 +197,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
 
           // ── Customer ──────────────────────────────────────────────
           _SectionCard(
-            title: 'Customer',
+            title: l.orderSectionCustomer,
             child: Column(
               children: [
                 _InfoRow(Icons.person_outline, _appt.customer.name),
@@ -212,7 +216,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
 
           // ── Appointment info ──────────────────────────────────────
           _SectionCard(
-            title: 'Appointment',
+            title: l.apptDetailTitle,
             child: Column(
               children: [
                 _InfoRow(Icons.design_services_outlined, _appt.service.name),
@@ -228,14 +232,14 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                 ),
                 _InfoRow(
                   Icons.timer_outlined,
-                  '${_appt.service.durationMinutes} min',
+                  l.durationMinutes(_appt.service.durationMinutes),
                 ),
                 _InfoRow(Icons.payments_outlined, formatUZS(_appt.price)),
                 _InfoRow(
                   Icons.payment_outlined,
                   _appt.paymentType == 'IN_ADVANCE'
-                      ? 'Pay in advance'
-                      : 'Pay at appointment',
+                      ? l.apptPayInAdvance
+                      : l.apptPayAtAppointment,
                 ),
               ],
             ),
@@ -245,7 +249,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
 
           // ── Notes ─────────────────────────────────────────────────
           _SectionCard(
-            title: 'Notes',
+            title: l.orderSectionNotes,
             trailing: _editingNotes
                 ? null
                 : IconButton(
@@ -262,10 +266,10 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                         controller: _notesController,
                         maxLines: 4,
                         minLines: 2,
-                        decoration: const InputDecoration(
-                          hintText: 'Add notes…',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.all(10),
+                        decoration: InputDecoration(
+                          hintText: l.apptNotesHint,
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.all(10),
                         ),
                         autofocus: true,
                       ),
@@ -281,7 +285,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                                         _appt.notes ?? '';
                                     setState(() => _editingNotes = false);
                                   },
-                            child: const Text('Cancel'),
+                            child: Text(l.buttonCancel),
                           ),
                           const SizedBox(width: 8),
                           FilledButton(
@@ -294,7 +298,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                                         strokeWidth: 2,
                                         color: Colors.white),
                                   )
-                                : const Text('Save'),
+                                : Text(l.buttonSave),
                           ),
                         ],
                       ),
@@ -303,7 +307,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                 : Text(
                     (_appt.notes?.isNotEmpty == true)
                         ? _appt.notes!
-                        : 'No notes',
+                        : l.apptNoNotes,
                     style: TextStyle(
                       color: (_appt.notes?.isNotEmpty == true)
                           ? Colors.grey[700]
@@ -326,7 +330,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                           strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.check_circle_outlined),
-              label: const Text('Confirm payment received'),
+              label: Text(l.apptConfirmPayment),
               style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF059669)),
             ),
@@ -337,7 +341,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
           if (!isTerminal) ...[
             if (_appt.status == 'REQUESTED') ...[
               _StatusButton(
-                label: 'Confirm appointment',
+                label: l.apptConfirm,
                 icon: Icons.event_available_outlined,
                 color: const Color(0xFF059669),
                 loading: _updatingStatus,
@@ -347,7 +351,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
             ],
             if (_appt.status == 'CONFIRMED') ...[
               _StatusButton(
-                label: 'Mark as completed',
+                label: l.apptMarkCompleted,
                 icon: Icons.task_alt_outlined,
                 color: const Color(0xFF1A56DB),
                 loading: _updatingStatus,
@@ -355,7 +359,7 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
               ),
               const SizedBox(height: 8),
               _StatusButton(
-                label: 'Mark as no-show',
+                label: l.apptMarkNoShow,
                 icon: Icons.person_off_outlined,
                 color: const Color(0xFFDC2626),
                 loading: _updatingStatus,
@@ -368,9 +372,9 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                   _updatingStatus ? null : () => _updateStatus('CANCELLED'),
               icon: const Icon(Icons.cancel_outlined,
                   color: Color(0xFF6B7280)),
-              label: const Text(
-                'Cancel appointment',
-                style: TextStyle(color: Color(0xFF6B7280)),
+              label: Text(
+                l.apptCancel,
+                style: const TextStyle(color: Color(0xFF6B7280)),
               ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Color(0xFF6B7280)),
@@ -396,19 +400,10 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
         _ => Icons.help_outline,
       };
 
-  String _statusLabel(String s) => switch (s) {
-        'REQUESTED' => 'Requested',
-        'CONFIRMED' => 'Confirmed',
-        'COMPLETED' => 'Completed',
-        'CANCELLED' => 'Cancelled',
-        'NO_SHOW' => 'No-show',
-        _ => s,
-      };
-
-  String _paymentLabel(String s) => switch (s) {
-        'PENDING' => 'Payment pending',
-        'PAYMENT_RECEIVED' => 'Payment received',
-        'CONFIRMED' => 'Payment confirmed',
+  String _paymentLabel(AppLocalizations l, String s) => switch (s) {
+        'PENDING' => l.orderPaymentPending,
+        'PAYMENT_RECEIVED' => l.paymentStatusPaymentReceived,
+        'CONFIRMED' => l.orderTimelinePaymentConfirmed,
         _ => s,
       };
 }

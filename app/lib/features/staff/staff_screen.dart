@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/models/staff.dart';
+import '../../l10n/app_localizations.dart';
 import 'staff_provider.dart';
 
 class StaffScreen extends ConsumerWidget {
@@ -10,10 +11,11 @@ class StaffScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final staffAsync = ref.watch(staffProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Staff')),
+      appBar: AppBar(title: Text(l.staffTitle)),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/staff/new'),
         child: const Icon(Icons.add),
@@ -30,7 +32,7 @@ class StaffScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => ref.read(staffProvider.notifier).refresh(),
-                  child: const Text('Retry'),
+                  child: Text(l.buttonRetry),
                 ),
               ],
             ),
@@ -38,8 +40,8 @@ class StaffScreen extends ConsumerWidget {
         ),
         data: (staff) {
           if (staff.isEmpty) {
-            return const Center(
-              child: Text('No staff yet. Tap + to add one.'),
+            return Center(
+              child: Text(l.staffEmpty),
             );
           }
           return ListView.builder(
@@ -67,8 +69,9 @@ class _StaffCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final serviceNames = member.services.isEmpty
-        ? 'No services assigned'
+        ? l.staffNoServices
         : member.services.map((s) => s.name).join(', ');
 
     return Card(

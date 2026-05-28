@@ -40,6 +40,9 @@ dependencies:
   firebase_core: ^3.3.0
   firebase_messaging: ^15.1.3
 
+  # Launching external URLs (calendar subscription links)
+  url_launcher: ^6.3.0
+
 
 dev_dependencies:
   flutter_test:

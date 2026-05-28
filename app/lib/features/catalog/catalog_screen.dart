@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/models/product.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
+import '../../shared/utils/status_labels.dart';
 import 'catalog_provider.dart';
 
 class CatalogScreen extends ConsumerWidget {
@@ -11,11 +13,12 @@ class CatalogScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final catalogAsync = ref.watch(catalogProvider);
     final notifier = ref.read(catalogProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Catalog')),
+      appBar: AppBar(title: Text(l.catalogTitle)),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await context.push('/catalog/new');
@@ -50,7 +53,7 @@ class CatalogScreen extends ConsumerWidget {
                     if (ctx.mounted) {
                       ScaffoldMessenger.of(ctx).showSnackBar(
                         SnackBar(
-                          content: Text('Error: $e'),
+                          content: Text(AppLocalizations.of(ctx)!.errorWithMessage(e.toString())),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -81,6 +84,7 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
 
     return Card(
@@ -134,13 +138,18 @@ class _ProductCard extends StatelessWidget {
                               fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                         const SizedBox(width: 10),
-                        _StockChip(label: product.stockLabel),
+                        _StockChip(
+                          label: stockLabel(l,
+                              unlimited: product.unlimited,
+                              stockQty: product.stockQty),
+                          isOut: !product.unlimited && product.stockQty == 0,
+                        ),
                       ],
                     ),
                     if (product.prepTime != null) ...[
                       const SizedBox(height: 3),
                       Text(
-                        'Prep: ${product.prepTime}',
+                        l.catalogPrepTime(product.prepTime!),
                         style: TextStyle(
                             color: Colors.grey[500], fontSize: 11),
                       ),
@@ -168,8 +177,9 @@ class _ActiveBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final color = active ? const Color(0xFF059669) : const Color(0xFF6B7280);
-    final label = active ? 'Active' : 'Paused';
+    final label = active ? l.commonActive : l.commonPaused;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
@@ -187,11 +197,11 @@ class _ActiveBadge extends StatelessWidget {
 
 class _StockChip extends StatelessWidget {
   final String label;
-  const _StockChip({required this.label});
+  final bool isOut;
+  const _StockChip({required this.label, required this.isOut});
 
   @override
   Widget build(BuildContext context) {
-    final isOut = label == 'Out of stock';
     final color = isOut ? const Color(0xFFDC2626) : Colors.grey;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -215,16 +225,17 @@ class _EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.inventory_2_outlined, size: 56, color: Colors.grey[300]),
           const SizedBox(height: 12),
-          Text('No products yet',
+          Text(l.catalogEmpty,
               style: TextStyle(color: Colors.grey[600])),
           const SizedBox(height: 8),
-          Text('Tap + to add your first product',
+          Text(l.catalogEmptyHint,
               style: TextStyle(color: Colors.grey[400], fontSize: 13)),
         ],
       ),
@@ -249,7 +260,7 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(onPressed: onRetry, child: Text(AppLocalizations.of(context)!.buttonRetry)),
           ],
         ),
       ),

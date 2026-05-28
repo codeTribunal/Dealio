@@ -1,6 +1,23 @@
 import axios from 'axios';
 import { ApiProduct, ApiBusiness, ApiCustomer, ApiOrderResult, ApiOrder, ApiService, ApiSlot, ApiAppointmentResult, ApiAppointment, ApiProject } from './types.js';
 
+/** Message shown to customers when a business is suspended. */
+export const SUSPENSION_MESSAGE =
+  'This service is temporarily unavailable. Please contact the business directly.';
+
+/**
+ * Thrown when the backend reports a business is suspended (403 ACCOUNT_SUSPENDED).
+ * Handlers / the global bot.catch should surface SUSPENSION_MESSAGE to the user.
+ */
+export class SuspendedError extends Error {
+  reason?: string;
+  constructor(reason?: string) {
+    super('ACCOUNT_SUSPENDED');
+    this.name = 'SuspendedError';
+    this.reason = reason;
+  }
+}
+
 const client = axios.create({
   baseURL: process.env.BACKEND_URL ?? 'http://localhost:3000',
   headers: {
@@ -9,6 +26,22 @@ const client = axios.create({
   },
   timeout: 10_000,
 });
+
+// Translate a suspended-business 403 into a typed error the handlers can catch.
+client.interceptors.response.use(
+  (res) => res,
+  (error: unknown) => {
+    if (
+      axios.isAxiosError(error) &&
+      error.response?.status === 403 &&
+      (error.response.data as { error?: string } | undefined)?.error === 'ACCOUNT_SUSPENDED'
+    ) {
+      const reason = (error.response.data as { reason?: string }).reason;
+      return Promise.reject(new SuspendedError(reason));
+    }
+    return Promise.reject(error);
+  },
+);
 
 export async function getCatalog(botUsername: string): Promise<{ business: ApiBusiness; products: ApiProduct[] }> {
   const res = await client.get(`/api/v1/bot/catalog/${botUsername}`);
@@ -21,8 +54,34 @@ export async function upsertCustomer(data: {
   telegramUsername?: string;
   name: string;
   phone?: string;
+  languagePreference?: 'UZBEK' | 'RUSSIAN' | 'ENGLISH';
 }): Promise<ApiCustomer> {
   const res = await client.post('/api/v1/bot/customers', data);
+  return res.data;
+}
+
+/** Read-only lookup used to decide whether to show the language picker. */
+export async function getCustomerLanguage(
+  botUsername: string,
+  telegramUserId: string,
+): Promise<{
+  exists: boolean;
+  languagePreference: 'UZBEK' | 'RUSSIAN' | 'ENGLISH' | null;
+  businessLanguage: 'UZBEK' | 'RUSSIAN' | 'ENGLISH';
+}> {
+  const res = await client.get(`/api/v1/bot/customer/${botUsername}/${telegramUserId}`);
+  return res.data;
+}
+
+/** Persist the customer's chosen language without altering their name. */
+export async function setCustomerLanguage(data: {
+  botUsername: string;
+  telegramUserId: string;
+  telegramUsername?: string;
+  name?: string;
+  language: 'UZBEK' | 'RUSSIAN' | 'ENGLISH';
+}): Promise<{ id: string; languagePreference: string }> {
+  const res = await client.post('/api/v1/bot/set-language', data);
   return res.data;
 }
 
@@ -68,6 +127,8 @@ export async function confirmPayment(botUsername: string, orderId: string): Prom
   order: { id: string; orderNumber: number; paymentStatus: string };
   customerTelegramUserId: string | null;
   customerName: string;
+  customerLanguagePreference: 'UZBEK' | 'RUSSIAN' | 'ENGLISH' | null;
+  businessLanguage: 'UZBEK' | 'RUSSIAN' | 'ENGLISH';
 }> {
   const res = await client.post('/api/v1/bot/confirm-payment', { botUsername, orderId });
   return res.data;

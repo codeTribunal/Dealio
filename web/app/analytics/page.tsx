@@ -72,7 +72,7 @@ export default function AnalyticsPage() {
 
   return (
     <AuthLayout title="Analytics">
-      <div className="grid grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
           <p className="text-sm font-medium text-gray-500 mb-1">Revenue this month</p>
           <p className="text-2xl font-bold text-gray-900">
@@ -122,7 +122,7 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
           <h3 className="text-base font-semibold text-gray-900 mb-4">Top customers</h3>
           <p className="text-xs text-gray-400 mb-4">Last 90 days</p>

@@ -6,6 +6,12 @@ import { getBusinessOrFail } from '../lib/businessFromUser.js';
 import { sendError } from '../lib/errors.js';
 import { getBotToken, hasBotToken } from '../lib/getBotToken.js';
 
+const createCustomerBody = z.object({
+  name: z.string().min(1).max(200),
+  phone: z.string().max(50).optional(),
+  telegramUsername: z.string().max(100).optional(),
+});
+
 const updateNotesBody = z.object({
   notes: z.string().max(2000),
 });
@@ -106,6 +112,20 @@ export default async function customerRoutes(app: FastifyInstance) {
     }));
 
     return reply.send({ customers: mapped, total });
+  });
+
+  // ── Create customer ─────────────────────────────────────────────
+  app.post('/customers', { preHandler: authenticate }, async (request, reply) => {
+    const business = await getBusinessOrFail(request.user.userId, reply);
+    if (!business) return;
+
+    const parsed = createCustomerBody.safeParse(request.body);
+    if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
+
+    const customer = await prisma.customer.create({
+      data: { ...parsed.data, businessId: business.id },
+    });
+    return reply.status(201).send(customer);
   });
 
   // ── Customer detail ─────────────────────────────────────────────

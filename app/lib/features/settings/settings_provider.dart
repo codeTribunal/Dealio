@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_service.dart';
 import '../../core/models/business.dart';
+import '../../core/providers/business_provider.dart';
 
 class SettingsState {
   final Business business;
@@ -56,6 +57,7 @@ class SettingsNotifier extends AsyncNotifier<SettingsState> {
       if (description != null && description.isEmpty) 'description': null,
     });
     state = AsyncData(current.copyWith(business: updated));
+    ref.invalidate(businessProvider);
   }
 
   Future<void> savePayment({
@@ -73,6 +75,7 @@ class SettingsNotifier extends AsyncNotifier<SettingsState> {
         ),
       ),
     );
+    ref.invalidate(businessProvider);
   }
 
   Future<void> saveLanguage(String language) async {
@@ -80,6 +83,7 @@ class SettingsNotifier extends AsyncNotifier<SettingsState> {
     if (current == null) return;
     final updated = await ref.read(apiServiceProvider).updateBusiness({'language': language});
     state = AsyncData(current.copyWith(business: updated));
+    ref.invalidate(businessProvider);
   }
 
   Future<void> saveMode(List<String> mode) async {
@@ -87,6 +91,29 @@ class SettingsNotifier extends AsyncNotifier<SettingsState> {
     if (current == null) return;
     final updated = await ref.read(apiServiceProvider).updateBusiness({'mode': mode});
     state = AsyncData(current.copyWith(business: updated));
+    ref.invalidate(businessProvider);
+  }
+
+  Future<void> enableCalendarSync() async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final token = await ref.read(apiServiceProvider).generateCalendarToken();
+    state = AsyncData(
+      current.copyWith(business: current.business.copyWith(calendarToken: token)),
+    );
+    ref.invalidate(businessProvider);
+  }
+
+  Future<void> disableCalendarSync() async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    await ref.read(apiServiceProvider).disableCalendarSync();
+    state = AsyncData(
+      current.copyWith(
+        business: current.business.copyWith(clearCalendarToken: true),
+      ),
+    );
+    ref.invalidate(businessProvider);
   }
 }
 

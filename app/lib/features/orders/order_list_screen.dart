@@ -3,17 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/models/order.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
+import '../../shared/utils/status_labels.dart';
 import 'orders_provider.dart';
 
-const _statuses = [
-  (null, 'All'),
-  ('NEW', 'New'),
-  ('PREPARING', 'Preparing'),
-  ('READY', 'Ready'),
-  ('DELIVERED', 'Delivered'),
-  ('CANCELLED', 'Cancelled'),
-];
+const _statusFilters = [null, 'NEW', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED'];
 
 const _statusColor = {
   'NEW': Color(0xFF1A56DB),
@@ -41,12 +36,13 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final notifier = ref.read(ordersProvider.notifier);
     final ordersAsync = ref.watch(ordersProvider);
     final filter = ref.watch(ordersProvider.notifier).filter;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Orders')),
+      appBar: AppBar(title: Text(l.ordersTitle)),
       body: Column(
         children: [
           // ── Search bar ────────────────────────────────────────
@@ -55,7 +51,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search by name or order #',
+                hintText: l.ordersSearchHint,
                 prefixIcon: const Icon(Icons.search, size: 20),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
@@ -77,8 +73,9 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              children: _statuses.map((entry) {
-                final (value, label) = entry;
+              children: _statusFilters.map((value) {
+                final label =
+                    value == null ? l.commonAll : orderStatusLabel(l, value);
                 final selected = filter.status == value;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
@@ -138,6 +135,7 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final statusColor =
         _statusColor[order.orderStatus] ?? const Color(0xFF6B7280);
     final paymentBadge = order.paymentStatus == 'PAYMENT_RECEIVED';
@@ -156,18 +154,18 @@ class _OrderCard extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    'Order #${order.orderNumber}',
+                    l.orderNumberLabel(order.orderNumber),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
                   if (paymentBadge)
-                    const _Badge(
-                      label: '💰 Paid',
-                      color: Color(0xFF059669),
+                    _Badge(
+                      label: l.orderPaidBadge,
+                      color: const Color(0xFF059669),
                     ),
                   if (paymentBadge) const SizedBox(width: 6),
                   _Badge(
-                    label: _statusLabel(order.orderStatus),
+                    label: orderStatusLabel(l, order.orderStatus),
                     color: statusColor,
                   ),
                 ],
@@ -250,21 +248,13 @@ class _Badge extends StatelessWidget {
   }
 }
 
-String _statusLabel(String status) => switch (status) {
-      'NEW' => 'New',
-      'PREPARING' => 'Preparing',
-      'READY' => 'Ready',
-      'DELIVERED' => 'Delivered',
-      'CANCELLED' => 'Cancelled',
-      _ => status,
-    };
-
 class _EmptyView extends StatelessWidget {
   final bool hasFilter;
   const _EmptyView({required this.hasFilter});
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -272,7 +262,7 @@ class _EmptyView extends StatelessWidget {
           Icon(Icons.receipt_long_outlined, size: 56, color: Colors.grey[300]),
           const SizedBox(height: 12),
           Text(
-            hasFilter ? 'No orders match your filter' : 'No orders yet',
+            hasFilter ? l.ordersEmptyFiltered : l.ordersEmpty,
             style: TextStyle(color: Colors.grey[600]),
           ),
         ],
@@ -298,7 +288,7 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(onPressed: onRetry, child: Text(AppLocalizations.of(context)!.buttonRetry)),
           ],
         ),
       ),

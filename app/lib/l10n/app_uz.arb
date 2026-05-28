@@ -1,0 +1,615 @@
+{
+  "@@locale": "uz",
+
+  "appTitle": "Uzbek CRM",
+
+  "buttonSave": "Saqlash",
+  "buttonSaveChanges": "O'zgarishlarni saqlash",
+  "buttonCancel": "Bekor qilish",
+  "buttonDelete": "O'chirish",
+  "buttonEdit": "Tahrirlash",
+  "buttonAdd": "Qo'shish",
+  "buttonCreate": "Yaratish",
+  "buttonConfirm": "Tasdiqlash",
+  "buttonContinue": "Davom etish",
+  "buttonBack": "Orqaga",
+  "buttonRetry": "Qayta urinish",
+  "buttonClose": "Yopish",
+  "buttonDone": "Tayyor",
+  "buttonNext": "Keyingi",
+  "buttonShare": "Ulashish",
+  "buttonCopy": "Nusxalash",
+
+  "commonSearch": "Qidirish",
+  "commonLoading": "Yuklanmoqda",
+  "commonToday": "Bugun",
+  "commonYesterday": "Kecha",
+  "commonActive": "Faol",
+  "commonPaused": "To'xtatilgan",
+  "commonOptional": "ixtiyoriy",
+  "commonOptionalLabel": "Ixtiyoriy",
+  "commonRequired": "Majburiy",
+  "commonYes": "Ha",
+  "commonNo": "Yo'q",
+  "commonAll": "Hammasi",
+  "commonNone": "Yo'q",
+
+  "errorGeneric": "Nimadir xato ketdi",
+  "errorLoadFailed": "Yuklab bo'lmadi",
+  "errorWithMessage": "Xato: {message}",
+  "@errorWithMessage": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "navHome": "Bosh sahifa",
+  "navCustomers": "Mijozlar",
+  "navOrders": "Buyurtmalar",
+  "navCatalog": "Katalog",
+  "navAppointments": "Navbatlar",
+  "navServices": "Xizmatlar",
+  "navStaff": "Xodimlar",
+  "navProjects": "Loyihalar",
+  "navAnalytics": "Tahlil",
+  "navSettings": "Sozlamalar",
+  "navMessages": "Xabarlar",
+
+  "orderStatusNew": "Yangi",
+  "orderStatusPreparing": "Tayyorlanmoqda",
+  "orderStatusReady": "Tayyor",
+  "orderStatusDelivered": "Yetkazildi",
+  "orderStatusCancelled": "Bekor qilindi",
+
+  "paymentStatusPending": "Kutilmoqda",
+  "paymentStatusPaymentReceived": "To'lov qabul qilindi",
+  "paymentStatusConfirmed": "Tasdiqlangan",
+
+  "appointmentStatusRequested": "So'ralgan",
+  "appointmentStatusConfirmed": "Tasdiqlangan",
+  "appointmentStatusCompleted": "Yakunlandi",
+  "appointmentStatusCancelled": "Bekor qilindi",
+  "appointmentStatusNoShow": "Kelmadi",
+
+  "projectStatusProposalSent": "Taklif yuborildi",
+  "projectStatusInProgress": "Jarayonda",
+  "projectStatusReview": "Ko'rib chiqilmoqda",
+  "projectStatusCompleted": "Yakunlandi",
+  "projectStatusCancelled": "Bekor qilindi",
+
+  "milestoneStatusPending": "Kutilmoqda",
+  "milestoneStatusSubmittedForReview": "Ko'rib chiqishga yuborildi",
+  "milestoneStatusApproved": "Ma'qullangan",
+  "milestoneStatusPaymentReceived": "To'lov qabul qilindi",
+
+  "invoiceStatusUnpaid": "To'lanmagan",
+  "invoiceStatusPaid": "To'langan",
+
+  "deliveryMethodPickup": "Olib ketish",
+  "deliveryMethodDelivery": "Yetkazib berish",
+
+  "loginWelcomeTitle": "Xush kelibsiz",
+  "loginWelcomeSubtitle": "Biznesingizni boshqarish uchun tizimga kiring",
+  "loginPhoneLabel": "Telefon raqami",
+  "loginPhoneHint": "90 123 45 67",
+  "loginContinueButton": "Davom etish",
+  "loginOtpHint": "Raqamingizga 4 xonali kod yuboriladi",
+  "loginErrorInvalidPhone": "To'g'ri telefon raqamini kiriting",
+
+  "otpTitle": "Kodni kiriting",
+  "otpSubtitle": "{phone} raqamiga kod yubordik",
+  "@otpSubtitle": {
+    "placeholders": {
+      "phone": { "type": "String" }
+    }
+  },
+  "otpCodeLabel": "Tasdiqlash kodi",
+  "otpVerifyButton": "Tasdiqlash",
+  "otpResendButton": "Kodni qayta yuborish",
+  "otpCodeResent": "Kod qayta yuborildi",
+  "otpDevHint": "Sinov rejimida 1234 dan foydalaning",
+  "otpErrorInvalid": "Kod noto'g'ri, qayta urinib ko'ring",
+  "consentGeneral": "Men Maxfiylik siyosati bilan tanishdim va O'zbekiston Respublikasining \"Shaxsga doir ma'lumotlar to'g'risida\"gi qonuniga muvofiq shaxsiy ma'lumotlarim qayta ishlanishiga roziman.",
+  "consentGeneralLink": "Maxfiylik siyosati",
+  "consentCrossBorder": "Shaxsiy ma'lumotlarim O'zbekistondan tashqarida joylashgan serverlarda (Railway, Cloudflare) saqlanishiga va uzatilishiga roziman.",
+
+  "onboardingBusinessStepTitle": "Biznesingiz haqida ma'lumot bering",
+  "onboardingBusinessNameLabel": "Biznes nomi",
+  "onboardingBusinessNameHint": "masalan, Laylo Cakes",
+  "onboardingModeTitle": "Biznesingiz nima bilan shug'ullanadi?",
+  "onboardingModeProducts": "Mahsulot sotish",
+  "onboardingModeProductsDesc": "Tortlar, kiyimlar, qo'lda yasalgan buyumlar",
+  "onboardingModeServices": "Xizmat ko'rsatish",
+  "onboardingModeServicesDesc": "Salon, repetitorlik, navbatlar",
+  "onboardingModeFreelance": "Frilans loyihalar",
+  "onboardingModeFreelanceDesc": "Dizayn, video, dasturlash",
+  "onboardingBotStepTitle": "Telegram botingizni ulang",
+  "onboardingBotTokenLabel": "Bot tokeni",
+  "onboardingBotTokenHint": "BotFather'dan olingan tokenni joylashtiring",
+  "onboardingPaymentStepTitle": "Mijozlar qanday to'laydi?",
+  "onboardingReviewStepTitle": "Ko'rib chiqish",
+  "onboardingDoneTitle": "Hammasi tayyor!",
+  "onboardingDoneSubtitle": "Biznesingiz buyurtmalarni qabul qilishga tayyor",
+  "onboardingDoneShareHint": "CRM tayyor. Bot havolangizni mijozlar bilan ulashing.",
+  "onboardingFinishButton": "Boshqaruv paneliga o'tish",
+  "onboardingSetupTitle": "Biznesingizni sozlang",
+  "onboardingBusinessType": "Biznes turi",
+  "onboardingLanguageLabel": "Til",
+  "onboardingModeProductsTitle": "Mahsulot sotish",
+  "onboardingModeProductsSubtitle": "Telegram bot orqali sotish",
+  "onboardingModeServicesTitle": "Xizmatlar va navbatlar",
+  "onboardingModeServicesSubtitle": "Bronlarni qabul qilish",
+  "onboardingModeFreelanceTitle": "Frilans loyihalar",
+  "onboardingModeFreelanceSubtitle": "Loyihalar va hisob-fakturalarni kuzatish",
+  "onboardingModeFreelanceShort": "Frilans",
+  "onboardingBotHeader": "Telegram bot",
+  "onboardingBotCreateTitle": "Telegram botingizni yarating",
+  "onboardingBotCreateSubtitle": "Mijozlaringiz ushbu botdan foydalanadi",
+  "onboardingBotStep1": "Telegramni oching va @BotFather'ni qidiring",
+  "onboardingBotStep2": "Quyidagi xabarni yuboring: /newbot",
+  "onboardingBotStep3": "Botingiz uchun nom tanlang (masalan, Zulfiya Cakes)",
+  "onboardingBotStep4": "_bot bilan tugaydigan foydalanuvchi nomini tanlang (masalan, zulfiya_cakes_bot)",
+  "onboardingBotStep5": "BotFather bergan tokenni nusxalang",
+  "onboardingBotPasteToken": "Bot tokeningizni joylashtiring",
+  "onboardingVerifyToken": "Tokenni tekshirish",
+  "onboardingBotReady": "@{username} tayyor!",
+  "@onboardingBotReady": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "onboardingPaymentHeader": "To'lov usuli",
+  "onboardingPaymentSubtitle": "Buni keyinroq Sozlamalarda o'zgartirishingiz mumkin",
+  "onboardingCardNumberLabel": "Karta raqami ({optional})",
+  "@onboardingCardNumberLabel": {
+    "placeholders": {
+      "optional": { "type": "String" }
+    }
+  },
+  "onboardingSkipForNow": "Hozircha o'tkazib yuborish",
+  "onboardingAlmostDone": "Deyarli tayyor!",
+  "onboardingSummaryType": "Turi",
+  "onboardingSummaryBot": "Bot",
+  "onboardingSummaryPayment": "To'lov",
+  "onboardingNotSet": "Belgilanmagan",
+  "onboardingLaunchCrm": "CRM'ni ishga tushirish",
+
+  "settingsTitle": "Sozlamalar",
+  "settingsBusinessProfile": "BIZNES PROFILI",
+  "settingsEditProfileTooltip": "Profilni tahrirlash",
+  "settingsDescriptionLabel": "Tavsif ({optional})",
+  "@settingsDescriptionLabel": {
+    "placeholders": {
+      "optional": { "type": "String" }
+    }
+  },
+  "settingsBusinessMode": "BIZNES TURI",
+  "settingsModeProductsLabel": "Mahsulot sotish",
+  "settingsModeProductsDesc": "Bot orqali jismoniy yoki raqamli mahsulotlarni sotish",
+  "settingsModeServicesLabel": "Xizmat / navbatlar",
+  "settingsModeServicesDesc": "Bron qabul qilish va navbatlarni boshqarish",
+  "settingsModeFreelanceLabel": "Frilans / loyihalar",
+  "settingsModeFreelanceDesc": "Loyiha bosqichlari va hisob-fakturalarni kuzatish",
+  "settingsModeAtLeastOne": "Kamida bitta tur faol bo'lishi kerak.",
+  "settingsPaymentMethod": "TO'LOV USULI",
+  "settingsEditPaymentTooltip": "To'lovni tahrirlash",
+  "settingsCardNumberLabel": "Karta raqami",
+  "settingsNoCardWarning": "To'lov kartasi belgilanmagan. Mijozlar to'lov qila olmaydi.",
+  "settingsCalendarSync": "TAQVIM SINXRONIZATSIYASI",
+  "settingsCalendarSyncTitle": "Taqvimimga sinxronlash",
+  "settingsCalendarSyncSubtitle": "Navbatlar, yetkazib berishlar va muddatlarni taqvimingizga qo'shing",
+  "settingsCalendarLinkLabel": "Taqvim havolangiz",
+  "settingsCalendarLinkCopied": "Taqvim havolasi nusxalandi",
+  "settingsCalendarSyncFailed": "Taqvim sinxronizatsiyasini yangilab bo'lmadi",
+  "settingsAddToGoogleCalendar": "Google Calendar'ga qo'shish",
+  "settingsAddToAppleCalendar": "Apple Calendar'ga qo'shish",
+  "settingsCalendarSamsungNote": "Samsung foydalanuvchilari: Google Calendar'ga qo'shing — u avtomatik ravishda Samsung Calendar bilan sinxronlanadi.",
+  "settingsReminders": "ESLATMALAR",
+  "settingsRemindersSubtitle": "Navbatlar, yetkazib berishlar va muddatlardan oldin xabardor bo'ling",
+  "settingsReminderSaveFailed": "Eslatma sozlamasini saqlab bo'lmadi",
+  "settingsRemindersLoadFailed": "Eslatma sozlamalarini yuklab bo'lmadi",
+  "settingsReminderAppointmentTitle": "Navbat eslatmalari",
+  "settingsReminderAppointmentSubtitle": "Har bir navbatdan oldin",
+  "settingsReminderSecondTitle": "Ikkinchi eslatma",
+  "settingsReminderSecondSubtitle": "Vaqtga yaqinroq yakuniy eslatma",
+  "settingsReminderDeliveryTitle": "Yetkazib berish eslatmalari",
+  "settingsReminderDeliverySubtitle": "Buyurtma yetkazib berilishidan oldin",
+  "settingsReminderDeadlineTitle": "Muddat eslatmalari",
+  "settingsReminderDeadlineSubtitle": "Bosqichlar va loyiha muddatlaridan oldin",
+  "settingsReminderHoursBefore": "{count, plural, =1{1 soat oldin} other{{count} soat oldin}}",
+  "@settingsReminderHoursBefore": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "settingsReminderDaysBefore": "{count, plural, =1{1 kun oldin} other{{count} kun oldin}}",
+  "@settingsReminderDaysBefore": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "settingsRemindersFootnote": "Eslatmalar ushbu ilovaga va Telegramingizga yuboriladi.",
+  "settingsTelegramBot": "TELEGRAM BOT",
+  "settingsNoBotConfigured": "Bot sozlanmagan. Botni sozlash uchun qo'llab-quvvatlash xizmatiga murojaat qiling.",
+  "settingsCopyLinkTooltip": "Havolani nusxalash",
+  "settingsBotLinkCopied": "Bot havolasi nusxalandi",
+  "settingsLanguage": "TIL",
+  "settingsLanguageFootnote": "Bu ilova tilini va Telegram botingiz mijozlar bilan ishlatadigan tilni o'zgartiradi.",
+  "settingsAccount": "HISOB",
+  "settingsLogOut": "Chiqish",
+  "settingsCustomerFields": "MIJOZ MAYDONLARI",
+  "settingsAddFieldTooltip": "Maydon qo'shish",
+  "settingsNoCustomFields": "Maxsus maydonlar yo'q. Mijozlar haqida qo'shimcha ma'lumot to'plash uchun maydon qo'shing.",
+  "settingsAddCustomerField": "Mijoz maydonini qo'shish",
+  "settingsFieldNameLabel": "Maydon nomi",
+  "settingsFieldNameHint": "masalan, Kompaniya, Instagram manzili",
+  "settingsFieldTypeLabel": "Maydon turi",
+  "settingsFieldTypeText": "Matn",
+  "settingsFieldTypeNumber": "Raqam",
+  "settingsFieldTypeDate": "Sana",
+  "settingsFieldTypeYesNo": "Ha / Yo'q",
+  "settingsPipelineStages": "VORONKA BOSQICHLARI",
+  "settingsAddStageTooltip": "Bosqich qo'shish",
+  "settingsNoStages": "Voronka bosqichlari yo'q. Mijozlar savdo jarayonining qaysi bosqichida ekanini kuzatish uchun bosqich qo'shing.",
+  "settingsAddStage": "Voronka bosqichini qo'shish",
+  "settingsStageNameLabel": "Bosqich nomi",
+  "settingsStageNameHint": "masalan, Potensial mijoz, Muzokara, Yakunlangan",
+  "settingsColorLabel": "Rang",
+  "settingsCheckoutQuestions": "BUYURTMA SAVOLLARI",
+  "settingsAddQuestionTooltip": "Savol qo'shish",
+  "settingsNoCheckoutQuestions": "Buyurtma savollari yo'q. Savollar Telegram botda buyurtma berish vaqtida so'raladi.",
+  "settingsAddCheckoutQuestion": "Buyurtma savolini qo'shish",
+  "settingsQuestionLabel": "Savol",
+  "settingsQuestionHint": "masalan, Allergiya yoki maxsus talablar bormi?",
+  "settingsServices": "XIZMATLAR",
+  "settingsManageServices": "Xizmatlarni boshqarish",
+  "settingsStaff": "XODIMLAR",
+  "settingsManageStaff": "Xodimlarni boshqarish",
+
+  "homeSearchHint": "Mijozlarni qidirish...",
+  "homeNoCustomersFound": "Mijozlar topilmadi",
+  "homeNoContactInfo": "Aloqa ma'lumoti yo'q",
+  "homeOrdersCount": "{count, plural, =1{1 ta buyurtma} other{{count} ta buyurtma}}",
+  "@homeOrdersCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "homeNeedsAttention": "E'tibor talab qiladi",
+  "homeTodaysActivity": "Bugungi faoliyat",
+  "homeOverdue": "Muddati o'tgan",
+  "homeDaysSilent": "{days} kun jim",
+  "@homeDaysSilent": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "homeBadgeAppointment": "Navbat",
+  "homeBadgeProject": "Loyiha",
+  "homeBadgeMilestone": "Bosqich",
+  "homeActivityCancelled": "{service} — bekor qilindi",
+  "@homeActivityCancelled": {
+    "placeholders": {
+      "service": { "type": "String" }
+    }
+  },
+  "homeActivityNewProject": "Yangi loyiha • {customer}",
+  "@homeActivityNewProject": {
+    "placeholders": {
+      "customer": { "type": "String" }
+    }
+  },
+  "homeActivityMilestoneApproved": "Ma'qullandi • {project}",
+  "@homeActivityMilestoneApproved": {
+    "placeholders": {
+      "project": { "type": "String" }
+    }
+  },
+  "homeNoActivity": "Bugun faoliyat yo'q",
+
+  "ordersTitle": "Buyurtmalar",
+  "ordersSearchHint": "Ism yoki buyurtma № bo'yicha qidirish",
+  "orderNumberLabel": "Buyurtma №{number}",
+  "@orderNumberLabel": {
+    "placeholders": {
+      "number": { "type": "int" }
+    }
+  },
+  "orderPaidBadge": "💰 To'landi",
+  "ordersEmpty": "Hali buyurtmalar yo'q",
+  "ordersEmptyFiltered": "Filtringizga mos buyurtma yo'q",
+
+  "commonTotal": "Jami",
+  "orderDetailTitle": "Buyurtma",
+  "orderPaymentPaid": "To'langan",
+  "orderPaymentPending": "To'lov kutilmoqda",
+  "orderSectionCustomer": "Mijoz",
+  "orderSectionItems": "Mahsulotlar",
+  "orderSectionDelivery": "Yetkazib berish",
+  "orderSectionNotes": "Izohlar",
+  "orderSectionResponses": "Mijoz javoblari",
+  "orderSectionTimeline": "Vaqt jadvali",
+  "orderTimelinePlaced": "Buyurtma berildi",
+  "orderTimelineReady": "Olib ketish / yetkazib berishga tayyor",
+  "orderTimelinePaymentConfirmed": "To'lov tasdiqlandi",
+  "orderConfirmPayment": "To'lovni tasdiqlash",
+  "orderStartPreparing": "Tayyorlashni boshlash",
+  "orderMarkReady": "Tayyor deb belgilash",
+  "orderMarkDelivered": "Yetkazildi deb belgilash",
+  "orderCancel": "Buyurtmani bekor qilish",
+  "orderPaymentAlreadyConfirmed": "To'lov allaqachon tasdiqlangan",
+  "orderCancelTitle": "Buyurtma bekor qilinsinmi?",
+  "orderCancelConfirm": "Bu amalni qaytarib bo'lmaydi.",
+  "orderKeep": "Qoldirish",
+
+  "customersTitle": "Mijozlar",
+  "customersSearchHint": "Ism, @handle yoki telefon bo'yicha qidirish",
+  "customersEmpty": "Hali mijozlar yo'q",
+  "customersEmptyFiltered": "Qidiruvingizga mos mijoz yo'q",
+  "customersEmptyHint": "Mijozlar bot orqali buyurtma berganda qo'shiladi",
+
+  "customerDetailTitle": "Mijoz",
+  "customerAddTag": "Teg qo'shish",
+  "customerTagHint": "Teg nomi (masalan, VIP, Tort ishqibozi)",
+  "customerSetStage": "Voronka bosqichini belgilash",
+  "customerNoStage": "Bosqichsiz",
+  "customerSetStageShort": "Bosqichni belgilash",
+  "customerSince": "{date} dan beri",
+  "@customerSince": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "customerStatOrders": "Buyurtmalar",
+  "customerStatTotalSpent": "Jami sarflangan",
+  "customerStatLastOrder": "Oxirgi buyurtma",
+  "customerDaysAgo": "{days} kun oldin",
+  "@customerDaysAgo": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "customerAddReminder": "Eslatma qo'shish",
+  "customerReminderHint": "Izoh (masalan, №12 buyurtma bo'yicha bog'lanish)",
+  "customerSaveReminder": "Eslatmani saqlash",
+  "customerNoReminders": "Eslatmalar yo'q. Qo'shish uchun + ni bosing.",
+  "customerNotesLabel": "IZOHLAR",
+  "customerNotesHint": "Ushbu mijoz haqida izohlar qo'shing…",
+  "customerNoNotes": "Hali izohlar yo'q. Qo'shish uchun tahrirlashni bosing.",
+  "customerCustomFields": "MAXSUS MAYDONLAR",
+  "customerNoCustomFields": "Maxsus maydonlar aniqlanmagan. Sozlamalarda maydon qo'shing.",
+  "customerTapToSet": "Belgilash uchun bosing",
+  "customerOrderHistory": "BUYURTMALAR TARIXI",
+  "customerLoadError": "Mijozni yuklab bo'lmadi",
+  "customerLoadErrorHint": "Internet aloqasini tekshiring va qayta urinib ko'ring",
+
+  "catalogTitle": "Katalog",
+  "catalogPrepTime": "Tayyorlash: {time}",
+  "@catalogPrepTime": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "catalogEmpty": "Hali mahsulotlar yo'q",
+  "catalogEmptyHint": "Birinchi mahsulotingizni qo'shish uchun + ni bosing",
+  "stockUnlimited": "Cheksiz",
+  "stockNoInfo": "Zaxira ma'lumoti yo'q",
+  "stockOut": "Tugagan",
+  "stockIn": "Zaxirada: {count}",
+  "@stockIn": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "productFormNewTitle": "Yangi mahsulot",
+  "productFormEditTitle": "Mahsulotni tahrirlash",
+  "productFormNameLabel": "Mahsulot nomi *",
+  "productFormNameHint": "masalan, Shokoladli tort",
+  "productFormNameRequired": "Nom kiritilishi shart",
+  "productFormPriceLabel": "Narx *",
+  "productFormPriceRequired": "Narx kiritilishi shart",
+  "productFormPriceInvalid": "To'g'ri narx kiriting",
+  "productFormDescLabel": "Tavsif",
+  "productFormDescHint": "Ixtiyoriy mahsulot tavsifi",
+  "productFormStockLabel": "Zaxira miqdori",
+  "productFormStockHint": "masalan, 10",
+  "productFormStockInvalid": "0 yoki undan ko'p kiriting",
+  "productFormTimeLabel": "Vaqt",
+  "productFormUnitLabel": "Birlik",
+  "prepUnitMinutes": "Daqiqa",
+  "prepUnitHours": "Soat",
+  "prepUnitDays": "Kun",
+  "prepUnitWeeks": "Hafta",
+  "productFormActiveOn": "Mahsulot bot katalogida ko'rinadi",
+  "productFormActiveOff": "Mahsulot mijozlardan yashirilgan",
+  "productFormCreate": "Mahsulot yaratish",
+
+  "formRequired": "Majburiy",
+  "formPositiveInteger": "Musbat butun son kiriting",
+  "durationMinutes": "{min} daqiqa",
+  "@durationMinutes": {
+    "placeholders": {
+      "min": { "type": "int" }
+    }
+  },
+  "servicesTitle": "Xizmatlar",
+  "servicesEmpty": "Hali xizmatlar yo'q. Qo'shish uchun + ni bosing.",
+  "serviceFormNewTitle": "Yangi xizmat",
+  "serviceFormEditTitle": "Xizmatni tahrirlash",
+  "serviceFormNameLabel": "Xizmat nomi",
+  "serviceFormDurationLabel": "Davomiyligi (daqiqa)",
+  "serviceFormPriceLabel": "Narx (so'm)",
+  "serviceFormActiveSubtitle": "Botda mijozlarga ko'rinadi",
+
+  "staffTitle": "Xodimlar",
+  "staffEmpty": "Hali xodimlar yo'q. Qo'shish uchun + ni bosing.",
+  "staffNoServices": "Xizmatlar biriktirilmagan",
+  "staffFormNewTitle": "Yangi xodim",
+  "staffFormEditTitle": "Xodimni tahrirlash",
+  "staffDeleteTitle": "{name} o'chirilsinmi?",
+  "@staffDeleteTitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "staffThisMember": "bu xodim",
+  "staffDeleteConfirm": "Buni qaytarib bo'lmaydi.",
+  "staffFormNameLabel": "To'liq ism",
+  "staffFormTelegramLabel": "Telegram manzili (ixtiyoriy)",
+  "staffFormServicesLabel": "Bajariladigan xizmatlar",
+  "staffNoServicesAvailable": "Mavjud xizmatlar yo'q. Avval xizmat qo'shing.",
+  "staffSelectService": "Kamida bitta xizmatni tanlang",
+
+  "appointmentsTitle": "Navbatlar",
+  "apptTomorrow": "Ertaga",
+  "apptEmpty": "Bu kuni navbatlar yo'q",
+  "apptEmptyHint": "Qo'shish uchun + tugmasidan foydalaning",
+  "apptDetailTitle": "Navbat",
+  "apptPayInAdvance": "Oldindan to'lash",
+  "apptPayAtAppointment": "Navbatda to'lash",
+  "apptNotesHint": "Izoh qo'shing…",
+  "apptNoNotes": "Izohlar yo'q",
+  "apptConfirmPayment": "To'lov qabul qilinganini tasdiqlash",
+  "apptConfirm": "Navbatni tasdiqlash",
+  "apptMarkCompleted": "Yakunlangan deb belgilash",
+  "apptMarkNoShow": "Kelmagan deb belgilash",
+  "apptCancel": "Navbatni bekor qilish",
+  "apptFormTitle": "Yangi navbat",
+  "apptFormCustomerLabel": "Mijoz *",
+  "apptFormSelectExisting": "Mavjudini tanlash",
+  "apptFormEnterManually": "Qo'lda kiritish",
+  "apptFormSelectCustomer": "Mijozni tanlang",
+  "apptFormCustomerNameLabel": "Mijoz ismi",
+  "apptFormCustomerNameHint": "Mijoz ismini kiriting",
+  "apptFormServiceLabel": "Xizmat *",
+  "apptFormFromServices": "Xizmatlarimdan",
+  "apptFormServiceField": "Xizmat",
+  "apptFormSelectService": "Xizmatni tanlang",
+  "apptFormServiceNameHint": "masalan, Soch olish, Maslahat, Dars",
+  "apptFormDurationLabel": "Davomiyligi (daq)",
+  "apptFormStaffLabel": "Xodim",
+  "apptFormAnyStaff": "Har qanday mavjud",
+  "apptFormWhenLabel": "Qachon *",
+  "apptFormDateLabel": "Sana",
+  "apptFormSelectDate": "Sanani tanlang",
+  "apptFormSelectTime": "Vaqtni tanlang",
+  "apptFormPaymentLabel": "To'lov",
+  "apptFormNotesHint": "Ushbu navbat haqida izohlar...",
+  "apptFormCreate": "Navbat yaratish",
+  "apptErrSelectCustomer": "Mijozni tanlang",
+  "apptErrEnterCustomer": "Mijoz ismini kiriting",
+  "apptErrSelectService": "Xizmatni tanlang",
+  "apptErrEnterService": "Xizmat nomini kiriting",
+  "apptErrSelectDateTime": "Sana va vaqtni tanlang",
+
+  "projectsTitle": "Loyihalar",
+  "projectsFilterProposal": "Taklif",
+  "projectsFilterReview": "Ko'rib chiqish",
+  "projectsEmpty": "Hali loyihalar yo'q",
+  "projectsMilestoneCount": "{done}/{total} bosqich",
+  "@projectsMilestoneCount": {
+    "placeholders": {
+      "done": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "projectDetailTitle": "Loyiha",
+  "projectMarkInProgress": "Jarayonda deb belgilash",
+  "projectSendForReview": "Ko'rib chiqishga yuborish",
+  "projectMarkCompleted": "Yakunlangan deb belgilash",
+  "projectCancelProject": "Loyihani bekor qilish",
+  "projectStatusUpdated": "Holat yangilandi: {status}",
+  "@projectStatusUpdated": {
+    "placeholders": {
+      "status": { "type": "String" }
+    }
+  },
+  "projectClient": "Mijoz",
+  "projectPhone": "Telefon",
+  "projectStart": "Boshlanishi",
+  "projectDeadline": "Muddat",
+  "projectScope": "Ish hajmi",
+  "projectPaymentTerms": "To'lov shartlari",
+  "projectProposalCopied": "Taklif havolasi nusxalandi",
+  "projectShareProposal": "Taklif havolasini ulashish",
+  "projectMilestones": "Bosqichlar",
+  "projectNoMilestones": "Hali bosqichlar yo'q",
+  "milestoneAwaitingReview": "Mijoz ko'rib chiqishini kutmoqda",
+  "milestoneApprovedByClient": "Mijoz tomonidan ma'qullangan",
+  "projectDuePrefix": "Muddat: {date}",
+  "@projectDuePrefix": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "projectResetMilestone": "Bosqichni qayta tiklash",
+  "projectResetMilestoneBody": "\"{name}\" bosqichi qayta Kutilmoqda holatiga qaytarilsinmi?\n\nBu sinov uchun — mijoz xabardor qilinmaydi.",
+  "@projectResetMilestoneBody": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "projectResetToPending": "Kutilmoqdaga qaytarish",
+  "projectSubmitForReview": "Mijoz ko'rib chiqishiga yuborish",
+  "projectWaitingApproval": "Mijoz tasdig'i kutilmoqda",
+  "projectMarkPaymentReceived": "To'lov qabul qilindi deb belgilash",
+  "projectInvoices": "Hisob-fakturalar",
+  "projectGenerate": "Yaratish",
+  "projectNoInvoices": "Hali hisob-fakturalar yo'q",
+  "projectInvoiceCopied": "Hisob-faktura havolasi nusxalandi",
+  "projectMarkPaid": "To'langan deb belgilash",
+  "projectGenerateInvoice": "Hisob-faktura yaratish",
+  "projectQty": "Soni",
+  "projectUnitPrice": "Birlik narxi (so'm)",
+  "projectDueDateLabel": "Muddat (YYYY-MM-DD)",
+  "projectFormTitle": "Yangi loyiha",
+  "projectSelectClient": "Mijozni tanlang",
+  "projectClientNameLabel": "Mijoz ismi",
+  "projectClientNameHint": "Mijoz ismini kiriting",
+  "projectNameLabel": "Loyiha nomi",
+  "projectNameHint": "masalan, Brend identifikatsiyasini qayta ishlash",
+  "projectScopeHint": "Yetkazib beriladigan natijalarni tasvirlang...",
+  "projectPriceLabel": "Kelishilgan umumiy narx (so'm)",
+  "projectTermsHint": "masalan, 50% oldindan, 50% yetkazib berishda",
+  "projectStartDate": "Boshlanish sanasi",
+  "projectFormCreate": "Loyiha yaratish",
+  "projectErrSelectClient": "Iltimos, mijozni tanlang",
+  "projectErrEnterClient": "Mijoz ismini kiriting",
+  "projectErrNameRequired": "Loyiha nomi kiritilishi shart",
+  "milestoneFormTitle": "Bosqich qo'shish",
+  "milestoneAdd": "Bosqich qo'shish",
+  "milestoneNameLabel": "Bosqich nomi",
+  "milestoneNameHint": "masalan, Dastlabki dizayn maketlari",
+  "milestoneAmountLabel": "Summa (so'm)",
+  "milestoneDueDateLabel": "Muddat",
+  "milestoneAmountInvalid": "To'g'ri summa kiriting",
+  "analyticsTitle": "Tahlil",
+  "analyticsNoDataLastMonth": "O'tgan oy uchun ma'lumot yo'q",
+  "analyticsVsLastMonth": "O'tgan oyga nisbatan {change}%",
+  "@analyticsVsLastMonth": {
+    "placeholders": {
+      "change": { "type": "String" }
+    }
+  },
+  "analyticsRevenueThisMonth": "Bu oylik daromad",
+  "analyticsLastMonth": "O'tgan oy: {amount}",
+  "@analyticsLastMonth": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "analyticsCompletedThisMonth": "Bu oy\nyakunlangan",
+  "analyticsAvgOrderValue": "O'rtacha\nbuyurtma",
+  "analyticsPendingPayments": "Kutilayotgan to'lovlar",
+  "analyticsAllReceived": "Barcha to'lovlar qabul qilindi",
+  "analyticsTopCustomers": "ENG YAXSHI MIJOZLAR — SO'NGGI 90 KUN",
+  "analyticsNoConfirmedOrders": "So'nggi 90 kunda tasdiqlangan buyurtmalar yo'q",
+  "analyticsBestSelling": "ENG KO'P SOTILGAN MAHSULOT",
+  "analyticsUnitsSold": "{count, plural, =1{1 dona sotilgan} other{{count} dona sotilgan}}",
+  "@analyticsUnitsSold": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  }
+}

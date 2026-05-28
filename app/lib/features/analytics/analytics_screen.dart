@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/models/analytics.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import 'analytics_provider.dart';
 
@@ -11,10 +12,11 @@ class AnalyticsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final analyticsAsync = ref.watch(analyticsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Analytics')),
+      appBar: AppBar(title: Text(l.analyticsTitle)),
       body: analyticsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _ErrorView(
@@ -52,11 +54,12 @@ class _RevenueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final change = data.revenueChangePercent;
     final isUp = change != null && change >= 0;
     final changeText = change == null
-        ? 'No data last month'
-        : '${isUp ? '+' : ''}${change.toStringAsFixed(1)}% vs last month';
+        ? l.analyticsNoDataLastMonth
+        : l.analyticsVsLastMonth('${isUp ? '+' : ''}${change.toStringAsFixed(1)}');
 
     return Card(
       margin: EdgeInsets.zero,
@@ -67,7 +70,7 @@ class _RevenueCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Revenue this month',
+              l.analyticsRevenueThisMonth,
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8),
                 fontSize: 13,
@@ -103,7 +106,7 @@ class _RevenueCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Last month: ${formatUZS(data.revenueLastMonth)}',
+              l.analyticsLastMonth(formatUZS(data.revenueLastMonth)),
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.6),
                 fontSize: 11,
@@ -124,11 +127,12 @@ class _QuickStatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Row(
       children: [
         Expanded(
           child: _StatCard(
-            label: 'Completed\nthis month',
+            label: l.analyticsCompletedThisMonth,
             value: data.ordersCompletedThisMonth.toString(),
             icon: Icons.check_circle_outline,
             color: Colors.green,
@@ -137,7 +141,7 @@ class _QuickStatsRow extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: _StatCard(
-            label: 'Avg order\nvalue',
+            label: l.analyticsAvgOrderValue,
             value: formatUZS(data.averageOrderValue),
             icon: Icons.receipt_long_outlined,
             color: Colors.blue,
@@ -206,6 +210,7 @@ class _PendingPaymentsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final hasPending = data.pendingPaymentsTotal > 0;
 
     return Card(
@@ -235,7 +240,7 @@ class _PendingPaymentsCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pending payments',
+                    l.analyticsPendingPayments,
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
@@ -245,7 +250,7 @@ class _PendingPaymentsCard extends StatelessWidget {
                   Text(
                     hasPending
                         ? formatUZS(data.pendingPaymentsTotal)
-                        : 'All payments received',
+                        : l.analyticsAllReceived,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
@@ -270,6 +275,7 @@ class _TopCustomersCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -278,7 +284,7 @@ class _TopCustomersCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'TOP CUSTOMERS — LAST 90 DAYS',
+              l.analyticsTopCustomers,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Colors.grey[600],
                     letterSpacing: 0.5,
@@ -291,7 +297,7 @@ class _TopCustomersCard extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Text(
-                    'No confirmed orders in the last 90 days',
+                    l.analyticsNoConfirmedOrders,
                     style: TextStyle(color: Colors.grey[400], fontSize: 13),
                   ),
                 ),
@@ -326,6 +332,7 @@ class _TopCustomerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final rankColor = rank <= 3 ? _rankColors[rank - 1] : Colors.grey;
 
     return InkWell(
@@ -365,7 +372,7 @@ class _TopCustomerRow extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
                   ),
                   Text(
-                    '${customer.orderCount} order${customer.orderCount != 1 ? 's' : ''}',
+                    l.homeOrdersCount(customer.orderCount),
                     style: TextStyle(color: Colors.grey[500], fontSize: 12),
                   ),
                 ],
@@ -390,6 +397,7 @@ class _BestSellingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final product = data.bestSellingProduct;
 
     return Card(
@@ -400,7 +408,7 @@ class _BestSellingCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'BEST SELLING PRODUCT',
+              l.analyticsBestSelling,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Colors.grey[600],
                     letterSpacing: 0.5,
@@ -410,7 +418,7 @@ class _BestSellingCard extends StatelessWidget {
             const SizedBox(height: 12),
             if (product == null)
               Text(
-                'No orders yet',
+                l.ordersEmpty,
                 style: TextStyle(color: Colors.grey[400], fontSize: 13),
               )
             else
@@ -440,7 +448,7 @@ class _BestSellingCard extends StatelessWidget {
                               fontWeight: FontWeight.bold, fontSize: 15),
                         ),
                         Text(
-                          '${product.unitsSold} unit${product.unitsSold != 1 ? 's' : ''} sold',
+                          l.analyticsUnitsSold(product.unitsSold),
                           style: TextStyle(color: Colors.grey[500], fontSize: 12),
                         ),
                       ],
@@ -474,7 +482,7 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(onPressed: onRetry, child: Text(AppLocalizations.of(context)!.buttonRetry)),
           ],
         ),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../services/services_provider.dart';
 import 'staff_provider.dart';
 
@@ -93,24 +94,25 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
   }
 
   Future<void> _confirmDelete() async {
+    final l = AppLocalizations.of(context)!;
     final name = _nameCtrl.text.trim().isNotEmpty
         ? _nameCtrl.text.trim()
-        : 'this staff member';
+        : l.staffThisMember;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Delete $name?'),
-        content: const Text('This cannot be undone.'),
+        title: Text(l.staffDeleteTitle(name)),
+        content: Text(l.staffDeleteConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l.buttonCancel),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete'),
+            child: Text(l.buttonDelete),
           ),
         ],
       ),
@@ -133,17 +135,18 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final servicesAsync = ref.watch(servicesProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEdit ? 'Edit staff member' : 'New staff member'),
+        title: Text(_isEdit ? l.staffFormEditTitle : l.staffFormNewTitle),
         actions: [
           if (_isEdit)
             TextButton(
               onPressed: _saving ? null : _confirmDelete,
               style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
+              child: Text(l.buttonDelete),
             ),
           TextButton(
             onPressed: _saving ? null : _save,
@@ -152,7 +155,7 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
               textStyle: const TextStyle(
                   fontWeight: FontWeight.bold, fontSize: 16),
             ),
-            child: const Text('Save'),
+            child: Text(l.buttonSave),
           ),
         ],
       ),
@@ -163,21 +166,21 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
           children: [
             TextFormField(
               controller: _nameCtrl,
-              decoration: const InputDecoration(labelText: 'Full name'),
+              decoration: InputDecoration(labelText: l.staffFormNameLabel),
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  (v == null || v.trim().isEmpty) ? l.formRequired : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _telegramCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Telegram handle (optional)',
+              decoration: InputDecoration(
+                labelText: l.staffFormTelegramLabel,
                 hintText: '@username',
               ),
             ),
             const SizedBox(height: 24),
             Text(
-              'Services performed',
+              l.staffFormServicesLabel,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Colors.grey[700],
                     fontWeight: FontWeight.w600,
@@ -187,13 +190,13 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
             servicesAsync.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text(
-                'Failed to load services: $e',
+                l.errorWithMessage(e.toString()),
                 style: const TextStyle(color: Colors.red, fontSize: 13),
               ),
               data: (services) {
                 if (services.isEmpty) {
                   return Text(
-                    'No services available. Add services first.',
+                    l.staffNoServicesAvailable,
                     style:
                         TextStyle(color: Colors.grey[500], fontSize: 13),
                   );
@@ -227,7 +230,7 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
             if (_servicesError) ...[
               const SizedBox(height: 4),
               Text(
-                'Select at least one service',
+                l.staffSelectService,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.error,
                   fontSize: 12,

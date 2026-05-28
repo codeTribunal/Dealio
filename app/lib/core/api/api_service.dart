@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/app_config.dart';
 import '../models/analytics.dart';
 import '../models/appointment.dart';
 import '../models/business.dart';
@@ -63,16 +64,75 @@ class ApiService {
   }
 
   Future<({String token, Map<String, dynamic> user, Map<String, dynamic>? business})>
-      verifyOtp(String phone, String code) async {
+      verifyOtp(
+    String phone,
+    String code, {
+    bool? generalConsent,
+    bool? crossBorderConsent,
+  }) async {
     try {
       final res = await _dio.post(
         '/auth/verify-otp',
-        data: {'phone': phone, 'code': code},
+        data: {
+          'phone': phone,
+          'code': code,
+          if (generalConsent != null) 'generalConsent': generalConsent,
+          if (crossBorderConsent != null) 'crossBorderConsent': crossBorderConsent,
+        },
       );
       return (
         token: res.data['token'] as String,
         user: res.data['user'] as Map<String, dynamic>,
         business: res.data['business'] as Map<String, dynamic>?,
+      );
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  // ── Onboarding ────────────────────────────────────────────────
+
+  Future<({bool valid, String botUsername, String botName})> verifyBotToken(
+      String token) async {
+    try {
+      final res = await _dio.post(
+        '/onboarding/verify-bot-token',
+        data: {'token': token},
+      );
+      return (
+        valid: res.data['valid'] as bool,
+        botUsername: res.data['botUsername'] as String,
+        botName: res.data['botName'] as String,
+      );
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  Future<({String id, String name, String botUsername, String botLink})>
+      completeOnboarding({
+    required String businessName,
+    required List<String> modes,
+    required String language,
+    required String botToken,
+    String? cardNumber,
+    String? cardBank,
+  }) async {
+    try {
+      final res = await _dio.post('/onboarding/complete', data: {
+        'businessName': businessName,
+        'mode': modes,
+        'language': language,
+        'botToken': botToken,
+        if (cardNumber != null && cardNumber.isNotEmpty) 'cardNumber': cardNumber,
+        if (cardBank != null) 'cardBank': cardBank,
+      });
+      final b = res.data['business'] as Map<String, dynamic>;
+      return (
+        id: b['id'] as String,
+        name: b['name'] as String,
+        botUsername: b['botUsername'] as String,
+        botLink: b['botLink'] as String,
       );
     } on DioException catch (e) {
       throw _wrap(e);
@@ -147,6 +207,50 @@ class ApiService {
         botUsername: res.data['botUsername'] as String?,
         botLink: res.data['botLink'] as String?,
       );
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  // ── Calendar sync ─────────────────────────────────────────────
+
+  // Public base URL for ICS feeds — the API root without the /api/v1 prefix.
+  static String get calendarBaseUrl =>
+      AppConfig.apiBaseUrl.replaceAll('/api/v1', '');
+
+  Future<String> generateCalendarToken() async {
+    try {
+      final res = await _dio.post('/business/calendar-token');
+      return res.data['calendarToken'] as String;
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  Future<void> disableCalendarSync() async {
+    try {
+      await _dio.delete('/business/calendar-token');
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  // ── Owner reminders ───────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getReminderSettings() async {
+    try {
+      final res = await _dio.get('/business/reminder-settings');
+      return Map<String, dynamic>.from(res.data as Map);
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> updateReminderSettings(
+      Map<String, dynamic> settings) async {
+    try {
+      final res = await _dio.patch('/business/reminder-settings', data: settings);
+      return Map<String, dynamic>.from(res.data as Map);
     } on DioException catch (e) {
       throw _wrap(e);
     }
@@ -298,12 +402,52 @@ class ApiService {
     }
   }
 
-  Future<List<Customer>> getCustomers() async {
+  Future<List<Customer>> getCustomers({
+    String? search,
+    int page = 1,
+    int limit = 30,
+  }) async {
     try {
-      final res = await _dio.get('/customers');
-      return (res.data as List)
-          .map((e) => Customer.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final res = await _dio.get(
+        '/customers',
+        queryParameters: {
+          if (search != null && search.isNotEmpty) 'search': search,
+          'page': page,
+          'limit': limit,
+        },
+      );
+      final data = res.data;
+      if (data is List) {
+        return data
+            .map((e) => Customer.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      if (data is Map && data['customers'] is List) {
+        return (data['customers'] as List)
+            .map((e) => Customer.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  Future<Customer> createCustomer({
+    required String name,
+    String? phone,
+    String? telegramUsername,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/customers',
+        data: {
+          'name': name,
+          if (phone != null) 'phone': phone,
+          if (telegramUsername != null) 'telegramUsername': telegramUsername,
+        },
+      );
+      return Customer.fromJson(res.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _wrap(e);
     }

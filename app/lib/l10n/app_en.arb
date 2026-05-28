@@ -1,0 +1,615 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "Uzbek CRM",
+
+  "buttonSave": "Save",
+  "buttonSaveChanges": "Save changes",
+  "buttonCancel": "Cancel",
+  "buttonDelete": "Delete",
+  "buttonEdit": "Edit",
+  "buttonAdd": "Add",
+  "buttonCreate": "Create",
+  "buttonConfirm": "Confirm",
+  "buttonContinue": "Continue",
+  "buttonBack": "Back",
+  "buttonRetry": "Try again",
+  "buttonClose": "Close",
+  "buttonDone": "Done",
+  "buttonNext": "Next",
+  "buttonShare": "Share",
+  "buttonCopy": "Copy",
+
+  "commonSearch": "Search",
+  "commonLoading": "Loading",
+  "commonToday": "Today",
+  "commonYesterday": "Yesterday",
+  "commonActive": "Active",
+  "commonPaused": "Paused",
+  "commonOptional": "optional",
+  "commonOptionalLabel": "Optional",
+  "commonRequired": "Required",
+  "commonYes": "Yes",
+  "commonNo": "No",
+  "commonAll": "All",
+  "commonNone": "None",
+
+  "errorGeneric": "Something went wrong",
+  "errorLoadFailed": "Failed to load",
+  "errorWithMessage": "Error: {message}",
+  "@errorWithMessage": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "navHome": "Home",
+  "navCustomers": "Customers",
+  "navOrders": "Orders",
+  "navCatalog": "Catalog",
+  "navAppointments": "Appointments",
+  "navServices": "Services",
+  "navStaff": "Staff",
+  "navProjects": "Projects",
+  "navAnalytics": "Analytics",
+  "navSettings": "Settings",
+  "navMessages": "Messages",
+
+  "orderStatusNew": "New",
+  "orderStatusPreparing": "Preparing",
+  "orderStatusReady": "Ready",
+  "orderStatusDelivered": "Delivered",
+  "orderStatusCancelled": "Cancelled",
+
+  "paymentStatusPending": "Pending",
+  "paymentStatusPaymentReceived": "Payment received",
+  "paymentStatusConfirmed": "Confirmed",
+
+  "appointmentStatusRequested": "Requested",
+  "appointmentStatusConfirmed": "Confirmed",
+  "appointmentStatusCompleted": "Completed",
+  "appointmentStatusCancelled": "Cancelled",
+  "appointmentStatusNoShow": "No-show",
+
+  "projectStatusProposalSent": "Proposal sent",
+  "projectStatusInProgress": "In progress",
+  "projectStatusReview": "In review",
+  "projectStatusCompleted": "Completed",
+  "projectStatusCancelled": "Cancelled",
+
+  "milestoneStatusPending": "Pending",
+  "milestoneStatusSubmittedForReview": "Submitted for review",
+  "milestoneStatusApproved": "Approved",
+  "milestoneStatusPaymentReceived": "Payment received",
+
+  "invoiceStatusUnpaid": "Unpaid",
+  "invoiceStatusPaid": "Paid",
+
+  "deliveryMethodPickup": "Pickup",
+  "deliveryMethodDelivery": "Delivery",
+
+  "loginWelcomeTitle": "Welcome",
+  "loginWelcomeSubtitle": "Sign in to manage your business",
+  "loginPhoneLabel": "Phone number",
+  "loginPhoneHint": "90 123 45 67",
+  "loginContinueButton": "Continue",
+  "loginOtpHint": "A 4-digit code will be sent to your number",
+  "loginErrorInvalidPhone": "Enter a valid phone number",
+
+  "otpTitle": "Enter the code",
+  "otpSubtitle": "We sent a code to {phone}",
+  "@otpSubtitle": {
+    "placeholders": {
+      "phone": { "type": "String" }
+    }
+  },
+  "otpCodeLabel": "Verification code",
+  "otpVerifyButton": "Verify",
+  "otpResendButton": "Resend code",
+  "otpCodeResent": "Code resent",
+  "otpDevHint": "Use 1234 in development",
+  "otpErrorInvalid": "Invalid code, try again",
+  "consentGeneral": "I have read the Privacy Policy and consent to the processing of my personal data in accordance with the Law of the Republic of Uzbekistan \"On Personal Data\".",
+  "consentGeneralLink": "Privacy Policy",
+  "consentCrossBorder": "I consent to the storage and transfer of my personal data on servers located outside Uzbekistan (Railway, Cloudflare).",
+
+  "onboardingBusinessStepTitle": "Tell us about your business",
+  "onboardingBusinessNameLabel": "Business name",
+  "onboardingBusinessNameHint": "e.g. Laylo Cakes",
+  "onboardingModeTitle": "What does your business do?",
+  "onboardingModeProducts": "Sell products",
+  "onboardingModeProductsDesc": "Cakes, clothes, handmade goods",
+  "onboardingModeServices": "Offer services",
+  "onboardingModeServicesDesc": "Salon, tutoring, appointments",
+  "onboardingModeFreelance": "Freelance projects",
+  "onboardingModeFreelanceDesc": "Design, video, development",
+  "onboardingBotStepTitle": "Connect your Telegram bot",
+  "onboardingBotTokenLabel": "Bot token",
+  "onboardingBotTokenHint": "Paste the token from BotFather",
+  "onboardingPaymentStepTitle": "How will customers pay?",
+  "onboardingReviewStepTitle": "Review",
+  "onboardingDoneTitle": "You're all set!",
+  "onboardingDoneSubtitle": "Your business is ready to receive orders",
+  "onboardingDoneShareHint": "Your CRM is ready. Share your bot link with customers.",
+  "onboardingFinishButton": "Go to dashboard",
+  "onboardingSetupTitle": "Set up your business",
+  "onboardingBusinessType": "Business type",
+  "onboardingLanguageLabel": "Language",
+  "onboardingModeProductsTitle": "Product selling",
+  "onboardingModeProductsSubtitle": "Sell via Telegram bot",
+  "onboardingModeServicesTitle": "Services & appointments",
+  "onboardingModeServicesSubtitle": "Accept bookings",
+  "onboardingModeFreelanceTitle": "Freelance projects",
+  "onboardingModeFreelanceSubtitle": "Track projects & invoices",
+  "onboardingModeFreelanceShort": "Freelance",
+  "onboardingBotHeader": "Telegram Bot",
+  "onboardingBotCreateTitle": "Create your Telegram bot",
+  "onboardingBotCreateSubtitle": "Your customers will use this bot",
+  "onboardingBotStep1": "Open Telegram and search for @BotFather",
+  "onboardingBotStep2": "Send the message: /newbot",
+  "onboardingBotStep3": "Choose a name for your bot (e.g. Zulfiya Cakes)",
+  "onboardingBotStep4": "Choose a username ending in _bot (e.g. zulfiya_cakes_bot)",
+  "onboardingBotStep5": "Copy the token BotFather gives you",
+  "onboardingBotPasteToken": "Paste your bot token",
+  "onboardingVerifyToken": "Verify token",
+  "onboardingBotReady": "@{username} is ready!",
+  "@onboardingBotReady": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "onboardingPaymentHeader": "Payment Method",
+  "onboardingPaymentSubtitle": "You can change this later in Settings",
+  "onboardingCardNumberLabel": "Card number ({optional})",
+  "@onboardingCardNumberLabel": {
+    "placeholders": {
+      "optional": { "type": "String" }
+    }
+  },
+  "onboardingSkipForNow": "Skip for now",
+  "onboardingAlmostDone": "Almost done!",
+  "onboardingSummaryType": "Type",
+  "onboardingSummaryBot": "Bot",
+  "onboardingSummaryPayment": "Payment",
+  "onboardingNotSet": "Not set",
+  "onboardingLaunchCrm": "Launch my CRM",
+
+  "settingsTitle": "Settings",
+  "settingsBusinessProfile": "BUSINESS PROFILE",
+  "settingsEditProfileTooltip": "Edit profile",
+  "settingsDescriptionLabel": "Description ({optional})",
+  "@settingsDescriptionLabel": {
+    "placeholders": {
+      "optional": { "type": "String" }
+    }
+  },
+  "settingsBusinessMode": "BUSINESS MODE",
+  "settingsModeProductsLabel": "Product selling",
+  "settingsModeProductsDesc": "Sell physical or digital products via the bot",
+  "settingsModeServicesLabel": "Service / appointments",
+  "settingsModeServicesDesc": "Accept bookings and manage appointments",
+  "settingsModeFreelanceLabel": "Freelance / projects",
+  "settingsModeFreelanceDesc": "Track project milestones and invoices",
+  "settingsModeAtLeastOne": "You must have at least one mode active.",
+  "settingsPaymentMethod": "PAYMENT METHOD",
+  "settingsEditPaymentTooltip": "Edit payment",
+  "settingsCardNumberLabel": "Card number",
+  "settingsNoCardWarning": "No payment card set. Customers will not be able to pay.",
+  "settingsCalendarSync": "CALENDAR SYNC",
+  "settingsCalendarSyncTitle": "Sync to my calendar",
+  "settingsCalendarSyncSubtitle": "Add appointments, deliveries and deadlines to your calendar",
+  "settingsCalendarLinkLabel": "Your calendar link",
+  "settingsCalendarLinkCopied": "Calendar link copied",
+  "settingsCalendarSyncFailed": "Failed to update calendar sync",
+  "settingsAddToGoogleCalendar": "Add to Google Calendar",
+  "settingsAddToAppleCalendar": "Add to Apple Calendar",
+  "settingsCalendarSamsungNote": "Samsung users: add to Google Calendar — it will sync to Samsung Calendar automatically.",
+  "settingsReminders": "REMINDERS",
+  "settingsRemindersSubtitle": "Get notified before appointments, deliveries and deadlines",
+  "settingsReminderSaveFailed": "Failed to save reminder setting",
+  "settingsRemindersLoadFailed": "Could not load reminder settings",
+  "settingsReminderAppointmentTitle": "Appointment reminders",
+  "settingsReminderAppointmentSubtitle": "Before each appointment",
+  "settingsReminderSecondTitle": "Second reminder",
+  "settingsReminderSecondSubtitle": "A final reminder closer to the time",
+  "settingsReminderDeliveryTitle": "Delivery reminders",
+  "settingsReminderDeliverySubtitle": "Before an order is due for delivery",
+  "settingsReminderDeadlineTitle": "Deadline reminders",
+  "settingsReminderDeadlineSubtitle": "Before milestones and project deadlines",
+  "settingsReminderHoursBefore": "{count, plural, =1{1 hour before} other{{count} hours before}}",
+  "@settingsReminderHoursBefore": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "settingsReminderDaysBefore": "{count, plural, =1{1 day before} other{{count} days before}}",
+  "@settingsReminderDaysBefore": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "settingsRemindersFootnote": "Reminders are sent to this app and your Telegram.",
+  "settingsTelegramBot": "TELEGRAM BOT",
+  "settingsNoBotConfigured": "No bot configured. Contact support to set up your bot.",
+  "settingsCopyLinkTooltip": "Copy link",
+  "settingsBotLinkCopied": "Bot link copied",
+  "settingsLanguage": "LANGUAGE",
+  "settingsLanguageFootnote": "This changes the app language and the language your Telegram bot uses with customers.",
+  "settingsAccount": "ACCOUNT",
+  "settingsLogOut": "Log out",
+  "settingsCustomerFields": "CUSTOMER FIELDS",
+  "settingsAddFieldTooltip": "Add field",
+  "settingsNoCustomFields": "No custom fields. Add fields to collect extra info about customers.",
+  "settingsAddCustomerField": "Add customer field",
+  "settingsFieldNameLabel": "Field name",
+  "settingsFieldNameHint": "e.g. Company, Instagram handle",
+  "settingsFieldTypeLabel": "Field type",
+  "settingsFieldTypeText": "Text",
+  "settingsFieldTypeNumber": "Number",
+  "settingsFieldTypeDate": "Date",
+  "settingsFieldTypeYesNo": "Yes / No",
+  "settingsPipelineStages": "PIPELINE STAGES",
+  "settingsAddStageTooltip": "Add stage",
+  "settingsNoStages": "No pipeline stages. Add stages to track where customers are in your sales process.",
+  "settingsAddStage": "Add pipeline stage",
+  "settingsStageNameLabel": "Stage name",
+  "settingsStageNameHint": "e.g. Lead, Negotiating, Won",
+  "settingsColorLabel": "Color",
+  "settingsCheckoutQuestions": "CHECKOUT QUESTIONS",
+  "settingsAddQuestionTooltip": "Add question",
+  "settingsNoCheckoutQuestions": "No checkout questions. Questions are asked in the Telegram bot during checkout.",
+  "settingsAddCheckoutQuestion": "Add checkout question",
+  "settingsQuestionLabel": "Question",
+  "settingsQuestionHint": "e.g. Any allergies or special requests?",
+  "settingsServices": "SERVICES",
+  "settingsManageServices": "Manage services",
+  "settingsStaff": "STAFF",
+  "settingsManageStaff": "Manage staff",
+
+  "homeSearchHint": "Search customers...",
+  "homeNoCustomersFound": "No customers found",
+  "homeNoContactInfo": "No contact info",
+  "homeOrdersCount": "{count, plural, =1{1 order} other{{count} orders}}",
+  "@homeOrdersCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "homeNeedsAttention": "Needs attention",
+  "homeTodaysActivity": "Today's activity",
+  "homeOverdue": "Overdue",
+  "homeDaysSilent": "{days}d silent",
+  "@homeDaysSilent": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "homeBadgeAppointment": "Appointment",
+  "homeBadgeProject": "Project",
+  "homeBadgeMilestone": "Milestone",
+  "homeActivityCancelled": "{service} — cancelled",
+  "@homeActivityCancelled": {
+    "placeholders": {
+      "service": { "type": "String" }
+    }
+  },
+  "homeActivityNewProject": "New project • {customer}",
+  "@homeActivityNewProject": {
+    "placeholders": {
+      "customer": { "type": "String" }
+    }
+  },
+  "homeActivityMilestoneApproved": "Approved • {project}",
+  "@homeActivityMilestoneApproved": {
+    "placeholders": {
+      "project": { "type": "String" }
+    }
+  },
+  "homeNoActivity": "No activity today",
+
+  "ordersTitle": "Orders",
+  "ordersSearchHint": "Search by name or order #",
+  "orderNumberLabel": "Order #{number}",
+  "@orderNumberLabel": {
+    "placeholders": {
+      "number": { "type": "int" }
+    }
+  },
+  "orderPaidBadge": "💰 Paid",
+  "ordersEmpty": "No orders yet",
+  "ordersEmptyFiltered": "No orders match your filter",
+
+  "commonTotal": "Total",
+  "orderDetailTitle": "Order",
+  "orderPaymentPaid": "Paid",
+  "orderPaymentPending": "Payment pending",
+  "orderSectionCustomer": "Customer",
+  "orderSectionItems": "Items",
+  "orderSectionDelivery": "Delivery",
+  "orderSectionNotes": "Notes",
+  "orderSectionResponses": "Customer responses",
+  "orderSectionTimeline": "Timeline",
+  "orderTimelinePlaced": "Order placed",
+  "orderTimelineReady": "Ready for pickup / delivery",
+  "orderTimelinePaymentConfirmed": "Payment confirmed",
+  "orderConfirmPayment": "Confirm Payment",
+  "orderStartPreparing": "Start Preparing",
+  "orderMarkReady": "Mark as Ready",
+  "orderMarkDelivered": "Mark as Delivered",
+  "orderCancel": "Cancel Order",
+  "orderPaymentAlreadyConfirmed": "Payment already confirmed",
+  "orderCancelTitle": "Cancel order?",
+  "orderCancelConfirm": "This action cannot be undone.",
+  "orderKeep": "Keep",
+
+  "customersTitle": "Customers",
+  "customersSearchHint": "Search by name, @handle or phone",
+  "customersEmpty": "No customers yet",
+  "customersEmptyFiltered": "No customers match your search",
+  "customersEmptyHint": "Customers are added when they order through the bot",
+
+  "customerDetailTitle": "Customer",
+  "customerAddTag": "Add tag",
+  "customerTagHint": "Tag label (e.g. VIP, Cake lover)",
+  "customerSetStage": "Set pipeline stage",
+  "customerNoStage": "No stage",
+  "customerSetStageShort": "Set stage",
+  "customerSince": "Since {date}",
+  "@customerSince": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "customerStatOrders": "Orders",
+  "customerStatTotalSpent": "Total spent",
+  "customerStatLastOrder": "Last order",
+  "customerDaysAgo": "{days}d ago",
+  "@customerDaysAgo": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "customerAddReminder": "Add reminder",
+  "customerReminderHint": "Note (e.g. Follow up on order #12)",
+  "customerSaveReminder": "Save reminder",
+  "customerNoReminders": "No reminders. Tap + to add a follow-up.",
+  "customerNotesLabel": "NOTES",
+  "customerNotesHint": "Add notes about this customer…",
+  "customerNoNotes": "No notes yet. Tap edit to add one.",
+  "customerCustomFields": "CUSTOM FIELDS",
+  "customerNoCustomFields": "No custom fields defined. Add fields in Settings.",
+  "customerTapToSet": "Tap to set",
+  "customerOrderHistory": "ORDER HISTORY",
+  "customerLoadError": "Could not load customer",
+  "customerLoadErrorHint": "Check your connection and try again",
+
+  "catalogTitle": "Catalog",
+  "catalogPrepTime": "Prep: {time}",
+  "@catalogPrepTime": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "catalogEmpty": "No products yet",
+  "catalogEmptyHint": "Tap + to add your first product",
+  "stockUnlimited": "Unlimited",
+  "stockNoInfo": "No stock info",
+  "stockOut": "Out of stock",
+  "stockIn": "In stock: {count}",
+  "@stockIn": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "productFormNewTitle": "New Product",
+  "productFormEditTitle": "Edit Product",
+  "productFormNameLabel": "Product name *",
+  "productFormNameHint": "e.g. Chocolate Cake",
+  "productFormNameRequired": "Name is required",
+  "productFormPriceLabel": "Price *",
+  "productFormPriceRequired": "Price is required",
+  "productFormPriceInvalid": "Enter a valid price",
+  "productFormDescLabel": "Description",
+  "productFormDescHint": "Optional product description",
+  "productFormStockLabel": "Stock quantity",
+  "productFormStockHint": "e.g. 10",
+  "productFormStockInvalid": "Enter 0 or more",
+  "productFormTimeLabel": "Time",
+  "productFormUnitLabel": "Unit",
+  "prepUnitMinutes": "Minutes",
+  "prepUnitHours": "Hours",
+  "prepUnitDays": "Days",
+  "prepUnitWeeks": "Weeks",
+  "productFormActiveOn": "Product is visible in the bot catalog",
+  "productFormActiveOff": "Product is hidden from customers",
+  "productFormCreate": "Create product",
+
+  "formRequired": "Required",
+  "formPositiveInteger": "Enter a positive integer",
+  "durationMinutes": "{min} min",
+  "@durationMinutes": {
+    "placeholders": {
+      "min": { "type": "int" }
+    }
+  },
+  "servicesTitle": "Services",
+  "servicesEmpty": "No services yet. Tap + to add one.",
+  "serviceFormNewTitle": "New service",
+  "serviceFormEditTitle": "Edit service",
+  "serviceFormNameLabel": "Service name",
+  "serviceFormDurationLabel": "Duration (minutes)",
+  "serviceFormPriceLabel": "Price (UZS)",
+  "serviceFormActiveSubtitle": "Visible to customers in the bot",
+
+  "staffTitle": "Staff",
+  "staffEmpty": "No staff yet. Tap + to add one.",
+  "staffNoServices": "No services assigned",
+  "staffFormNewTitle": "New staff member",
+  "staffFormEditTitle": "Edit staff member",
+  "staffDeleteTitle": "Delete {name}?",
+  "@staffDeleteTitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "staffThisMember": "this staff member",
+  "staffDeleteConfirm": "This cannot be undone.",
+  "staffFormNameLabel": "Full name",
+  "staffFormTelegramLabel": "Telegram handle (optional)",
+  "staffFormServicesLabel": "Services performed",
+  "staffNoServicesAvailable": "No services available. Add services first.",
+  "staffSelectService": "Select at least one service",
+
+  "appointmentsTitle": "Appointments",
+  "apptTomorrow": "Tomorrow",
+  "apptEmpty": "No appointments on this day",
+  "apptEmptyHint": "Use the + button to add one",
+  "apptDetailTitle": "Appointment",
+  "apptPayInAdvance": "Pay in advance",
+  "apptPayAtAppointment": "Pay at appointment",
+  "apptNotesHint": "Add notes…",
+  "apptNoNotes": "No notes",
+  "apptConfirmPayment": "Confirm payment received",
+  "apptConfirm": "Confirm appointment",
+  "apptMarkCompleted": "Mark as completed",
+  "apptMarkNoShow": "Mark as no-show",
+  "apptCancel": "Cancel appointment",
+  "apptFormTitle": "New appointment",
+  "apptFormCustomerLabel": "Customer *",
+  "apptFormSelectExisting": "Select existing",
+  "apptFormEnterManually": "Enter manually",
+  "apptFormSelectCustomer": "Select a customer",
+  "apptFormCustomerNameLabel": "Customer name",
+  "apptFormCustomerNameHint": "Enter customer name",
+  "apptFormServiceLabel": "Service *",
+  "apptFormFromServices": "From my services",
+  "apptFormServiceField": "Service",
+  "apptFormSelectService": "Select a service",
+  "apptFormServiceNameHint": "e.g. Haircut, Consultation, Lesson",
+  "apptFormDurationLabel": "Duration (min)",
+  "apptFormStaffLabel": "Staff member",
+  "apptFormAnyStaff": "Any available",
+  "apptFormWhenLabel": "When *",
+  "apptFormDateLabel": "Date",
+  "apptFormSelectDate": "Select date",
+  "apptFormSelectTime": "Select time",
+  "apptFormPaymentLabel": "Payment",
+  "apptFormNotesHint": "Any notes about this appointment...",
+  "apptFormCreate": "Create appointment",
+  "apptErrSelectCustomer": "Select a customer",
+  "apptErrEnterCustomer": "Enter a customer name",
+  "apptErrSelectService": "Select a service",
+  "apptErrEnterService": "Enter a service name",
+  "apptErrSelectDateTime": "Select date and time",
+
+  "projectsTitle": "Projects",
+  "projectsFilterProposal": "Proposal",
+  "projectsFilterReview": "Review",
+  "projectsEmpty": "No projects yet",
+  "projectsMilestoneCount": "{done}/{total} milestones",
+  "@projectsMilestoneCount": {
+    "placeholders": {
+      "done": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "projectDetailTitle": "Project",
+  "projectMarkInProgress": "Mark as in progress",
+  "projectSendForReview": "Send for review",
+  "projectMarkCompleted": "Mark as completed",
+  "projectCancelProject": "Cancel project",
+  "projectStatusUpdated": "Status updated to {status}",
+  "@projectStatusUpdated": {
+    "placeholders": {
+      "status": { "type": "String" }
+    }
+  },
+  "projectClient": "Client",
+  "projectPhone": "Phone",
+  "projectStart": "Start",
+  "projectDeadline": "Deadline",
+  "projectScope": "Scope of work",
+  "projectPaymentTerms": "Payment terms",
+  "projectProposalCopied": "Proposal link copied to clipboard",
+  "projectShareProposal": "Share proposal link",
+  "projectMilestones": "Milestones",
+  "projectNoMilestones": "No milestones yet",
+  "milestoneAwaitingReview": "Awaiting client review",
+  "milestoneApprovedByClient": "Approved by client",
+  "projectDuePrefix": "Due {date}",
+  "@projectDuePrefix": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "projectResetMilestone": "Reset milestone",
+  "projectResetMilestoneBody": "Reset \"{name}\" back to Pending?\n\nThis is for testing — the client will not be notified.",
+  "@projectResetMilestoneBody": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "projectResetToPending": "Reset to pending",
+  "projectSubmitForReview": "Submit for client review",
+  "projectWaitingApproval": "Waiting for client approval",
+  "projectMarkPaymentReceived": "Mark payment received",
+  "projectInvoices": "Invoices",
+  "projectGenerate": "Generate",
+  "projectNoInvoices": "No invoices yet",
+  "projectInvoiceCopied": "Invoice link copied to clipboard",
+  "projectMarkPaid": "Mark paid",
+  "projectGenerateInvoice": "Generate invoice",
+  "projectQty": "Qty",
+  "projectUnitPrice": "Unit price (UZS)",
+  "projectDueDateLabel": "Due date (YYYY-MM-DD)",
+  "projectFormTitle": "New project",
+  "projectSelectClient": "Select a client",
+  "projectClientNameLabel": "Client name",
+  "projectClientNameHint": "Enter client name",
+  "projectNameLabel": "Project name",
+  "projectNameHint": "e.g. Brand identity redesign",
+  "projectScopeHint": "Describe deliverables...",
+  "projectPriceLabel": "Total agreed price (UZS)",
+  "projectTermsHint": "e.g. 50% upfront, 50% on delivery",
+  "projectStartDate": "Start date",
+  "projectFormCreate": "Create project",
+  "projectErrSelectClient": "Please select a client",
+  "projectErrEnterClient": "Enter a client name",
+  "projectErrNameRequired": "Project name is required",
+  "milestoneFormTitle": "Add milestone",
+  "milestoneAdd": "Add milestone",
+  "milestoneNameLabel": "Milestone name",
+  "milestoneNameHint": "e.g. Initial design mockups",
+  "milestoneAmountLabel": "Amount (UZS)",
+  "milestoneDueDateLabel": "Due date",
+  "milestoneAmountInvalid": "Enter a valid amount",
+  "analyticsTitle": "Analytics",
+  "analyticsNoDataLastMonth": "No data last month",
+  "analyticsVsLastMonth": "{change}% vs last month",
+  "@analyticsVsLastMonth": {
+    "placeholders": {
+      "change": { "type": "String" }
+    }
+  },
+  "analyticsRevenueThisMonth": "Revenue this month",
+  "analyticsLastMonth": "Last month: {amount}",
+  "@analyticsLastMonth": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "analyticsCompletedThisMonth": "Completed\nthis month",
+  "analyticsAvgOrderValue": "Avg order\nvalue",
+  "analyticsPendingPayments": "Pending payments",
+  "analyticsAllReceived": "All payments received",
+  "analyticsTopCustomers": "TOP CUSTOMERS — LAST 90 DAYS",
+  "analyticsNoConfirmedOrders": "No confirmed orders in the last 90 days",
+  "analyticsBestSelling": "BEST SELLING PRODUCT",
+  "analyticsUnitsSold": "{count, plural, =1{1 unit sold} other{{count} units sold}}",
+  "@analyticsUnitsSold": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  }
+}

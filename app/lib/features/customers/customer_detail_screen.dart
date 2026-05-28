@@ -6,7 +6,9 @@ import 'package:intl/intl.dart';
 import '../../core/models/customer.dart';
 import '../../core/models/order.dart';
 import '../../features/settings/customization_provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
+import '../../shared/utils/status_labels.dart';
 import 'customer_detail_provider.dart';
 
 class CustomerDetailScreen extends ConsumerStatefulWidget {
@@ -54,13 +56,14 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
       if (!mounted) return;
       setState(() => _notesSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())), backgroundColor: Colors.red),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final customerAsync =
         ref.watch(customerDetailProvider(widget.customerId));
     final notifier =
@@ -68,7 +71,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
 
     return customerAsync.when(
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Customer')),
+        appBar: AppBar(title: Text(l.customerDetailTitle)),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => _ErrorView(customerId: widget.customerId),
@@ -125,6 +128,7 @@ class _HeaderCard extends ConsumerWidget {
   ];
 
   void _showAddTag(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final ctrl = TextEditingController();
     String pickedColor = _tagPalette[0];
 
@@ -139,14 +143,14 @@ class _HeaderCard extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Add tag',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(l.customerAddTag,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 12),
               TextField(
                 controller: ctrl,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Tag label (e.g. VIP, Cake lover)',
+                decoration: InputDecoration(
+                  hintText: l.customerTagHint,
                   isDense: true,
                 ),
                 maxLength: 30,
@@ -186,13 +190,13 @@ class _HeaderCard extends ConsumerWidget {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                              content: Text('Error: $e'),
+                              content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
                               backgroundColor: Colors.red),
                         );
                       }
                     }
                   },
-                  child: const Text('Add tag'),
+                  child: Text(l.customerAddTag),
                 ),
               ),
             ],
@@ -211,6 +215,7 @@ class _HeaderCard extends ConsumerWidget {
   }
 
   void _showChangeStage(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final stages = ref.read(stagesProvider).valueOrNull ?? [];
     showModalBottomSheet(
       context: context,
@@ -219,14 +224,14 @@ class _HeaderCard extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
-              child: Text('Set pipeline stage',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              child: Text(l.customerSetStage,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
             ListTile(
               leading: const Icon(Icons.block_outlined, size: 18, color: Colors.grey),
-              title: const Text('No stage'),
+              title: Text(l.customerNoStage),
               onTap: () async {
                 Navigator.pop(ctx);
                 try {
@@ -234,7 +239,7 @@ class _HeaderCard extends ConsumerWidget {
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                      SnackBar(content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())), backgroundColor: Colors.red),
                     );
                   }
                 }
@@ -257,7 +262,7 @@ class _HeaderCard extends ConsumerWidget {
                   } catch (e) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                        SnackBar(content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())), backgroundColor: Colors.red),
                       );
                     }
                   }
@@ -273,6 +278,7 @@ class _HeaderCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     ref.watch(stagesProvider); // keep stage list fresh
     return Card(
       margin: EdgeInsets.zero,
@@ -326,7 +332,7 @@ class _HeaderCard extends ConsumerWidget {
                         ),
                       _InfoRow(
                         icon: Icons.calendar_today_outlined,
-                        text: 'Since ${formatDate(customer.createdAt)}',
+                        text: l.customerSince(formatDate(customer.createdAt)),
                       ),
                     ],
                   ),
@@ -348,7 +354,7 @@ class _HeaderCard extends ConsumerWidget {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                                content: Text('Error: $e'),
+                                content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
                                 backgroundColor: Colors.red),
                           );
                         }
@@ -372,7 +378,7 @@ class _HeaderCard extends ConsumerWidget {
                       children: [
                         Icon(Icons.add, size: 12, color: Colors.grey[400]),
                         const SizedBox(width: 4),
-                        Text('Set stage',
+                        Text(l.customerSetStageShort,
                             style: TextStyle(
                                 fontSize: 12, color: Colors.grey[400])),
                       ],
@@ -473,7 +479,7 @@ class _AddTagChip extends StatelessWidget {
           children: [
             Icon(Icons.add, size: 12, color: Colors.grey[500]),
             const SizedBox(width: 3),
-            Text('Add tag',
+            Text(AppLocalizations.of(context)!.customerAddTag,
                 style: TextStyle(fontSize: 11, color: Colors.grey[500])),
           ],
         ),
@@ -516,12 +522,13 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final d = customer.daysSinceLastOrder;
     return Row(
       children: [
         Expanded(
           child: _StatCard(
-            label: 'Orders',
+            label: l.customerStatOrders,
             value: customer.totalOrders.toString(),
             icon: Icons.receipt_long_outlined,
             color: Colors.blue,
@@ -530,7 +537,7 @@ class _StatsRow extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: _StatCard(
-            label: 'Total spent',
+            label: l.customerStatTotalSpent,
             value: formatUZS(customer.totalSpent),
             icon: Icons.payments_outlined,
             color: Colors.green,
@@ -539,8 +546,8 @@ class _StatsRow extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: _StatCard(
-            label: 'Last order',
-            value: d < 0 ? '—' : d == 0 ? 'Today' : '${d}d ago',
+            label: l.customerStatLastOrder,
+            value: d < 0 ? '—' : d == 0 ? l.commonToday : l.customerDaysAgo(d),
             icon: Icons.history_outlined,
             color: d > 30 ? Colors.orange : Colors.grey,
           ),
@@ -607,6 +614,7 @@ class _RemindersCard extends StatelessWidget {
   const _RemindersCard({required this.customer, required this.notifier});
 
   void _showAddReminder(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final ctrl = TextEditingController();
     DateTime pickedDate =
         DateTime.now().add(const Duration(days: 1));
@@ -622,15 +630,15 @@ class _RemindersCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Add reminder',
-                  style: TextStyle(
+              Text(l.customerAddReminder,
+                  style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 12),
               TextField(
                 controller: ctrl,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Note (e.g. Follow up on order #12)',
+                decoration: InputDecoration(
+                  hintText: l.customerReminderHint,
                   isDense: true,
                 ),
                 maxLength: 200,
@@ -682,13 +690,13 @@ class _RemindersCard extends StatelessWidget {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                              content: Text('Error: $e'),
+                              content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
                               backgroundColor: Colors.red),
                         );
                       }
                     }
                   },
-                  child: const Text('Save reminder'),
+                  child: Text(l.customerSaveReminder),
                 ),
               ),
             ],
@@ -700,6 +708,7 @@ class _RemindersCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final pending = customer.reminders.where((r) => !r.done).toList();
     final done = customer.reminders.where((r) => r.done).toList();
 
@@ -713,7 +722,7 @@ class _RemindersCard extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'REMINDERS',
+                  l.settingsReminders,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: Colors.grey[600],
                         letterSpacing: 0.5,
@@ -724,7 +733,7 @@ class _RemindersCard extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline, size: 20),
                   onPressed: () => _showAddReminder(context),
-                  tooltip: 'Add reminder',
+                  tooltip: l.customerAddReminder,
                   visualDensity: VisualDensity.compact,
                 ),
               ],
@@ -733,7 +742,7 @@ class _RemindersCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Text(
-                  'No reminders. Tap + to add a follow-up.',
+                  l.customerNoReminders,
                   style:
                       TextStyle(color: Colors.grey[400], fontSize: 13),
                 ),
@@ -838,6 +847,7 @@ class _NotesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -848,7 +858,7 @@ class _NotesCard extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'NOTES',
+                  l.customerNotesLabel,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: Colors.grey[600],
                         letterSpacing: 0.5,
@@ -870,15 +880,15 @@ class _NotesCard extends StatelessWidget {
                 controller: controller,
                 maxLines: 4,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Add notes about this customer…',
+                decoration: InputDecoration(
+                  hintText: l.customerNotesHint,
                   isDense: true,
                 ),
               )
             else
               Text(
                 controller.text.isEmpty
-                    ? 'No notes yet. Tap edit to add one.'
+                    ? l.customerNoNotes
                     : controller.text,
                 style: TextStyle(
                   color: controller.text.isEmpty
@@ -894,7 +904,7 @@ class _NotesCard extends StatelessWidget {
                 children: [
                   TextButton(
                     onPressed: saving ? null : onCancel,
-                    child: const Text('Cancel'),
+                    child: Text(l.buttonCancel),
                   ),
                   const SizedBox(width: 8),
                   FilledButton(
@@ -906,7 +916,7 @@ class _NotesCard extends StatelessWidget {
                             child:
                                 CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Save'),
+                        : Text(l.buttonSave),
                   ),
                 ],
               ),
@@ -954,7 +964,7 @@ class _CustomFieldsCardState extends ConsumerState<_CustomFieldsCard> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())), backgroundColor: Colors.red),
         );
       }
     }
@@ -970,6 +980,7 @@ class _CustomFieldsCardState extends ConsumerState<_CustomFieldsCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final fieldsAsync = ref.watch(customFieldsProvider);
 
     return Card(
@@ -980,7 +991,7 @@ class _CustomFieldsCardState extends ConsumerState<_CustomFieldsCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'CUSTOM FIELDS',
+              l.customerCustomFields,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Colors.grey[600],
                     letterSpacing: 0.5,
@@ -992,14 +1003,14 @@ class _CustomFieldsCardState extends ConsumerState<_CustomFieldsCard> {
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: LinearProgressIndicator(),
               ),
-              error: (e, _) => Text('Error loading fields: $e',
+              error: (e, _) => Text(l.errorWithMessage(e.toString()),
                   style: const TextStyle(color: Colors.red, fontSize: 12)),
               data: (fields) {
                 if (fields.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
-                      'No custom fields defined. Add fields in Settings.',
+                      l.customerNoCustomFields,
                       style: TextStyle(color: Colors.grey[400], fontSize: 13),
                     ),
                   );
@@ -1066,6 +1077,7 @@ class _FieldValueEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     if (field.fieldType == 'YESNO') {
       final isBool = value == 'true';
       return Row(
@@ -1074,7 +1086,7 @@ class _FieldValueEditor extends StatelessWidget {
             value: isBool,
             onChanged: (v) => onSave(v.toString()),
           ),
-          Text(isBool ? 'Yes' : 'No',
+          Text(isBool ? l.commonYes : l.commonNo,
               style: const TextStyle(fontSize: 13)),
         ],
       );
@@ -1154,7 +1166,7 @@ class _FieldValueEditor extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            value.isEmpty ? 'Tap to set' : value,
+            value.isEmpty ? l.customerTapToSet : value,
             style: TextStyle(
               fontSize: 14,
               color: value.isEmpty ? Colors.grey[400] : null,
@@ -1182,16 +1194,9 @@ class _OrderHistorySection extends StatelessWidget {
     'CANCELLED': Color(0xFFDC2626),
   };
 
-  static const _statusLabel = {
-    'NEW': 'New',
-    'PREPARING': 'Preparing',
-    'READY': 'Ready',
-    'DELIVERED': 'Delivered',
-    'CANCELLED': 'Cancelled',
-  };
-
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -1202,7 +1207,7 @@ class _OrderHistorySection extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'ORDER HISTORY',
+                  l.customerOrderHistory,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: Colors.grey[600],
                         letterSpacing: 0.5,
@@ -1232,7 +1237,7 @@ class _OrderHistorySection extends StatelessWidget {
               const SizedBox(height: 16),
               Center(
                 child: Text(
-                  'No orders yet',
+                  l.ordersEmpty,
                   style: TextStyle(color: Colors.grey[400]),
                 ),
               ),
@@ -1243,8 +1248,7 @@ class _OrderHistorySection extends StatelessWidget {
                   order: o,
                   statusColor: _statusColor[o.orderStatus] ??
                       const Color(0xFF6B7280),
-                  statusLabel:
-                      _statusLabel[o.orderStatus] ?? o.orderStatus,
+                  statusLabel: orderStatusLabel(l, o.orderStatus),
                 ),
               ),
             ],
@@ -1355,27 +1359,28 @@ class _ErrorView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Customer')),
+      appBar: AppBar(title: Text(l.customerDetailTitle)),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.wifi_off_outlined, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
-            const Text(
-              'Could not load customer',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              l.customerLoadError,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              'Check your connection and try again',
+              l.customerLoadErrorHint,
               style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () => ref.invalidate(customerDetailProvider(customerId)),
-              child: const Text('Try again'),
+              child: Text(l.buttonRetry),
             ),
           ],
         ),

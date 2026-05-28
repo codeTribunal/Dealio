@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/order.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
+import '../../shared/utils/status_labels.dart';
 import '../settings/customization_provider.dart';
 import 'order_detail_provider.dart';
 
@@ -12,14 +14,15 @@ class OrderDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final orderAsync = ref.watch(orderDetailProvider(orderId));
     final notifier = ref.read(orderDetailProvider(orderId).notifier);
 
     return Scaffold(
       appBar: AppBar(
         title: orderAsync.maybeWhen(
-          data: (o) => Text('Order #${o.orderNumber}'),
-          orElse: () => const Text('Order'),
+          data: (o) => Text(l.orderNumberLabel(o.orderNumber)),
+          orElse: () => Text(l.orderDetailTitle),
         ),
       ),
       body: orderAsync.when(
@@ -83,23 +86,16 @@ class _StatusRow extends StatelessWidget {
     'CANCELLED': Color(0xFFDC2626),
   };
 
-  static const _statusLabel = {
-    'NEW': 'New',
-    'PREPARING': 'Preparing',
-    'READY': 'Ready',
-    'DELIVERED': 'Delivered',
-    'CANCELLED': 'Cancelled',
-  };
-
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final color = _statusColor[order.orderStatus] ?? const Color(0xFF6B7280);
-    final label = _statusLabel[order.orderStatus] ?? order.orderStatus;
+    final label = orderStatusLabel(l, order.orderStatus);
 
     final (payLabel, payColor) = switch (order.paymentStatus) {
-      'CONFIRMED' => ('Paid', const Color(0xFF059669)),
-      'PAYMENT_RECEIVED' => ('Payment received', const Color(0xFF1A56DB)),
-      _ => ('Payment pending', const Color(0xFFD97706)),
+      'CONFIRMED' => (l.orderPaymentPaid, const Color(0xFF059669)),
+      'PAYMENT_RECEIVED' => (l.paymentStatusPaymentReceived, const Color(0xFF1A56DB)),
+      _ => (l.orderPaymentPending, const Color(0xFFD97706)),
     };
 
     return Row(
@@ -151,7 +147,7 @@ class _CustomerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Section(
-      title: 'Customer',
+      title: AppLocalizations.of(context)!.orderSectionCustomer,
       child: Row(
         children: [
           const CircleAvatar(
@@ -183,8 +179,9 @@ class _ItemsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return _Section(
-      title: 'Items',
+      title: l.orderSectionItems,
       child: Column(
         children: [
           ...order.items.map((item) => Padding(
@@ -209,8 +206,8 @@ class _ItemsCard extends StatelessWidget {
           const Divider(height: 20),
           Row(
             children: [
-              const Text('Total',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(l.commonTotal,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
               const Spacer(),
               Text(
                 formatUZS(order.total),
@@ -233,9 +230,10 @@ class _DeliveryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final isDelivery = order.deliveryMethod == 'DELIVERY';
     return _Section(
-      title: 'Delivery',
+      title: l.orderSectionDelivery,
       child: Row(
         children: [
           Icon(
@@ -247,8 +245,8 @@ class _DeliveryCard extends StatelessWidget {
           Expanded(
             child: Text(
               isDelivery
-                  ? (order.deliveryAddress ?? 'Delivery')
-                  : 'Pickup',
+                  ? (order.deliveryAddress ?? l.deliveryMethodDelivery)
+                  : l.deliveryMethodPickup,
               style: TextStyle(color: Colors.grey[700]),
             ),
           ),
@@ -267,7 +265,7 @@ class _NotesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Section(
-      title: 'Notes',
+      title: AppLocalizations.of(context)!.orderSectionNotes,
       child: Text(notes, style: TextStyle(color: Colors.grey[700])),
     );
   }
@@ -287,7 +285,7 @@ class _CustomAnswersCard extends ConsumerWidget {
         : <String, String>{};
 
     return _Section(
-      title: 'Customer responses',
+      title: AppLocalizations.of(context)!.orderSectionResponses,
       child: Column(
         children: answers.entries.map((e) {
           final label = questionMap[e.key] ?? e.key;
@@ -332,7 +330,7 @@ class _TimelineCard extends StatelessWidget {
       return const SizedBox.shrink();
     }
     return _Section(
-      title: 'Timeline',
+      title: AppLocalizations.of(context)!.orderSectionTimeline,
       child: Column(
         children: timeline.reversed
             .map((entry) => _TimelineEntry(entry: entry as Map<String, dynamic>))
@@ -348,6 +346,7 @@ class _TimelineEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final status = entry['status'] as String? ?? '';
     final ts = entry['at'] as String? ?? entry['timestamp'] as String? ?? '';
     DateTime? time;
@@ -374,7 +373,7 @@ class _TimelineEntry extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _label(status),
+                  _label(l, status),
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
                 if (time != null)
@@ -390,15 +389,15 @@ class _TimelineEntry extends StatelessWidget {
     );
   }
 
-  String _label(String s) => switch (s) {
-        'NEW' => 'Order placed',
-        'PREPARING' => 'Preparing',
-        'READY' => 'Ready for pickup / delivery',
-        'DELIVERED' => 'Delivered',
-        'CANCELLED' => 'Cancelled',
-        'PAYMENT_RECEIVED' => 'Payment received',
-        'PAYMENT_CONFIRMED' => 'Payment confirmed',
-        'CONFIRMED' => 'Payment confirmed',
+  String _label(AppLocalizations l, String s) => switch (s) {
+        'NEW' => l.orderTimelinePlaced,
+        'PREPARING' => l.orderStatusPreparing,
+        'READY' => l.orderTimelineReady,
+        'DELIVERED' => l.orderStatusDelivered,
+        'CANCELLED' => l.orderStatusCancelled,
+        'PAYMENT_RECEIVED' => l.paymentStatusPaymentReceived,
+        'PAYMENT_CONFIRMED' => l.orderTimelinePaymentConfirmed,
+        'CONFIRMED' => l.orderTimelinePaymentConfirmed,
         _ => s,
       };
 }
@@ -412,6 +411,7 @@ class _ActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final status = order.orderStatus;
     final showConfirmPayment = order.paymentStatus != 'CONFIRMED';
 
@@ -421,7 +421,7 @@ class _ActionButtons extends StatelessWidget {
         if (showConfirmPayment)
           FilledButton.icon(
             icon: const Icon(Icons.check_circle_outline),
-            label: const Text('Confirm Payment'),
+            label: Text(l.orderConfirmPayment),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF059669),
               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -432,7 +432,7 @@ class _ActionButtons extends StatelessWidget {
           if (showConfirmPayment) const SizedBox(height: 10),
           FilledButton.icon(
             icon: const Icon(Icons.restaurant_outlined),
-            label: const Text('Start Preparing'),
+            label: Text(l.orderStartPreparing),
             style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14)),
             onPressed: () => _updateStatus(context, 'PREPARING'),
@@ -442,7 +442,7 @@ class _ActionButtons extends StatelessWidget {
           if (showConfirmPayment) const SizedBox(height: 10),
           FilledButton.icon(
             icon: const Icon(Icons.done_all),
-            label: const Text('Mark as Ready'),
+            label: Text(l.orderMarkReady),
             style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14)),
             onPressed: () => _updateStatus(context, 'READY'),
@@ -452,7 +452,7 @@ class _ActionButtons extends StatelessWidget {
           if (showConfirmPayment) const SizedBox(height: 10),
           FilledButton.icon(
             icon: const Icon(Icons.local_shipping_outlined),
-            label: const Text('Mark as Delivered'),
+            label: Text(l.orderMarkDelivered),
             style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14)),
             onPressed: () => _updateStatus(context, 'DELIVERED'),
@@ -462,7 +462,7 @@ class _ActionButtons extends StatelessWidget {
           const SizedBox(height: 10),
           OutlinedButton.icon(
             icon: const Icon(Icons.cancel_outlined),
-            label: const Text('Cancel Order'),
+            label: Text(l.orderCancel),
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.red,
               side: const BorderSide(color: Colors.red),
@@ -476,18 +476,19 @@ class _ActionButtons extends StatelessWidget {
   }
 
   Future<void> _confirmPayment(BuildContext context) async {
+    final l = AppLocalizations.of(context)!;
     try {
       await notifier.confirmPayment();
     } catch (e) {
       if (!context.mounted) return;
-      final msg = e.toString().contains('already confirmed')
-          ? 'Payment already confirmed'
-          : 'Error: $e';
+      final alreadyConfirmed = e.toString().contains('already confirmed');
+      final msg = alreadyConfirmed
+          ? l.orderPaymentAlreadyConfirmed
+          : l.errorWithMessage(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
-          backgroundColor:
-              msg == 'Payment already confirmed' ? Colors.orange : Colors.red,
+          backgroundColor: alreadyConfirmed ? Colors.orange : Colors.red,
         ),
       );
     }
@@ -499,26 +500,30 @@ class _ActionButtons extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
 
   Future<void> _cancelOrder(BuildContext context) async {
+    final l = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cancel order?'),
-        content: const Text('This action cannot be undone.'),
+        title: Text(l.orderCancelTitle),
+        content: Text(l.orderCancelConfirm),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Keep')),
+              child: Text(l.orderKeep)),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Cancel order',
-                  style: TextStyle(color: Colors.red))),
+              child: Text(l.orderCancel,
+                  style: const TextStyle(color: Colors.red))),
         ],
       ),
     );
@@ -582,7 +587,7 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(onPressed: onRetry, child: Text(AppLocalizations.of(context)!.buttonRetry)),
           ],
         ),
       ),

@@ -68,9 +68,9 @@ export default function OrderDetailPage() {
           </button>
         </div>
       ) : order ? (
-        <div className="flex gap-8 items-start">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
           {/* LEFT COLUMN */}
-          <div className="w-80 flex-shrink-0">
+          <div className="w-full lg:w-80 lg:flex-shrink-0">
             {/* Card 1 — Order summary */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-4">
               <div className="flex items-center justify-between mb-4">

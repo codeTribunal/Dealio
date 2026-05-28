@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
@@ -6,10 +7,13 @@ import { allocateOrderNumber } from '../services/orderNumber.js';
 import { sendTelegramMessage } from '../lib/telegram.js';
 import { sendPushToAll } from '../lib/push.js';
 import { getBotToken, hasBotToken } from '../lib/getBotToken.js';
+import { PLAN_LIMITS, planLimitError } from '../lib/planLimits.js';
 
 function verifyBotSecret(request: FastifyRequest, reply: FastifyReply): boolean {
   const secret = request.headers['x-bot-secret'];
-  if (!secret || secret !== process.env.BOT_MANAGER_SECRET) {
+  const provided = Buffer.from(typeof secret === 'string' ? secret : '', 'utf8');
+  const expected = Buffer.from(process.env.BOT_MANAGER_SECRET ?? '', 'utf8');
+  if (provided.length === 0 || provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
     sendError(reply, 401, 'Unauthorized');
     return false;
   }
@@ -32,7 +36,7 @@ const upsertCustomerBody = z.object({
   telegramUsername: z.string().optional(),
   name: z.string().min(1),
   phone: z.string().optional(),
-  languagePreference: z.enum(['UZBEK', 'RUSSIAN']).optional(),
+  languagePreference: z.enum(['UZBEK', 'RUSSIAN', 'ENGLISH']).optional(),
 });
 
 const createBotOrderBody = z.object({
@@ -72,6 +76,13 @@ export default async function botRoutes(app: FastifyInstance) {
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
 
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
+
     const questions = await prisma.checkoutQuestion.findMany({
       where: { businessId: business.id, deletedAt: null },
       orderBy: { order: 'asc' },
@@ -87,6 +98,13 @@ export default async function botRoutes(app: FastifyInstance) {
     const { botUsername } = request.params as { botUsername: string };
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
+
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
 
     const products = await prisma.product.findMany({
       where: { businessId: business.id, active: true, deletedAt: null },
@@ -121,6 +139,29 @@ export default async function botRoutes(app: FastifyInstance) {
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
 
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
+
+    // Check customer limit before creating a new customer (skip on update)
+    const existingCustomer = await prisma.customer.findUnique({
+      where: { businessId_telegramUserId: { businessId: business.id, telegramUserId } },
+      select: { id: true },
+    });
+    if (!existingCustomer) {
+      const plan = business.plan ?? 'FREE';
+      const limits = PLAN_LIMITS[plan];
+      if (limits.customers !== Infinity) {
+        const count = await prisma.customer.count({ where: { businessId: business.id, deletedAt: null } });
+        if (count >= limits.customers) {
+          return reply.status(402).send(planLimitError('customers', { allowed: false, limit: limits.customers, current: count }, plan));
+        }
+      }
+    }
+
     const customer = await prisma.customer.upsert({
       where: { businessId_telegramUserId: { businessId: business.id, telegramUserId } },
       create: {
@@ -129,12 +170,15 @@ export default async function botRoutes(app: FastifyInstance) {
         telegramUsername,
         name,
         phone,
-        languagePreference: languagePreference ?? business.language,
+        // Leave null when not provided so the bot shows a language picker on
+        // first contact. The customer's choice is persisted via /bot/set-language.
+        languagePreference: languagePreference ?? null,
       },
       update: {
         telegramUsername,
         name,
         ...(phone ? { phone } : {}),
+        ...(languagePreference ? { languagePreference } : {}),
         lastInteractionAt: new Date(),
       },
     });
@@ -152,6 +196,13 @@ export default async function botRoutes(app: FastifyInstance) {
 
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
+
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
 
     const customer = await prisma.customer.findFirst({
       where: { id: customerId, businessId: business.id, deletedAt: null },
@@ -235,6 +286,13 @@ export default async function botRoutes(app: FastifyInstance) {
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
 
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
+
     const order = await prisma.order.findFirst({
       where: { id: orderId, businessId: business.id, deletedAt: null },
       include: { customer: { select: { name: true } } },
@@ -288,6 +346,13 @@ export default async function botRoutes(app: FastifyInstance) {
     const business = await findBusinessByUsername(parsed.data.botUsername, reply);
     if (!business) return;
 
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
+
     await prisma.business.update({
       where: { id: business.id },
       data: { ownerTelegramChatId: parsed.data.ownerTelegramChatId },
@@ -303,6 +368,13 @@ export default async function botRoutes(app: FastifyInstance) {
 
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
+
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
 
     const customer = await prisma.customer.findFirst({
       where: { businessId: business.id, telegramUserId, deletedAt: null },
@@ -334,6 +406,13 @@ export default async function botRoutes(app: FastifyInstance) {
     const { botUsername } = request.params as { botUsername: string };
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
+
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
 
     const services = await prisma.service.findMany({
       where: { businessId: business.id, active: true, deletedAt: null },
@@ -373,6 +452,13 @@ export default async function botRoutes(app: FastifyInstance) {
 
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
+
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
 
     const service = await prisma.service.findFirst({
       where: { id: query.serviceId, businessId: business.id, active: true, deletedAt: null },
@@ -424,6 +510,13 @@ export default async function botRoutes(app: FastifyInstance) {
       return;
     }
     console.log('[bot/appointments] business found:', business.id);
+
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
 
     const [customer, service] = await Promise.all([
       prisma.customer.findFirst({ where: { id: customerId, businessId: business.id, deletedAt: null } }),
@@ -494,6 +587,13 @@ export default async function botRoutes(app: FastifyInstance) {
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
 
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
+
     const appointment = await prisma.appointment.findFirst({
       where: { id: appointmentId, businessId: business.id, deletedAt: null },
       include: {
@@ -533,6 +633,13 @@ export default async function botRoutes(app: FastifyInstance) {
 
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
+
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
 
     const customer = await prisma.customer.findFirst({
       where: { businessId: business.id, telegramUserId, deletedAt: null },
@@ -575,6 +682,13 @@ export default async function botRoutes(app: FastifyInstance) {
     const business = await findBusinessByUsername(query.botUsername, reply);
     if (!business) return;
 
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
+
     const appointments = await prisma.appointment.findMany({
       where: {
         businessId: business.id,
@@ -584,7 +698,7 @@ export default async function botRoutes(app: FastifyInstance) {
         deletedAt: null,
       },
       include: {
-        customer: { select: { id: true, name: true, telegramUserId: true } },
+        customer: { select: { id: true, name: true, telegramUserId: true, languagePreference: true } },
         service: { select: { name: true } },
         staff: { select: { name: true } },
       },
@@ -594,6 +708,7 @@ export default async function botRoutes(app: FastifyInstance) {
       ...a,
       business: {
         name: business.name,
+        language: business.language,
         ownerTelegramChatId: business.ownerTelegramChatId,
       },
     }));
@@ -614,6 +729,13 @@ export default async function botRoutes(app: FastifyInstance) {
     const business = await findBusinessByUsername(parsed.data.botUsername, reply);
     if (!business) return;
 
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
+
     await prisma.appointment.update({
       where: { id: parsed.data.appointmentId },
       data: { reminderSent: true },
@@ -629,6 +751,13 @@ export default async function botRoutes(app: FastifyInstance) {
 
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
+
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
 
     const customer = await prisma.customer.findFirst({
       where: { businessId: business.id, telegramUserId, deletedAt: null },
@@ -675,6 +804,13 @@ export default async function botRoutes(app: FastifyInstance) {
 
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
+
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
 
     const milestone = await prisma.milestone.findFirst({
       where: { id: milestoneId, deletedAt: null, project: { businessId: business.id, deletedAt: null } },
@@ -746,6 +882,13 @@ export default async function botRoutes(app: FastifyInstance) {
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
 
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
+
     const project = await prisma.project.findFirst({
       where: { id: projectId, businessId: business.id, deletedAt: null },
       include: { customer: { select: { name: true, telegramUserId: true } } },
@@ -804,6 +947,13 @@ export default async function botRoutes(app: FastifyInstance) {
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
 
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
+
     const customer = await prisma.customer.findFirst({
       where: { businessId: business.id, telegramUserId, deletedAt: null },
     });
@@ -837,9 +987,16 @@ export default async function botRoutes(app: FastifyInstance) {
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
 
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
+
     const order = await prisma.order.findFirst({
       where: { id: orderId, businessId: business.id, deletedAt: null },
-      include: { customer: { select: { telegramUserId: true, name: true } } },
+      include: { customer: { select: { telegramUserId: true, name: true, languagePreference: true } } },
     });
     if (!order) return sendError(reply, 404, 'Order not found');
 
@@ -861,6 +1018,77 @@ export default async function botRoutes(app: FastifyInstance) {
       order: { id: updated.id, orderNumber: updated.orderNumber, paymentStatus: updated.paymentStatus },
       customerTelegramUserId: order.customer.telegramUserId,
       customerName: order.customer.name,
+      customerLanguagePreference: order.customer.languagePreference,
+      businessLanguage: business.language,
     });
+  });
+
+  // GET /bot/customer/:botUsername/:telegramUserId — read-only language lookup.
+  // Used by the bot to decide whether to show the language picker on /start.
+  app.get('/bot/customer/:botUsername/:telegramUserId', async (request, reply) => {
+    if (!verifyBotSecret(request, reply)) return;
+
+    const { botUsername, telegramUserId } = request.params as {
+      botUsername: string;
+      telegramUserId: string;
+    };
+
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
+
+    const customer = await prisma.customer.findUnique({
+      where: { businessId_telegramUserId: { businessId: business.id, telegramUserId } },
+      select: { languagePreference: true },
+    });
+
+    return reply.send({
+      exists: customer !== null,
+      languagePreference: customer?.languagePreference ?? null,
+      businessLanguage: business.language,
+    });
+  });
+
+  // POST /bot/set-language — persist the customer's chosen language without
+  // touching their name. Creates a minimal customer record if none exists yet.
+  app.post('/bot/set-language', async (request, reply) => {
+    if (!verifyBotSecret(request, reply)) return;
+
+    const parsed = z
+      .object({
+        botUsername: z.string(),
+        telegramUserId: z.string(),
+        telegramUsername: z.string().optional(),
+        name: z.string().optional(),
+        language: z.enum(['UZBEK', 'RUSSIAN', 'ENGLISH']),
+      })
+      .safeParse(request.body);
+    if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
+
+    const { botUsername, telegramUserId, telegramUsername, name, language } = parsed.data;
+
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
+
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: business.suspendedReason || 'This account has been suspended.',
+      });
+    }
+
+    const customer = await prisma.customer.upsert({
+      where: { businessId_telegramUserId: { businessId: business.id, telegramUserId } },
+      create: {
+        businessId: business.id,
+        telegramUserId,
+        telegramUsername,
+        name: name || telegramUsername || 'Customer',
+        languagePreference: language,
+      },
+      update: { languagePreference: language },
+      select: { id: true, languagePreference: true },
+    });
+
+    return reply.send(customer);
   });
 }

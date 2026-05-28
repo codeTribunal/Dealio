@@ -17,7 +17,9 @@ model Business {
   cardNumber   String?
   cardBank     CardBank?
   botUsername           String?   @unique
+  calendarToken         String?   @unique
   workingHours          Json?
+  reminderSettings      Json?
   ownerTelegramChatId   String?
   fcmToken              String?
   ownerId               String    @unique
@@ -35,6 +37,7 @@ model Business {
   botTokenTag       String?
 
   customers         Customer[]
+  usageLogs         UsageLog[]
   products          Product[]
   orders            Order[]
   services          Service[]
@@ -47,9 +50,27 @@ model Business {
   stages            CustomerStage[]
   checkoutQuestions CheckoutQuestion[]
   deviceTokens      DeviceToken[]
+  sentReminders     SentReminder[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model SentReminder {
+  id           String   @id @default(cuid())
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id])
+
+  // What this reminder was about
+  entityType   String // "APPOINTMENT" | "ORDER" | "MILESTONE" | "PROJECT"
+  entityId     String // the appointment/order/milestone/project id
+  reminderKind String // "FIRST" | "SECOND" — for appointments with two reminders
+
+  sentAt       DateTime @default(now())
+
+  @@unique([businessId, entityType, entityId, reminderKind])
+  @@index([businessId])
+  @@index([entityId])
 }
 
 model DeviceToken {
@@ -65,10 +86,25 @@ model DeviceToken {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  phone     String    @unique
-  business  Business?
-  createdAt DateTime  @default(now())
+  id             String          @id @default(cuid())
+  phone          String          @unique
+  business       Business?
+  consentRecords ConsentRecord[]
+  createdAt      DateTime        @default(now())
+}
+
+model ConsentRecord {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id])
+  generalConsent     Boolean  @default(false)
+  crossBorderConsent Boolean  @default(false)
+  policyVersion      String
+  ipAddress          String?
+  userAgent          String?
+  createdAt          DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Customer {
@@ -84,7 +120,7 @@ model Customer {
   customFields       Json?
   currentStageId     String?
   currentStage       CustomerStage? @relation(fields: [currentStageId], references: [id])
-  languagePreference Language  @default(UZBEK)
+  languagePreference Language?
   deletedAt          DateTime?
 
   orders       Order[]
@@ -369,6 +405,54 @@ model CheckoutQuestion {
   createdAt DateTime @default(now())
 }
 
+model AdminUser {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  name         String
+  role         AdminRole  @default(SUPPORT)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  auditLogs AuditLog[]
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  adminUserId String
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id])
+  action      String
+  targetType  String
+  targetId    String
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([adminUserId])
+  @@index([targetType, targetId])
+}
+
+model UsageLog {
+  id           String   @id @default(cuid())
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id])
+  month        String
+  orders       Int      @default(0)
+  appointments Int      @default(0)
+  customers    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([businessId, month])
+  @@index([businessId])
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  SUPPORT
+}
+
 enum Mode {
   PRODUCTS
   SERVICES
@@ -378,6 +462,7 @@ enum Mode {
 enum Language {
   UZBEK
   RUSSIAN
+  ENGLISH
 }
 
 enum CardBank {

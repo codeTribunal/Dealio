@@ -1,0 +1,615 @@
+{
+  "@@locale": "ru",
+
+  "appTitle": "Uzbek CRM",
+
+  "buttonSave": "Сохранить",
+  "buttonSaveChanges": "Сохранить изменения",
+  "buttonCancel": "Отмена",
+  "buttonDelete": "Удалить",
+  "buttonEdit": "Редактировать",
+  "buttonAdd": "Добавить",
+  "buttonCreate": "Создать",
+  "buttonConfirm": "Подтвердить",
+  "buttonContinue": "Продолжить",
+  "buttonBack": "Назад",
+  "buttonRetry": "Повторить",
+  "buttonClose": "Закрыть",
+  "buttonDone": "Готово",
+  "buttonNext": "Далее",
+  "buttonShare": "Поделиться",
+  "buttonCopy": "Копировать",
+
+  "commonSearch": "Поиск",
+  "commonLoading": "Загрузка",
+  "commonToday": "Сегодня",
+  "commonYesterday": "Вчера",
+  "commonActive": "Активный",
+  "commonPaused": "Приостановлен",
+  "commonOptional": "необязательно",
+  "commonOptionalLabel": "Необязательно",
+  "commonRequired": "Обязательно",
+  "commonYes": "Да",
+  "commonNo": "Нет",
+  "commonAll": "Все",
+  "commonNone": "Нет",
+
+  "errorGeneric": "Что-то пошло не так",
+  "errorLoadFailed": "Не удалось загрузить",
+  "errorWithMessage": "Ошибка: {message}",
+  "@errorWithMessage": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "navHome": "Главная",
+  "navCustomers": "Клиенты",
+  "navOrders": "Заказы",
+  "navCatalog": "Каталог",
+  "navAppointments": "Записи",
+  "navServices": "Услуги",
+  "navStaff": "Сотрудники",
+  "navProjects": "Проекты",
+  "navAnalytics": "Аналитика",
+  "navSettings": "Настройки",
+  "navMessages": "Сообщения",
+
+  "orderStatusNew": "Новый",
+  "orderStatusPreparing": "Готовится",
+  "orderStatusReady": "Готов",
+  "orderStatusDelivered": "Доставлен",
+  "orderStatusCancelled": "Отменён",
+
+  "paymentStatusPending": "Ожидает",
+  "paymentStatusPaymentReceived": "Оплата получена",
+  "paymentStatusConfirmed": "Подтверждён",
+
+  "appointmentStatusRequested": "Запрошена",
+  "appointmentStatusConfirmed": "Подтверждена",
+  "appointmentStatusCompleted": "Завершена",
+  "appointmentStatusCancelled": "Отменена",
+  "appointmentStatusNoShow": "Не пришёл",
+
+  "projectStatusProposalSent": "Предложение отправлено",
+  "projectStatusInProgress": "В процессе",
+  "projectStatusReview": "На проверке",
+  "projectStatusCompleted": "Завершён",
+  "projectStatusCancelled": "Отменён",
+
+  "milestoneStatusPending": "Ожидает",
+  "milestoneStatusSubmittedForReview": "Отправлено на проверку",
+  "milestoneStatusApproved": "Одобрено",
+  "milestoneStatusPaymentReceived": "Оплата получена",
+
+  "invoiceStatusUnpaid": "Не оплачен",
+  "invoiceStatusPaid": "Оплачен",
+
+  "deliveryMethodPickup": "Самовывоз",
+  "deliveryMethodDelivery": "Доставка",
+
+  "loginWelcomeTitle": "Добро пожаловать",
+  "loginWelcomeSubtitle": "Войдите, чтобы управлять своим бизнесом",
+  "loginPhoneLabel": "Номер телефона",
+  "loginPhoneHint": "90 123 45 67",
+  "loginContinueButton": "Продолжить",
+  "loginOtpHint": "На ваш номер будет отправлен 4-значный код",
+  "loginErrorInvalidPhone": "Введите корректный номер телефона",
+
+  "otpTitle": "Введите код",
+  "otpSubtitle": "Мы отправили код на номер {phone}",
+  "@otpSubtitle": {
+    "placeholders": {
+      "phone": { "type": "String" }
+    }
+  },
+  "otpCodeLabel": "Код подтверждения",
+  "otpVerifyButton": "Подтвердить",
+  "otpResendButton": "Отправить код повторно",
+  "otpCodeResent": "Код отправлен повторно",
+  "otpDevHint": "В режиме разработки используйте 1234",
+  "otpErrorInvalid": "Неверный код, попробуйте снова",
+  "consentGeneral": "Я ознакомился с Политикой конфиденциальности и соглашаюсь на обработку моих персональных данных в соответствии с Законом Республики Узбекистан «О персональных данных».",
+  "consentGeneralLink": "Политикой конфиденциальности",
+  "consentCrossBorder": "Я соглашаюсь на хранение и передачу моих персональных данных на серверах, расположенных за пределами Узбекистана (Railway, Cloudflare).",
+
+  "onboardingBusinessStepTitle": "Расскажите о своём бизнесе",
+  "onboardingBusinessNameLabel": "Название бизнеса",
+  "onboardingBusinessNameHint": "например, Laylo Cakes",
+  "onboardingModeTitle": "Чем занимается ваш бизнес?",
+  "onboardingModeProducts": "Продажа товаров",
+  "onboardingModeProductsDesc": "Торты, одежда, изделия ручной работы",
+  "onboardingModeServices": "Оказание услуг",
+  "onboardingModeServicesDesc": "Салон, репетиторство, записи",
+  "onboardingModeFreelance": "Фриланс-проекты",
+  "onboardingModeFreelanceDesc": "Дизайн, видео, разработка",
+  "onboardingBotStepTitle": "Подключите свой Telegram-бот",
+  "onboardingBotTokenLabel": "Токен бота",
+  "onboardingBotTokenHint": "Вставьте токен от BotFather",
+  "onboardingPaymentStepTitle": "Как клиенты будут платить?",
+  "onboardingReviewStepTitle": "Проверка",
+  "onboardingDoneTitle": "Всё готово!",
+  "onboardingDoneSubtitle": "Ваш бизнес готов принимать заказы",
+  "onboardingDoneShareHint": "Ваш CRM готов. Поделитесь ссылкой на бот с клиентами.",
+  "onboardingFinishButton": "Перейти к панели управления",
+  "onboardingSetupTitle": "Настройте свой бизнес",
+  "onboardingBusinessType": "Тип бизнеса",
+  "onboardingLanguageLabel": "Язык",
+  "onboardingModeProductsTitle": "Продажа товаров",
+  "onboardingModeProductsSubtitle": "Продажа через Telegram-бот",
+  "onboardingModeServicesTitle": "Услуги и записи",
+  "onboardingModeServicesSubtitle": "Приём бронирований",
+  "onboardingModeFreelanceTitle": "Фриланс-проекты",
+  "onboardingModeFreelanceSubtitle": "Отслеживание проектов и счетов",
+  "onboardingModeFreelanceShort": "Фриланс",
+  "onboardingBotHeader": "Telegram-бот",
+  "onboardingBotCreateTitle": "Создайте свой Telegram-бот",
+  "onboardingBotCreateSubtitle": "Ваши клиенты будут пользоваться этим ботом",
+  "onboardingBotStep1": "Откройте Telegram и найдите @BotFather",
+  "onboardingBotStep2": "Отправьте сообщение: /newbot",
+  "onboardingBotStep3": "Выберите имя для бота (например, Zulfiya Cakes)",
+  "onboardingBotStep4": "Выберите имя пользователя, оканчивающееся на _bot (например, zulfiya_cakes_bot)",
+  "onboardingBotStep5": "Скопируйте токен, который выдаст BotFather",
+  "onboardingBotPasteToken": "Вставьте токен бота",
+  "onboardingVerifyToken": "Проверить токен",
+  "onboardingBotReady": "@{username} готов!",
+  "@onboardingBotReady": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "onboardingPaymentHeader": "Способ оплаты",
+  "onboardingPaymentSubtitle": "Это можно изменить позже в Настройках",
+  "onboardingCardNumberLabel": "Номер карты ({optional})",
+  "@onboardingCardNumberLabel": {
+    "placeholders": {
+      "optional": { "type": "String" }
+    }
+  },
+  "onboardingSkipForNow": "Пропустить пока",
+  "onboardingAlmostDone": "Почти готово!",
+  "onboardingSummaryType": "Тип",
+  "onboardingSummaryBot": "Бот",
+  "onboardingSummaryPayment": "Оплата",
+  "onboardingNotSet": "Не указано",
+  "onboardingLaunchCrm": "Запустить CRM",
+
+  "settingsTitle": "Настройки",
+  "settingsBusinessProfile": "ПРОФИЛЬ БИЗНЕСА",
+  "settingsEditProfileTooltip": "Редактировать профиль",
+  "settingsDescriptionLabel": "Описание ({optional})",
+  "@settingsDescriptionLabel": {
+    "placeholders": {
+      "optional": { "type": "String" }
+    }
+  },
+  "settingsBusinessMode": "ТИП БИЗНЕСА",
+  "settingsModeProductsLabel": "Продажа товаров",
+  "settingsModeProductsDesc": "Продавайте физические или цифровые товары через бот",
+  "settingsModeServicesLabel": "Услуги / записи",
+  "settingsModeServicesDesc": "Принимайте бронирования и управляйте записями",
+  "settingsModeFreelanceLabel": "Фриланс / проекты",
+  "settingsModeFreelanceDesc": "Отслеживайте этапы проектов и счета",
+  "settingsModeAtLeastOne": "Должен быть активен хотя бы один тип.",
+  "settingsPaymentMethod": "СПОСОБ ОПЛАТЫ",
+  "settingsEditPaymentTooltip": "Редактировать оплату",
+  "settingsCardNumberLabel": "Номер карты",
+  "settingsNoCardWarning": "Карта для оплаты не указана. Клиенты не смогут оплатить.",
+  "settingsCalendarSync": "СИНХРОНИЗАЦИЯ КАЛЕНДАРЯ",
+  "settingsCalendarSyncTitle": "Синхронизировать с моим календарём",
+  "settingsCalendarSyncSubtitle": "Добавляйте записи, доставки и сроки в свой календарь",
+  "settingsCalendarLinkLabel": "Ссылка на ваш календарь",
+  "settingsCalendarLinkCopied": "Ссылка на календарь скопирована",
+  "settingsCalendarSyncFailed": "Не удалось обновить синхронизацию календаря",
+  "settingsAddToGoogleCalendar": "Добавить в Google Calendar",
+  "settingsAddToAppleCalendar": "Добавить в Apple Calendar",
+  "settingsCalendarSamsungNote": "Пользователям Samsung: добавьте в Google Calendar — он автоматически синхронизируется с Samsung Calendar.",
+  "settingsReminders": "НАПОМИНАНИЯ",
+  "settingsRemindersSubtitle": "Получайте уведомления перед записями, доставками и сроками",
+  "settingsReminderSaveFailed": "Не удалось сохранить настройку напоминания",
+  "settingsRemindersLoadFailed": "Не удалось загрузить настройки напоминаний",
+  "settingsReminderAppointmentTitle": "Напоминания о записях",
+  "settingsReminderAppointmentSubtitle": "Перед каждой записью",
+  "settingsReminderSecondTitle": "Второе напоминание",
+  "settingsReminderSecondSubtitle": "Финальное напоминание ближе к времени",
+  "settingsReminderDeliveryTitle": "Напоминания о доставке",
+  "settingsReminderDeliverySubtitle": "Перед доставкой заказа",
+  "settingsReminderDeadlineTitle": "Напоминания о сроках",
+  "settingsReminderDeadlineSubtitle": "Перед этапами и сроками проектов",
+  "settingsReminderHoursBefore": "{count, plural, one{за 1 час} other{за {count} часов}}",
+  "@settingsReminderHoursBefore": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "settingsReminderDaysBefore": "{count, plural, one{за 1 день} other{за {count} дней}}",
+  "@settingsReminderDaysBefore": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "settingsRemindersFootnote": "Напоминания отправляются в это приложение и в ваш Telegram.",
+  "settingsTelegramBot": "TELEGRAM-БОТ",
+  "settingsNoBotConfigured": "Бот не настроен. Обратитесь в поддержку, чтобы настроить бот.",
+  "settingsCopyLinkTooltip": "Копировать ссылку",
+  "settingsBotLinkCopied": "Ссылка на бот скопирована",
+  "settingsLanguage": "ЯЗЫК",
+  "settingsLanguageFootnote": "Это меняет язык приложения и язык, который ваш Telegram-бот использует с клиентами.",
+  "settingsAccount": "АККАУНТ",
+  "settingsLogOut": "Выйти",
+  "settingsCustomerFields": "ПОЛЯ КЛИЕНТА",
+  "settingsAddFieldTooltip": "Добавить поле",
+  "settingsNoCustomFields": "Нет дополнительных полей. Добавьте поля, чтобы собирать дополнительную информацию о клиентах.",
+  "settingsAddCustomerField": "Добавить поле клиента",
+  "settingsFieldNameLabel": "Название поля",
+  "settingsFieldNameHint": "например, Компания, Instagram",
+  "settingsFieldTypeLabel": "Тип поля",
+  "settingsFieldTypeText": "Текст",
+  "settingsFieldTypeNumber": "Число",
+  "settingsFieldTypeDate": "Дата",
+  "settingsFieldTypeYesNo": "Да / Нет",
+  "settingsPipelineStages": "ЭТАПЫ ВОРОНКИ",
+  "settingsAddStageTooltip": "Добавить этап",
+  "settingsNoStages": "Нет этапов воронки. Добавьте этапы, чтобы отслеживать, на каком этапе продаж находятся клиенты.",
+  "settingsAddStage": "Добавить этап воронки",
+  "settingsStageNameLabel": "Название этапа",
+  "settingsStageNameHint": "например, Лид, Переговоры, Сделка",
+  "settingsColorLabel": "Цвет",
+  "settingsCheckoutQuestions": "ВОПРОСЫ ПРИ ЗАКАЗЕ",
+  "settingsAddQuestionTooltip": "Добавить вопрос",
+  "settingsNoCheckoutQuestions": "Нет вопросов при заказе. Вопросы задаются в Telegram-боте при оформлении заказа.",
+  "settingsAddCheckoutQuestion": "Добавить вопрос при заказе",
+  "settingsQuestionLabel": "Вопрос",
+  "settingsQuestionHint": "например, Есть ли аллергия или особые пожелания?",
+  "settingsServices": "УСЛУГИ",
+  "settingsManageServices": "Управление услугами",
+  "settingsStaff": "СОТРУДНИКИ",
+  "settingsManageStaff": "Управление сотрудниками",
+
+  "homeSearchHint": "Поиск клиентов...",
+  "homeNoCustomersFound": "Клиенты не найдены",
+  "homeNoContactInfo": "Нет контактных данных",
+  "homeOrdersCount": "{count, plural, one{1 заказ} few{{count} заказа} other{{count} заказов}}",
+  "@homeOrdersCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "homeNeedsAttention": "Требует внимания",
+  "homeTodaysActivity": "Сегодняшняя активность",
+  "homeOverdue": "Просрочено",
+  "homeDaysSilent": "{days} дн. без активности",
+  "@homeDaysSilent": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "homeBadgeAppointment": "Запись",
+  "homeBadgeProject": "Проект",
+  "homeBadgeMilestone": "Этап",
+  "homeActivityCancelled": "{service} — отменена",
+  "@homeActivityCancelled": {
+    "placeholders": {
+      "service": { "type": "String" }
+    }
+  },
+  "homeActivityNewProject": "Новый проект • {customer}",
+  "@homeActivityNewProject": {
+    "placeholders": {
+      "customer": { "type": "String" }
+    }
+  },
+  "homeActivityMilestoneApproved": "Одобрено • {project}",
+  "@homeActivityMilestoneApproved": {
+    "placeholders": {
+      "project": { "type": "String" }
+    }
+  },
+  "homeNoActivity": "Сегодня активности нет",
+
+  "ordersTitle": "Заказы",
+  "ordersSearchHint": "Поиск по имени или № заказа",
+  "orderNumberLabel": "Заказ №{number}",
+  "@orderNumberLabel": {
+    "placeholders": {
+      "number": { "type": "int" }
+    }
+  },
+  "orderPaidBadge": "💰 Оплачено",
+  "ordersEmpty": "Заказов пока нет",
+  "ordersEmptyFiltered": "Нет заказов по вашему фильтру",
+
+  "commonTotal": "Итого",
+  "orderDetailTitle": "Заказ",
+  "orderPaymentPaid": "Оплачено",
+  "orderPaymentPending": "Ожидает оплаты",
+  "orderSectionCustomer": "Клиент",
+  "orderSectionItems": "Товары",
+  "orderSectionDelivery": "Доставка",
+  "orderSectionNotes": "Заметки",
+  "orderSectionResponses": "Ответы клиента",
+  "orderSectionTimeline": "Хронология",
+  "orderTimelinePlaced": "Заказ оформлен",
+  "orderTimelineReady": "Готов к выдаче / доставке",
+  "orderTimelinePaymentConfirmed": "Оплата подтверждена",
+  "orderConfirmPayment": "Подтвердить оплату",
+  "orderStartPreparing": "Начать готовить",
+  "orderMarkReady": "Отметить как готовый",
+  "orderMarkDelivered": "Отметить как доставленный",
+  "orderCancel": "Отменить заказ",
+  "orderPaymentAlreadyConfirmed": "Оплата уже подтверждена",
+  "orderCancelTitle": "Отменить заказ?",
+  "orderCancelConfirm": "Это действие нельзя отменить.",
+  "orderKeep": "Оставить",
+
+  "customersTitle": "Клиенты",
+  "customersSearchHint": "Поиск по имени, @handle или телефону",
+  "customersEmpty": "Клиентов пока нет",
+  "customersEmptyFiltered": "Нет клиентов по вашему запросу",
+  "customersEmptyHint": "Клиенты добавляются, когда оформляют заказ через бот",
+
+  "customerDetailTitle": "Клиент",
+  "customerAddTag": "Добавить тег",
+  "customerTagHint": "Название тега (например, VIP, Любитель тортов)",
+  "customerSetStage": "Выбрать этап воронки",
+  "customerNoStage": "Без этапа",
+  "customerSetStageShort": "Выбрать этап",
+  "customerSince": "С {date}",
+  "@customerSince": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "customerStatOrders": "Заказы",
+  "customerStatTotalSpent": "Всего потрачено",
+  "customerStatLastOrder": "Последний заказ",
+  "customerDaysAgo": "{days} дн. назад",
+  "@customerDaysAgo": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "customerAddReminder": "Добавить напоминание",
+  "customerReminderHint": "Заметка (например, связаться по заказу №12)",
+  "customerSaveReminder": "Сохранить напоминание",
+  "customerNoReminders": "Нет напоминаний. Нажмите +, чтобы добавить.",
+  "customerNotesLabel": "ЗАМЕТКИ",
+  "customerNotesHint": "Добавьте заметки об этом клиенте…",
+  "customerNoNotes": "Заметок пока нет. Нажмите «Редактировать», чтобы добавить.",
+  "customerCustomFields": "ДОПОЛНИТЕЛЬНЫЕ ПОЛЯ",
+  "customerNoCustomFields": "Дополнительные поля не заданы. Добавьте поля в Настройках.",
+  "customerTapToSet": "Нажмите, чтобы указать",
+  "customerOrderHistory": "ИСТОРИЯ ЗАКАЗОВ",
+  "customerLoadError": "Не удалось загрузить клиента",
+  "customerLoadErrorHint": "Проверьте подключение и попробуйте снова",
+
+  "catalogTitle": "Каталог",
+  "catalogPrepTime": "Подготовка: {time}",
+  "@catalogPrepTime": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "catalogEmpty": "Товаров пока нет",
+  "catalogEmptyHint": "Нажмите +, чтобы добавить первый товар",
+  "stockUnlimited": "Неограниченно",
+  "stockNoInfo": "Нет данных об остатке",
+  "stockOut": "Нет в наличии",
+  "stockIn": "В наличии: {count}",
+  "@stockIn": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "productFormNewTitle": "Новый товар",
+  "productFormEditTitle": "Редактировать товар",
+  "productFormNameLabel": "Название товара *",
+  "productFormNameHint": "например, Шоколадный торт",
+  "productFormNameRequired": "Название обязательно",
+  "productFormPriceLabel": "Цена *",
+  "productFormPriceRequired": "Цена обязательна",
+  "productFormPriceInvalid": "Введите корректную цену",
+  "productFormDescLabel": "Описание",
+  "productFormDescHint": "Необязательное описание товара",
+  "productFormStockLabel": "Количество на складе",
+  "productFormStockHint": "например, 10",
+  "productFormStockInvalid": "Введите 0 или больше",
+  "productFormTimeLabel": "Время",
+  "productFormUnitLabel": "Единица",
+  "prepUnitMinutes": "Минуты",
+  "prepUnitHours": "Часы",
+  "prepUnitDays": "Дни",
+  "prepUnitWeeks": "Недели",
+  "productFormActiveOn": "Товар виден в каталоге бота",
+  "productFormActiveOff": "Товар скрыт от клиентов",
+  "productFormCreate": "Создать товар",
+
+  "formRequired": "Обязательно",
+  "formPositiveInteger": "Введите положительное целое число",
+  "durationMinutes": "{min} мин",
+  "@durationMinutes": {
+    "placeholders": {
+      "min": { "type": "int" }
+    }
+  },
+  "servicesTitle": "Услуги",
+  "servicesEmpty": "Услуг пока нет. Нажмите +, чтобы добавить.",
+  "serviceFormNewTitle": "Новая услуга",
+  "serviceFormEditTitle": "Редактировать услугу",
+  "serviceFormNameLabel": "Название услуги",
+  "serviceFormDurationLabel": "Длительность (минуты)",
+  "serviceFormPriceLabel": "Цена (сум)",
+  "serviceFormActiveSubtitle": "Видна клиентам в боте",
+
+  "staffTitle": "Сотрудники",
+  "staffEmpty": "Сотрудников пока нет. Нажмите +, чтобы добавить.",
+  "staffNoServices": "Услуги не назначены",
+  "staffFormNewTitle": "Новый сотрудник",
+  "staffFormEditTitle": "Редактировать сотрудника",
+  "staffDeleteTitle": "Удалить {name}?",
+  "@staffDeleteTitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "staffThisMember": "этого сотрудника",
+  "staffDeleteConfirm": "Это нельзя отменить.",
+  "staffFormNameLabel": "Полное имя",
+  "staffFormTelegramLabel": "Telegram (необязательно)",
+  "staffFormServicesLabel": "Выполняемые услуги",
+  "staffNoServicesAvailable": "Нет доступных услуг. Сначала добавьте услуги.",
+  "staffSelectService": "Выберите хотя бы одну услугу",
+
+  "appointmentsTitle": "Записи",
+  "apptTomorrow": "Завтра",
+  "apptEmpty": "На этот день записей нет",
+  "apptEmptyHint": "Нажмите +, чтобы добавить",
+  "apptDetailTitle": "Запись",
+  "apptPayInAdvance": "Оплата заранее",
+  "apptPayAtAppointment": "Оплата на месте",
+  "apptNotesHint": "Добавьте заметки…",
+  "apptNoNotes": "Нет заметок",
+  "apptConfirmPayment": "Подтвердить получение оплаты",
+  "apptConfirm": "Подтвердить запись",
+  "apptMarkCompleted": "Отметить как завершённую",
+  "apptMarkNoShow": "Отметить как неявку",
+  "apptCancel": "Отменить запись",
+  "apptFormTitle": "Новая запись",
+  "apptFormCustomerLabel": "Клиент *",
+  "apptFormSelectExisting": "Выбрать существующего",
+  "apptFormEnterManually": "Ввести вручную",
+  "apptFormSelectCustomer": "Выберите клиента",
+  "apptFormCustomerNameLabel": "Имя клиента",
+  "apptFormCustomerNameHint": "Введите имя клиента",
+  "apptFormServiceLabel": "Услуга *",
+  "apptFormFromServices": "Из моих услуг",
+  "apptFormServiceField": "Услуга",
+  "apptFormSelectService": "Выберите услугу",
+  "apptFormServiceNameHint": "например, Стрижка, Консультация, Урок",
+  "apptFormDurationLabel": "Длительность (мин)",
+  "apptFormStaffLabel": "Сотрудник",
+  "apptFormAnyStaff": "Любой доступный",
+  "apptFormWhenLabel": "Когда *",
+  "apptFormDateLabel": "Дата",
+  "apptFormSelectDate": "Выберите дату",
+  "apptFormSelectTime": "Выберите время",
+  "apptFormPaymentLabel": "Оплата",
+  "apptFormNotesHint": "Любые заметки об этой записи...",
+  "apptFormCreate": "Создать запись",
+  "apptErrSelectCustomer": "Выберите клиента",
+  "apptErrEnterCustomer": "Введите имя клиента",
+  "apptErrSelectService": "Выберите услугу",
+  "apptErrEnterService": "Введите название услуги",
+  "apptErrSelectDateTime": "Выберите дату и время",
+
+  "projectsTitle": "Проекты",
+  "projectsFilterProposal": "Предложение",
+  "projectsFilterReview": "Проверка",
+  "projectsEmpty": "Проектов пока нет",
+  "projectsMilestoneCount": "{done}/{total} этапов",
+  "@projectsMilestoneCount": {
+    "placeholders": {
+      "done": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "projectDetailTitle": "Проект",
+  "projectMarkInProgress": "Отметить как в процессе",
+  "projectSendForReview": "Отправить на проверку",
+  "projectMarkCompleted": "Отметить как завершённый",
+  "projectCancelProject": "Отменить проект",
+  "projectStatusUpdated": "Статус изменён на: {status}",
+  "@projectStatusUpdated": {
+    "placeholders": {
+      "status": { "type": "String" }
+    }
+  },
+  "projectClient": "Клиент",
+  "projectPhone": "Телефон",
+  "projectStart": "Начало",
+  "projectDeadline": "Срок",
+  "projectScope": "Объём работ",
+  "projectPaymentTerms": "Условия оплаты",
+  "projectProposalCopied": "Ссылка на предложение скопирована",
+  "projectShareProposal": "Поделиться ссылкой на предложение",
+  "projectMilestones": "Этапы",
+  "projectNoMilestones": "Этапов пока нет",
+  "milestoneAwaitingReview": "Ожидает проверки клиентом",
+  "milestoneApprovedByClient": "Одобрено клиентом",
+  "projectDuePrefix": "Срок: {date}",
+  "@projectDuePrefix": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "projectResetMilestone": "Сбросить этап",
+  "projectResetMilestoneBody": "Вернуть этап «{name}» в статус «Ожидает»?\n\nЭто для тестирования — клиент не будет уведомлён.",
+  "@projectResetMilestoneBody": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "projectResetToPending": "Вернуть в ожидание",
+  "projectSubmitForReview": "Отправить клиенту на проверку",
+  "projectWaitingApproval": "Ожидание одобрения клиента",
+  "projectMarkPaymentReceived": "Отметить оплату полученной",
+  "projectInvoices": "Счета",
+  "projectGenerate": "Создать",
+  "projectNoInvoices": "Счетов пока нет",
+  "projectInvoiceCopied": "Ссылка на счёт скопирована",
+  "projectMarkPaid": "Отметить оплаченным",
+  "projectGenerateInvoice": "Создать счёт",
+  "projectQty": "Кол-во",
+  "projectUnitPrice": "Цена за единицу (сум)",
+  "projectDueDateLabel": "Срок (ГГГГ-ММ-ДД)",
+  "projectFormTitle": "Новый проект",
+  "projectSelectClient": "Выберите клиента",
+  "projectClientNameLabel": "Имя клиента",
+  "projectClientNameHint": "Введите имя клиента",
+  "projectNameLabel": "Название проекта",
+  "projectNameHint": "например, Редизайн фирменного стиля",
+  "projectScopeHint": "Опишите результаты...",
+  "projectPriceLabel": "Согласованная общая цена (сум)",
+  "projectTermsHint": "например, 50% предоплата, 50% при сдаче",
+  "projectStartDate": "Дата начала",
+  "projectFormCreate": "Создать проект",
+  "projectErrSelectClient": "Пожалуйста, выберите клиента",
+  "projectErrEnterClient": "Введите имя клиента",
+  "projectErrNameRequired": "Название проекта обязательно",
+  "milestoneFormTitle": "Добавить этап",
+  "milestoneAdd": "Добавить этап",
+  "milestoneNameLabel": "Название этапа",
+  "milestoneNameHint": "например, Первые макеты дизайна",
+  "milestoneAmountLabel": "Сумма (сум)",
+  "milestoneDueDateLabel": "Срок",
+  "milestoneAmountInvalid": "Введите корректную сумму",
+  "analyticsTitle": "Аналитика",
+  "analyticsNoDataLastMonth": "Нет данных за прошлый месяц",
+  "analyticsVsLastMonth": "{change}% к прошлому месяцу",
+  "@analyticsVsLastMonth": {
+    "placeholders": {
+      "change": { "type": "String" }
+    }
+  },
+  "analyticsRevenueThisMonth": "Выручка за этот месяц",
+  "analyticsLastMonth": "Прошлый месяц: {amount}",
+  "@analyticsLastMonth": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "analyticsCompletedThisMonth": "Завершено\nза месяц",
+  "analyticsAvgOrderValue": "Средний\nзаказ",
+  "analyticsPendingPayments": "Ожидающие оплаты",
+  "analyticsAllReceived": "Все платежи получены",
+  "analyticsTopCustomers": "ЛУЧШИЕ КЛИЕНТЫ — ПОСЛЕДНИЕ 90 ДНЕЙ",
+  "analyticsNoConfirmedOrders": "Нет подтверждённых заказов за последние 90 дней",
+  "analyticsBestSelling": "САМЫЙ ПРОДАВАЕМЫЙ ТОВАР",
+  "analyticsUnitsSold": "{count, plural, one{продана 1 шт.} few{продано {count} шт.} other{продано {count} шт.}}",
+  "@analyticsUnitsSold": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  }
+}

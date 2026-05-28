@@ -1,8 +1,9 @@
 import { InlineKeyboard } from 'grammy';
 import { MyContext, ApiProduct } from '../lib/types.js';
-import { getCatalog } from '../lib/api.js';
-import { getBotUsername } from '../lib/botContext.js';
-import { formatUZS, buildCartSummary } from '../lib/format.js';
+import { getCatalog, SuspendedError } from '../lib/api.js';
+import { buildCartSummary } from '../lib/format.js';
+import { t, formatMoney } from '../lib/i18n.js';
+import { getLang } from '../lib/lang.js';
 
 export function registerCatalogHandlers(bot: import('grammy').Bot<MyContext>) {
   // "Browse catalog" button → show product list
@@ -48,44 +49,54 @@ export function registerCatalogHandlers(bot: import('grammy').Bot<MyContext>) {
 }
 
 export async function showCatalog(ctx: MyContext) {
+  const lang = await getLang(ctx);
   let catalog: { products: ApiProduct[] };
   try {
-    catalog = await getCatalog(getBotUsername());
-  } catch {
-    await ctx.reply('Could not load catalog. Please try again later.');
+    catalog = await getCatalog(ctx.botUsername);
+  } catch (err) {
+    if (err instanceof SuspendedError) {
+      await ctx.reply(t(lang, 'suspended'));
+      return;
+    }
+    await ctx.reply(t(lang, 'catalogLoadError'));
     return;
   }
 
   if (catalog.products.length === 0) {
-    await ctx.reply('No products available at the moment.');
+    await ctx.reply(t(lang, 'catalogEmpty'));
     return;
   }
 
   const keyboard = new InlineKeyboard();
   for (const product of catalog.products) {
-    keyboard.text(`${product.name} — ${formatUZS(product.price)}`, `product:${product.id}`).row();
+    keyboard.text(`${product.name} — ${formatMoney(lang, product.price)}`, `product:${product.id}`).row();
   }
 
   const cartCount = ctx.session.cart.reduce((sum, i) => sum + i.quantity, 0);
   if (cartCount > 0) {
-    keyboard.text(`🛒 Cart (${cartCount} items)`, 'cart');
+    keyboard.text(t(lang, 'cartButton', { count: cartCount }), 'cart');
   }
 
-  await ctx.reply('Choose a product:', { reply_markup: keyboard });
+  await ctx.reply(t(lang, 'chooseProduct'), { reply_markup: keyboard });
 }
 
 async function showProduct(ctx: MyContext, productId: string) {
+  const lang = await getLang(ctx);
   let catalog: { products: ApiProduct[] };
   try {
-    catalog = await getCatalog(getBotUsername());
-  } catch {
-    await ctx.reply('Could not load product. Please try again later.');
+    catalog = await getCatalog(ctx.botUsername);
+  } catch (err) {
+    if (err instanceof SuspendedError) {
+      await ctx.reply(t(lang, 'suspended'));
+      return;
+    }
+    await ctx.reply(t(lang, 'catalogLoadError'));
     return;
   }
 
   const product = catalog.products.find((p) => p.id === productId);
   if (!product) {
-    await ctx.reply('Product not found.');
+    await ctx.reply(t(lang, 'productNotFound'));
     return;
   }
 
@@ -93,17 +104,17 @@ async function showProduct(ctx: MyContext, productId: string) {
     product.unlimited
       ? ''
       : product.stockQty === 0
-      ? '\n⚠️ Out of stock'
+      ? t(lang, 'outOfStockLine')
       : product.stockQty != null
-      ? `\n📦 In stock: ${product.stockQty}`
+      ? t(lang, 'inStock', { qty: product.stockQty })
       : '';
 
-  const prepText = product.prepTime ? `\n⏱ Prep time: ${product.prepTime}` : '';
+  const prepText = product.prepTime ? t(lang, 'prepTimeLabel', { time: product.prepTime }) : '';
 
   const caption =
     `<b>${product.name}</b>\n\n` +
     (product.description ? `${product.description}\n\n` : '') +
-    `💰 <b>${formatUZS(product.price)}</b>` +
+    `💰 <b>${formatMoney(lang, product.price)}</b>` +
     stockText +
     prepText;
 
@@ -118,7 +129,7 @@ async function showProduct(ctx: MyContext, productId: string) {
     qtyKeyboard.row();
   }
 
-  qtyKeyboard.text('« Back to catalog', 'catalog');
+  qtyKeyboard.text(t(lang, 'backToCatalogText'), 'catalog');
 
   // Send photo if available, otherwise just text
   if (product.photos.length > 0) {
@@ -138,17 +149,22 @@ async function showProduct(ctx: MyContext, productId: string) {
 }
 
 async function addToCart(ctx: MyContext, productId: string, qty: number) {
+  const lang = await getLang(ctx);
   let catalog: { products: ApiProduct[] };
   try {
-    catalog = await getCatalog(getBotUsername());
-  } catch {
-    await ctx.reply('Could not add to cart. Please try again.');
+    catalog = await getCatalog(ctx.botUsername);
+  } catch (err) {
+    if (err instanceof SuspendedError) {
+      await ctx.reply(t(lang, 'suspended'));
+      return;
+    }
+    await ctx.reply(t(lang, 'catalogLoadError'));
     return;
   }
 
   const product = catalog.products.find((p) => p.id === productId);
   if (!product) {
-    await ctx.reply('Product not found.');
+    await ctx.reply(t(lang, 'productNotFound'));
     return;
   }
 
@@ -169,31 +185,36 @@ async function addToCart(ctx: MyContext, productId: string, qty: number) {
   const cartCount = ctx.session.cart.reduce((sum, i) => sum + i.quantity, 0);
 
   const keyboard = new InlineKeyboard()
-    .text('🛒 View cart', 'cart')
-    .text('🛍 Continue shopping', 'catalog')
+    .text(t(lang, 'viewCart'), 'cart')
+    .text(t(lang, 'continueShopping'), 'catalog')
     .row()
-    .text('✅ Checkout', 'checkout');
+    .text(t(lang, 'checkout'), 'checkout');
 
   await ctx.reply(
-    `✅ Added ${qty}× <b>${product.name}</b> to cart.\n\n` +
-      `Cart: ${cartCount} items — <b>${formatUZS(total)}</b>`,
+    t(lang, 'addedToCartFull', {
+      qty,
+      name: product.name,
+      count: cartCount,
+      total: formatMoney(lang, total),
+    }),
     { parse_mode: 'HTML', reply_markup: keyboard },
   );
 }
 
 export async function showCart(ctx: MyContext) {
+  const lang = await getLang(ctx);
   const cart = ctx.session.cart;
-  const summary = buildCartSummary(cart);
+  const summary = buildCartSummary(cart, lang);
 
   const keyboard = new InlineKeyboard();
 
   if (cart.length > 0) {
     for (const item of cart) {
-      keyboard.text(`Remove: ${item.name}`, `remove:${item.productId}`).row();
+      keyboard.text(t(lang, 'removeItem', { name: item.name }), `remove:${item.productId}`).row();
     }
-    keyboard.text('🛍 Continue shopping', 'catalog').text('✅ Checkout', 'checkout');
+    keyboard.text(t(lang, 'continueShopping'), 'catalog').text(t(lang, 'checkout'), 'checkout');
   } else {
-    keyboard.text('🛍 Browse catalog', 'catalog');
+    keyboard.text(t(lang, 'browseCatalog'), 'catalog');
   }
 
   await ctx.reply(summary, { parse_mode: 'HTML', reply_markup: keyboard });

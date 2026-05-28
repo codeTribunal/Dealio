@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/auth.js';
 import { getBusinessOrFail } from '../lib/businessFromUser.js';
 import { sendError } from '../lib/errors.js';
 import { allocateOrderNumber } from '../services/orderNumber.js';
+import { checkOrderLimit } from '../middleware/checkLimits.js';
 
 const orderItemSchema = z.object({
   productId: z.string(),
@@ -78,7 +79,7 @@ export default async function orderRoutes(app: FastifyInstance) {
     return reply.send(orders);
   });
 
-  app.post('/orders', { preHandler: authenticate }, async (request, reply) => {
+  app.post('/orders', { preHandler: [authenticate, checkOrderLimit()] }, async (request, reply) => {
     const business = await getBusinessOrFail(request.user.userId, reply);
     if (!business) return;
 

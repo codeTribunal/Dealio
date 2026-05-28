@@ -4,17 +4,31 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/models/project.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
+import '../../shared/utils/status_labels.dart';
 import 'projects_provider.dart';
 
-const _statusFilters = [
-  ('All', null),
-  ('Proposal', 'PROPOSAL_SENT'),
-  ('In progress', 'IN_PROGRESS'),
-  ('Review', 'REVIEW'),
-  ('Completed', 'COMPLETED'),
-  ('Cancelled', 'CANCELLED'),
-];
+const _statusFilterCodes = [null, 'PROPOSAL_SENT', 'IN_PROGRESS', 'REVIEW', 'COMPLETED', 'CANCELLED'];
+
+String _filterLabel(AppLocalizations l, String? code) {
+  switch (code) {
+    case null:
+      return l.commonAll;
+    case 'PROPOSAL_SENT':
+      return l.projectsFilterProposal;
+    case 'IN_PROGRESS':
+      return l.projectStatusInProgress;
+    case 'REVIEW':
+      return l.projectsFilterReview;
+    case 'COMPLETED':
+      return l.projectStatusCompleted;
+    case 'CANCELLED':
+      return l.projectStatusCancelled;
+    default:
+      return code;
+  }
+}
 
 const _statusColor = {
   'PROPOSAL_SENT': Color(0xFF6366F1),
@@ -22,14 +36,6 @@ const _statusColor = {
   'REVIEW': Color(0xFFD97706),
   'COMPLETED': Color(0xFF059669),
   'CANCELLED': Color(0xFFDC2626),
-};
-
-const _statusLabel = {
-  'PROPOSAL_SENT': 'Proposal sent',
-  'IN_PROGRESS': 'In progress',
-  'REVIEW': 'Review',
-  'COMPLETED': 'Completed',
-  'CANCELLED': 'Cancelled',
 };
 
 class ProjectsScreen extends ConsumerStatefulWidget {
@@ -44,11 +50,12 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final projectsAsync = ref.watch(projectsProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Projects'),
+        title: Text(l.projectsTitle),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(44),
           child: _FilterBar(
@@ -71,7 +78,7 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
               TextButton(
                 onPressed: () =>
                     ref.read(projectsProvider.notifier).refresh(status: _selectedStatus),
-                child: const Text('Retry'),
+                child: Text(l.buttonRetry),
               ),
             ],
           ),
@@ -89,7 +96,7 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
                   Icon(Icons.work_outline, size: 48, color: Colors.grey[300]),
                   const SizedBox(height: 12),
                   Text(
-                    'No projects yet',
+                    l.projectsEmpty,
                     style: TextStyle(color: Colors.grey[500]),
                   ),
                 ],
@@ -124,16 +131,17 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Row(
-        children: _statusFilters.map((f) {
-          final isActive = selected == f.$2;
+        children: _statusFilterCodes.map((code) {
+          final isActive = selected == code;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
-              onTap: () => onSelected(f.$2),
+              onTap: () => onSelected(code),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -144,7 +152,7 @@ class _FilterBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  f.$1,
+                  _filterLabel(l, code),
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -168,8 +176,9 @@ class _ProjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final color = _statusColor[project.status] ?? Colors.grey;
-    final label = _statusLabel[project.status] ?? project.status;
+    final label = projectStatusLabel(l, project.status);
     final totalMilestones = project.milestones.length;
     final doneMilestones = project.milestones
         .where((m) => m.status == 'PAYMENT_RECEIVED' || m.status == 'APPROVED')
@@ -238,7 +247,7 @@ class _ProjectCard extends StatelessWidget {
                   if (totalMilestones > 0) ...[
                     const SizedBox(width: 12),
                     Text(
-                      '$doneMilestones/$totalMilestones milestones',
+                      l.projectsMilestoneCount(doneMilestones, totalMilestones),
                       style: TextStyle(
                           color: Colors.grey[500], fontSize: 12),
                     ),

@@ -9,6 +9,7 @@ class Business {
   final String? cardBank;
   final String? botToken;
   final String? botUsername;
+  final String? calendarToken;
   final String? ownerTelegramChatId;
 
   const Business({
@@ -22,6 +23,7 @@ class Business {
     this.cardBank,
     this.botToken,
     this.botUsername,
+    this.calendarToken,
     this.ownerTelegramChatId,
   });
 
@@ -36,6 +38,7 @@ class Business {
         cardBank: json['cardBank'] as String?,
         botToken: json['botToken'] as String?,
         botUsername: json['botUsername'] as String?,
+        calendarToken: json['calendarToken'] as String?,
         ownerTelegramChatId: json['ownerTelegramChatId'] as String?,
       );
 
@@ -48,6 +51,8 @@ class Business {
     String? cardNumber,
     String? cardBank,
     String? botUsername,
+    String? calendarToken,
+    bool clearCalendarToken = false,
   }) =>
       Business(
         id: id,
@@ -60,6 +65,8 @@ class Business {
         cardBank: cardBank ?? this.cardBank,
         botToken: botToken,
         botUsername: botUsername ?? this.botUsername,
+        calendarToken:
+            clearCalendarToken ? null : (calendarToken ?? this.calendarToken),
         ownerTelegramChatId: ownerTelegramChatId,
       );
 }

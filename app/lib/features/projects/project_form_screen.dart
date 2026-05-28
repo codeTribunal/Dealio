@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/api/api_service.dart';
 import '../../core/models/customer.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_text_field.dart';
 import 'projects_provider.dart';
@@ -31,6 +32,8 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
 
   Customer? _selectedCustomer;
   List<Customer>? _customers;
+  bool _customerManualMode = false;
+  String _manualCustomerName = '';
   bool _saving = false;
   String? _error;
 
@@ -62,54 +65,141 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('New project')),
+      appBar: AppBar(title: Text(l.projectFormTitle)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Client selection
-            DropdownButtonFormField<Customer>(
-              decoration: const InputDecoration(
-                labelText: 'Client',
-                border: OutlineInputBorder(),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                l.projectClient,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
               ),
-              // ignore: deprecated_member_use
-              value: _selectedCustomer,
-              hint: _customers == null
-                  ? const Text('Loading...')
-                  : const Text('Select a client'),
-              items: _customers
-                  ?.map(
-                    (c) => DropdownMenuItem<Customer>(
-                      value: c,
-                      child: Text(c.name),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (c) => setState(() => _selectedCustomer = c),
             ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _customerManualMode = false),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: !_customerManualMode
+                            ? const Color(0xFF1F2937)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: !_customerManualMode
+                              ? const Color(0xFF1F2937)
+                              : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: Text(
+                        l.apptFormSelectExisting,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: !_customerManualMode
+                              ? Colors.white
+                              : Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _customerManualMode = true),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _customerManualMode
+                            ? const Color(0xFF1F2937)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _customerManualMode
+                              ? const Color(0xFF1F2937)
+                              : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: Text(
+                        l.apptFormEnterManually,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: _customerManualMode
+                              ? Colors.white
+                              : Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (!_customerManualMode)
+              DropdownButtonFormField<Customer>(
+                decoration: InputDecoration(
+                  labelText: l.projectClient,
+                  border: const OutlineInputBorder(),
+                ),
+                // ignore: deprecated_member_use
+                value: _selectedCustomer,
+                hint: _customers == null
+                    ? Text(l.commonLoading)
+                    : Text(l.projectSelectClient),
+                items: _customers
+                    ?.map(
+                      (c) => DropdownMenuItem<Customer>(
+                        value: c,
+                        child: Text(c.name),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (c) => setState(() => _selectedCustomer = c),
+              )
+            else
+              TextFormField(
+                decoration: InputDecoration(
+                  labelText: l.projectClientNameLabel,
+                  hintText: l.projectClientNameHint,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onChanged: (v) => setState(() => _manualCustomerName = v),
+              ),
             const SizedBox(height: 16),
 
             AppTextField(
               controller: _nameCtrl,
-              label: 'Project name',
-              hint: 'e.g. Brand identity redesign',
+              label: l.projectNameLabel,
+              hint: l.projectNameHint,
             ),
             const SizedBox(height: 16),
 
             AppTextField(
               controller: _descCtrl,
-              label: 'Scope of work',
-              hint: 'Describe deliverables...',
+              label: l.projectScope,
+              hint: l.projectScopeHint,
               maxLines: 4,
             ),
             const SizedBox(height: 16),
 
             AppTextField(
               controller: _priceCtrl,
-              label: 'Total agreed price (UZS)',
+              label: l.projectPriceLabel,
               hint: '0',
               keyboardType: TextInputType.number,
             ),
@@ -117,8 +207,8 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
 
             AppTextField(
               controller: _termsCtrl,
-              label: 'Payment terms',
-              hint: 'e.g. 50% upfront, 50% on delivery',
+              label: l.projectPaymentTerms,
+              hint: l.projectTermsHint,
               maxLines: 2,
             ),
             const SizedBox(height: 16),
@@ -128,8 +218,8 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                 Expanded(
                   child: AppTextField(
                     controller: _startCtrl,
-                    label: 'Start date',
-                    hint: 'Optional',
+                    label: l.projectStartDate,
+                    hint: l.commonOptionalLabel,
                     readOnly: true,
                     keyboardType: TextInputType.none,
                     suffixIcon: _startDate == null
@@ -154,8 +244,8 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                 Expanded(
                   child: AppTextField(
                     controller: _deadlineCtrl,
-                    label: 'Deadline',
-                    hint: 'Optional',
+                    label: l.projectDeadline,
+                    hint: l.commonOptionalLabel,
                     readOnly: true,
                     keyboardType: TextInputType.none,
                     suffixIcon: _deadline == null
@@ -186,7 +276,7 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
             ],
 
             AppButton(
-              label: 'Create project',
+              label: l.projectFormCreate,
               loading: _saving,
               onPressed: _submit,
             ),
@@ -210,18 +300,23 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
   }
 
   Future<void> _submit() async {
-    if (_selectedCustomer == null) {
-      setState(() => _error = 'Please select a client');
+    final l = AppLocalizations.of(context)!;
+    if (!_customerManualMode && _selectedCustomer == null) {
+      setState(() => _error = l.projectErrSelectClient);
+      return;
+    }
+    if (_customerManualMode && _manualCustomerName.trim().isEmpty) {
+      setState(() => _error = l.projectErrEnterClient);
       return;
     }
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = 'Project name is required');
+      setState(() => _error = l.projectErrNameRequired);
       return;
     }
     final price = int.tryParse(_priceCtrl.text.trim().replaceAll(RegExp(r'\s'), ''));
     if (price == null) {
-      setState(() => _error = 'Enter a valid price');
+      setState(() => _error = l.productFormPriceInvalid);
       return;
     }
 
@@ -231,8 +326,18 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
     });
 
     try {
+      String customerId;
+      if (_customerManualMode) {
+        final customer = await ref
+            .read(apiServiceProvider)
+            .createCustomer(name: _manualCustomerName.trim());
+        customerId = customer.id;
+      } else {
+        customerId = _selectedCustomer!.id;
+      }
+
       final data = <String, dynamic>{
-        'customerId': _selectedCustomer!.id,
+        'customerId': customerId,
         'name': name,
         if (_descCtrl.text.trim().isNotEmpty) 'description': _descCtrl.text.trim(),
         'totalPrice': price,

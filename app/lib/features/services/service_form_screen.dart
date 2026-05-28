@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'services_provider.dart';
 
 class ServiceFormScreen extends ConsumerStatefulWidget {
@@ -85,9 +86,10 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEdit ? 'Edit service' : 'New service'),
+        title: Text(_isEdit ? l.serviceFormEditTitle : l.serviceFormNewTitle),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
@@ -96,7 +98,7 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
               textStyle: const TextStyle(
                   fontWeight: FontWeight.bold, fontSize: 16),
             ),
-            child: const Text('Save'),
+            child: Text(l.buttonSave),
           ),
         ],
       ),
@@ -107,41 +109,40 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
           children: [
             TextFormField(
               controller: _nameCtrl,
-              decoration: const InputDecoration(labelText: 'Service name'),
+              decoration: InputDecoration(labelText: l.serviceFormNameLabel),
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  (v == null || v.trim().isEmpty) ? l.formRequired : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _durationCtrl,
               decoration:
-                  const InputDecoration(labelText: 'Duration (minutes)'),
+                  InputDecoration(labelText: l.serviceFormDurationLabel),
               keyboardType: TextInputType.number,
               validator: (v) {
                 final n = int.tryParse(v?.trim() ?? '');
                 return (n == null || n <= 0)
-                    ? 'Enter a positive integer'
+                    ? l.formPositiveInteger
                     : null;
               },
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _priceCtrl,
-              decoration: const InputDecoration(labelText: 'Price (UZS)'),
+              decoration: InputDecoration(labelText: l.serviceFormPriceLabel),
               keyboardType: TextInputType.number,
               validator: (v) {
                 final n = int.tryParse(v?.trim() ?? '');
                 return (n == null || n <= 0)
-                    ? 'Enter a positive integer'
+                    ? l.formPositiveInteger
                     : null;
               },
             ),
             const SizedBox(height: 8),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Active'),
-              subtitle:
-                  const Text('Visible to customers in the bot'),
+              title: Text(l.commonActive),
+              subtitle: Text(l.serviceFormActiveSubtitle),
               value: _active,
               onChanged: (v) => setState(() => _active = v),
             ),

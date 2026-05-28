@@ -1,4 +1,5 @@
 import { CartItem } from './types.js';
+import { t, formatMoney, type Lang } from './i18n.js';
 
 export function formatUZS(amount: number): string {
   return amount.toLocaleString('uz-UZ').replace(/,/g, ' ') + ' UZS';
@@ -29,13 +30,13 @@ export function toTashkentDateStr(date: Date): string {
   return date.toLocaleDateString('sv-SE', { timeZone: TZ });
 }
 
-export function buildCartSummary(cart: CartItem[]): string {
-  if (cart.length === 0) return 'Your cart is empty.';
+export function buildCartSummary(cart: CartItem[], lang: Lang): string {
+  if (cart.length === 0) return t(lang, 'cartEmpty');
   const lines = cart.map(
-    (item) => `• ${item.name} × ${item.quantity} — ${formatUZS(item.price * item.quantity)}`,
+    (item) => `• ${item.name} × ${item.quantity} — ${formatMoney(lang, item.price * item.quantity)}`,
   );
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  return lines.join('\n') + `\n\n<b>Total: ${formatUZS(total)}</b>`;
+  return lines.join('\n') + `\n\n` + t(lang, 'cartTotal', { total: formatMoney(lang, total) });
 }
 
 export function buildOrderSummary(
@@ -43,20 +44,23 @@ export function buildOrderSummary(
   name: string,
   phone: string,
   deliveryMethod: 'PICKUP' | 'DELIVERY',
+  lang: Lang,
   deliveryAddress?: string,
 ): string {
   const items = cart
-    .map((i) => `• ${i.name} × ${i.quantity} — ${formatUZS(i.price * i.quantity)}`)
+    .map((i) => `• ${i.name} × ${i.quantity} — ${formatMoney(lang, i.price * i.quantity)}`)
     .join('\n');
   const total = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const deliveryLabel =
+    deliveryMethod === 'PICKUP' ? t(lang, 'pickup') : t(lang, 'delivery');
 
   return (
-    `<b>Order Summary</b>\n\n` +
+    `${t(lang, 'orderSummaryTitle')}\n\n` +
     `${items}\n\n` +
-    `<b>Total:</b> ${formatUZS(total)}\n` +
-    `<b>Name:</b> ${name}\n` +
-    `<b>Phone:</b> ${phone}\n` +
-    `<b>Delivery:</b> ${deliveryMethod === 'PICKUP' ? '🏪 Pickup' : '🚚 Delivery'}\n` +
-    (deliveryAddress ? `<b>Address:</b> ${deliveryAddress}\n` : '')
+    `<b>${t(lang, 'labelTotal')}:</b> ${formatMoney(lang, total)}\n` +
+    `<b>${t(lang, 'labelName')}:</b> ${name}\n` +
+    `<b>${t(lang, 'labelPhone')}:</b> ${phone}\n` +
+    `<b>${t(lang, 'labelDelivery')}:</b> ${deliveryLabel}\n` +
+    (deliveryAddress ? `<b>${t(lang, 'labelAddress')}:</b> ${deliveryAddress}\n` : '')
   );
 }

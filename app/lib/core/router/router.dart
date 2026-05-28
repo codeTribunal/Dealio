@@ -4,10 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../auth/auth_notifier.dart';
 import '../api/api_service.dart';
+import '../locale/locale_provider.dart';
 import '../services/fcm_service.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/otp_screen.dart';
-import '../../features/auth/onboarding_screen.dart';
+import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/orders/order_list_screen.dart';
 import '../../features/orders/order_detail_screen.dart';
@@ -19,6 +20,7 @@ import '../../features/analytics/analytics_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/appointments/appointment_calendar_screen.dart';
 import '../../features/appointments/appointment_detail_screen.dart';
+import '../../features/appointments/appointment_form_screen.dart';
 import '../../features/services/services_screen.dart';
 import '../../features/services/service_form_screen.dart';
 import '../../features/staff/staff_screen.dart';
@@ -41,20 +43,34 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/splash',
     refreshListenable: authNotifier,
     redirect: (BuildContext context, GoRouterState state) {
-      if (!authNotifier.isInitialized) return null;
+      // Wait until startup check (token + business fetch) is complete
+      if (!authNotifier.isStartupComplete) return null;
 
       final loggedIn = authNotifier.isAuthenticated;
+      final hasBusiness = authNotifier.hasBusiness;
       final loc = state.matchedLocation;
 
-      // Always leave splash once initialized
-      if (loc == '/splash') return loggedIn ? '/home' : '/login';
+      // Leave splash: send to login, onboarding, or home
+      if (loc == '/splash') {
+        if (!loggedIn) return '/login';
+        return hasBusiness ? '/home' : '/onboarding';
+      }
 
-      // Redirect unauthenticated users away from protected routes
-      const publicRoutes = {'/login', '/otp', '/onboarding'};
+      // Unauthenticated users can only access login/otp
+      const publicRoutes = {'/login', '/otp'};
       if (!loggedIn && !publicRoutes.contains(loc)) return '/login';
 
-      // Redirect authenticated users away from auth screens
-      if (loggedIn && (loc == '/login' || loc == '/otp')) return '/home';
+      if (loggedIn) {
+        // Bounce away from auth screens
+        if (loc == '/login' || loc == '/otp') {
+          return hasBusiness ? '/home' : '/onboarding';
+        }
+        // Prevent re-entering onboarding once business is set
+        if (loc == '/onboarding' && hasBusiness) return '/home';
+        // Redirect authenticated users without a business to onboarding
+        // (allow /onboarding itself to stay)
+        if (!hasBusiness && loc != '/onboarding') return '/onboarding';
+      }
 
       return null;
     },
@@ -130,6 +146,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/appointments',
         builder: (ctx, state) => const AppointmentCalendarScreen(),
+      ),
+      GoRoute(
+        path: '/appointments/new',
+        builder: (ctx, state) => const AppointmentFormScreen(),
       ),
       GoRoute(
         path: '/appointments/:id',
@@ -212,8 +232,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   Future<void> _init() async {
     await ref.read(authNotifierProvider).initialize();
-    // If already logged in, refresh the FCM token so push notifications work after reinstall
+
     if (ref.read(authNotifierProvider).isAuthenticated) {
+      // Fetch business so the router knows whether to go to /onboarding or /home
+      try {
+        final business = await ref.read(apiServiceProvider).getBusiness();
+        ref.read(authNotifierProvider).finishStartup(business);
+        // Sync app language to the business language on first launch (only
+        // when the user has not manually picked a language in Settings).
+        ref
+            .read(localeProvider.notifier)
+            .syncFromBusinessLanguage(business.language)
+            .ignore();
+      } catch (_) {
+        // 404 = no business yet; any other error treated the same way
+        ref.read(authNotifierProvider).finishStartup(null);
+      }
+      // Best-effort FCM token refresh after reinstall
       registerFcmToken(ref.read(apiServiceProvider)).ignore();
     }
     // Navigation is handled by the router's refreshListenable — no manual go() needed.

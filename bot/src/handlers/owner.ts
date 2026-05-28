@@ -1,32 +1,38 @@
 import { InlineKeyboard } from 'grammy';
 import { MyContext } from '../lib/types.js';
-import { notifyPaymentReceived, confirmPayment } from '../lib/api.js';
-import { getBotUsername } from '../lib/botContext.js';
+import { notifyPaymentReceived, confirmPayment, SuspendedError, SUSPENSION_MESSAGE } from '../lib/api.js';
 import { formatUZS } from '../lib/format.js';
+import { t, resolveLang } from '../lib/i18n.js';
+import { getLang } from '../lib/lang.js';
 
 export function registerOwnerHandlers(bot: import('grammy').Bot<MyContext>) {
   // Customer taps "I have paid"
   bot.callbackQuery(/^paid:(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery('Processing...');
+    const lang = await getLang(ctx);
 
     const orderId = ctx.match[1];
 
     let result: Awaited<ReturnType<typeof notifyPaymentReceived>>;
     try {
-      result = await notifyPaymentReceived(getBotUsername(), orderId);
+      result = await notifyPaymentReceived(ctx.botUsername, orderId);
     } catch (err: unknown) {
+      if (err instanceof SuspendedError) {
+        await ctx.reply(t(lang, 'suspended'));
+        return;
+      }
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       if (msg === 'Payment already confirmed') {
         await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() });
-        await ctx.reply('✅ Payment already confirmed. Your order is being processed.');
+        await ctx.reply(t(lang, 'paymentAlreadyConfirmed'));
       } else {
-        await ctx.reply('Something went wrong. Please try again or contact us.');
+        await ctx.reply(t(lang, 'genericError'));
       }
       return;
     }
 
     await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() });
-    await ctx.reply('✅ Thank you! We have received your payment notification.\n\nThe store owner will confirm it shortly.');
+    await ctx.reply(t(lang, 'paymentNotificationReceived'));
 
     const { notification } = result;
     if (notification.ownerTelegramChatId) {
@@ -55,8 +61,12 @@ export function registerOwnerHandlers(bot: import('grammy').Bot<MyContext>) {
 
     let result: Awaited<ReturnType<typeof confirmPayment>>;
     try {
-      result = await confirmPayment(getBotUsername(), orderId);
+      result = await confirmPayment(ctx.botUsername, orderId);
     } catch (err: unknown) {
+      if (err instanceof SuspendedError) {
+        await ctx.reply(SUSPENSION_MESSAGE);
+        return;
+      }
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       if (msg === 'Payment already confirmed') {
         await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() });
@@ -71,10 +81,14 @@ export function registerOwnerHandlers(bot: import('grammy').Bot<MyContext>) {
     await ctx.reply(`✅ Payment confirmed for order. Customer has been notified.`);
 
     if (result.customerTelegramUserId) {
+      const customerLang = resolveLang(
+        result.customerLanguagePreference,
+        result.businessLanguage,
+      );
       try {
         await bot.api.sendMessage(
           result.customerTelegramUserId,
-          `✅ <b>Payment confirmed!</b>\n\nYour order is now being prepared. We'll let you know when it's ready.`,
+          t(customerLang, 'paymentConfirmedCustomer'),
           { parse_mode: 'HTML' },
         );
       } catch {
@@ -101,7 +115,7 @@ export function registerOwnerHandlers(bot: import('grammy').Bot<MyContext>) {
       const axios = await import('axios');
       await axios.default.patch(
         `${process.env.BACKEND_URL ?? 'http://localhost:3000'}/api/v1/bot/set-owner-chat`,
-        { botUsername: getBotUsername(), ownerTelegramChatId: chatId },
+        { botUsername: ctx.botUsername, ownerTelegramChatId: chatId },
         { headers: { 'x-bot-secret': process.env.BOT_MANAGER_SECRET ?? '' } },
       );
       await ctx.reply(

@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/api/api_service.dart';
 import '../../core/auth/auth_notifier.dart';
+import '../../core/locale/locale_provider.dart';
+import '../../l10n/app_localizations.dart';
 import 'customization_provider.dart';
+import 'reminder_settings_provider.dart';
 import 'settings_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -12,10 +17,11 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final settingsAsync = ref.watch(settingsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(l.settingsTitle)),
       body: settingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _ErrorView(
@@ -38,6 +44,10 @@ class SettingsScreen extends ConsumerWidget {
               ],
               const SizedBox(height: 12),
               _PaymentSection(data: data),
+              const SizedBox(height: 12),
+              _CalendarSection(data: data),
+              const SizedBox(height: 12),
+              _RemindersSection(data: data),
               const SizedBox(height: 12),
               _BotSection(data: data),
               const SizedBox(height: 12),
@@ -106,7 +116,10 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -121,6 +134,7 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -131,7 +145,7 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
             Row(
               children: [
                 Text(
-                  'BUSINESS PROFILE',
+                  l.settingsBusinessProfile,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: Colors.grey[600],
                         letterSpacing: 0.5,
@@ -143,7 +157,7 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
                   IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 18),
                     onPressed: () => setState(() => _editing = true),
-                    tooltip: 'Edit profile',
+                    tooltip: l.settingsEditProfileTooltip,
                     visualDensity: VisualDensity.compact,
                   ),
               ],
@@ -152,8 +166,8 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
             if (_editing) ...[
               TextField(
                 controller: _nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Business name',
+                decoration: InputDecoration(
+                  labelText: l.onboardingBusinessNameLabel,
                   isDense: true,
                 ),
                 autofocus: true,
@@ -161,8 +175,8 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
               const SizedBox(height: 12),
               TextField(
                 controller: _descCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Description (optional)',
+                decoration: InputDecoration(
+                  labelText: l.settingsDescriptionLabel(l.commonOptional),
                   isDense: true,
                 ),
                 maxLines: 3,
@@ -173,7 +187,7 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
                 children: [
                   TextButton(
                     onPressed: _saving ? null : _cancel,
-                    child: const Text('Cancel'),
+                    child: Text(l.buttonCancel),
                   ),
                   const SizedBox(width: 8),
                   FilledButton(
@@ -184,7 +198,7 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Save'),
+                        : Text(l.buttonSave),
                   ),
                 ],
               ),
@@ -215,17 +229,12 @@ class _BusinessModeSection extends ConsumerWidget {
   final SettingsState data;
   const _BusinessModeSection({required this.data});
 
-  static const _modes = [
-    ('PRODUCTS', 'Product selling', 'Sell physical or digital products via the bot'),
-    ('SERVICES', 'Service / appointments', 'Accept bookings and manage appointments'),
-    ('FREELANCE', 'Freelance / projects', 'Track project milestones and invoices'),
-  ];
-
   Future<void> _toggle(BuildContext context, WidgetRef ref, String mode, List<String> current) async {
+    final l = AppLocalizations.of(context)!;
     final isOn = current.contains(mode);
     if (isOn && current.length == 1) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You must have at least one mode active.')),
+        SnackBar(content: Text(l.settingsModeAtLeastOne)),
       );
       return;
     }
@@ -237,7 +246,7 @@ class _BusinessModeSection extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(l.errorWithMessage(e.toString())), backgroundColor: Colors.red),
         );
       }
     }
@@ -245,7 +254,13 @@ class _BusinessModeSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final current = data.business.mode;
+    final modes = [
+      ('PRODUCTS', l.settingsModeProductsLabel, l.settingsModeProductsDesc),
+      ('SERVICES', l.settingsModeServicesLabel, l.settingsModeServicesDesc),
+      ('FREELANCE', l.settingsModeFreelanceLabel, l.settingsModeFreelanceDesc),
+    ];
 
     return Card(
       margin: EdgeInsets.zero,
@@ -255,7 +270,7 @@ class _BusinessModeSection extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'BUSINESS MODE',
+              l.settingsBusinessMode,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Colors.grey[600],
                     letterSpacing: 0.5,
@@ -263,7 +278,7 @@ class _BusinessModeSection extends ConsumerWidget {
                   ),
             ),
             const SizedBox(height: 4),
-            for (final (value, label, subtitle) in _modes)
+            for (final (value, label, subtitle) in modes)
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(label, style: const TextStyle(fontSize: 14)),
@@ -326,7 +341,10 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -341,6 +359,7 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final hasCard = widget.data.business.cardNumber != null &&
         widget.data.business.cardNumber!.isNotEmpty;
 
@@ -354,7 +373,7 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
             Row(
               children: [
                 Text(
-                  'PAYMENT METHOD',
+                  l.settingsPaymentMethod,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: Colors.grey[600],
                         letterSpacing: 0.5,
@@ -366,7 +385,7 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
                   IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 18),
                     onPressed: () => setState(() => _editing = true),
-                    tooltip: 'Edit payment',
+                    tooltip: l.settingsEditPaymentTooltip,
                     visualDensity: VisualDensity.compact,
                   ),
               ],
@@ -384,8 +403,8 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
               const SizedBox(height: 12),
               TextField(
                 controller: _cardCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Card number',
+                decoration: InputDecoration(
+                  labelText: l.settingsCardNumberLabel,
                   hintText: '8600 0000 0000 0000',
                   isDense: true,
                 ),
@@ -399,7 +418,7 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
                 children: [
                   TextButton(
                     onPressed: _saving ? null : _cancel,
-                    child: const Text('Cancel'),
+                    child: Text(l.buttonCancel),
                   ),
                   const SizedBox(width: 8),
                   FilledButton(
@@ -410,7 +429,7 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Save'),
+                        : Text(l.buttonSave),
                   ),
                 ],
               ),
@@ -445,7 +464,7 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
               ),
             ] else ...[
               Text(
-                'No payment card set. Customers will not be able to pay.',
+                l.settingsNoCardWarning,
                 style: TextStyle(color: Colors.orange[700], fontSize: 13),
               ),
             ],
@@ -468,12 +487,461 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
 
 // ── Bot section ──────────────────────────────────────────────────────
 
+// ── Calendar sync section ────────────────────────────────────────────
+
+class _CalendarSection extends ConsumerStatefulWidget {
+  final SettingsState data;
+  const _CalendarSection({required this.data});
+
+  @override
+  ConsumerState<_CalendarSection> createState() => _CalendarSectionState();
+}
+
+class _CalendarSectionState extends ConsumerState<_CalendarSection> {
+  bool _loading = false;
+
+  String? get _token => widget.data.business.calendarToken;
+
+  String get _calendarUrl {
+    final token = _token;
+    if (token == null) return '';
+    return '${ApiService.calendarBaseUrl}/calendar/$token.ics';
+  }
+
+  Future<void> _toggleCalendar(bool value) async {
+    setState(() => _loading = true);
+    try {
+      final notifier = ref.read(settingsProvider.notifier);
+      if (value) {
+        await notifier.enableCalendarSync();
+      } else {
+        await notifier.disableCalendarSync();
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.settingsCalendarSyncFailed)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _copyCalendarUrl() {
+    Clipboard.setData(ClipboardData(text: _calendarUrl));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.settingsCalendarLinkCopied),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _addToGoogleCalendar() async {
+    final googleUrl =
+        'https://calendar.google.com/calendar/r/settings/addbyurl'
+        '?url=${Uri.encodeComponent(_calendarUrl)}';
+    final uri = Uri.parse(googleUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _addToAppleCalendar() async {
+    // Apple Calendar subscribes via the webcal:// protocol
+    final webcalUrl = _calendarUrl
+        .replaceFirst('https://', 'webcal://')
+        .replaceFirst('http://', 'webcal://');
+    final uri = Uri.parse(webcalUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      // Fallback: open the https URL directly
+      final httpsUri = Uri.parse(_calendarUrl);
+      if (await canLaunchUrl(httpsUri)) {
+        await launchUrl(httpsUri, mode: LaunchMode.externalApplication);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final enabled = _token != null;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l.settingsCalendarSync,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Colors.grey[600],
+                    letterSpacing: 0.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l.settingsCalendarSyncTitle,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        l.settingsCalendarSyncSubtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_loading)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else
+                  Switch(
+                    value: enabled,
+                    onChanged: _toggleCalendar,
+                  ),
+              ],
+            ),
+            if (enabled) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+              Text(
+                l.settingsCalendarLinkLabel,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _calendarUrl,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[700],
+                          fontFamily: 'monospace',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: _copyCalendarUrl,
+                      child: Icon(
+                        Icons.copy,
+                        size: 18,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _addToGoogleCalendar,
+                  icon: const Icon(Icons.calendar_today, size: 18),
+                  label: Text(l.settingsAddToGoogleCalendar),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _addToAppleCalendar,
+                  icon: const Icon(Icons.apple, size: 18),
+                  label: Text(l.settingsAddToAppleCalendar),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l.settingsCalendarSamsungNote,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Reminders section ────────────────────────────────────────────────
+
+class _RemindersSection extends ConsumerWidget {
+  final SettingsState data;
+  const _RemindersSection({required this.data});
+
+  Future<void> _update(
+    BuildContext context,
+    WidgetRef ref,
+    String key,
+    Object value,
+  ) async {
+    try {
+      await ref.read(reminderSettingsProvider.notifier).updateSetting(key, value);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.settingsReminderSaveFailed)),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
+    final modes = data.business.mode;
+    final settingsAsync = ref.watch(reminderSettingsProvider);
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l.settingsReminders,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Colors.grey[600],
+                    letterSpacing: 0.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              l.settingsRemindersSubtitle,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 8),
+            settingsAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: LinearProgressIndicator(),
+              ),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  l.settingsRemindersLoadFailed,
+                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                ),
+              ),
+              data: (s) {
+                final tiles = <Widget>[];
+
+                // SERVICES → appointment reminders
+                if (modes.contains('SERVICES')) {
+                  final apptEnabled = s['appointmentEnabled'] as bool? ?? true;
+                  tiles.add(_ReminderToggle(
+                    title: l.settingsReminderAppointmentTitle,
+                    subtitle: l.settingsReminderAppointmentSubtitle,
+                    enabled: apptEnabled,
+                    hoursBefore: s['appointmentHoursBefore'] as int? ?? 24,
+                    onToggle: (v) => _update(context, ref, 'appointmentEnabled', v),
+                    onTimingChange: (h) =>
+                        _update(context, ref, 'appointmentHoursBefore', h),
+                    timingOptions: const [1, 2, 3, 6, 12, 24, 48],
+                  ));
+                  if (apptEnabled) {
+                    tiles.add(_ReminderToggle(
+                      title: l.settingsReminderSecondTitle,
+                      subtitle: l.settingsReminderSecondSubtitle,
+                      enabled: s['appointmentSecondEnabled'] as bool? ?? true,
+                      hoursBefore: s['appointmentSecondHoursBefore'] as int? ?? 1,
+                      onToggle: (v) =>
+                          _update(context, ref, 'appointmentSecondEnabled', v),
+                      onTimingChange: (h) => _update(
+                          context, ref, 'appointmentSecondHoursBefore', h),
+                      timingOptions: const [1, 2, 3, 6],
+                    ));
+                  }
+                }
+
+                // PRODUCTS → delivery reminders
+                if (modes.contains('PRODUCTS')) {
+                  tiles.add(_ReminderToggle(
+                    title: l.settingsReminderDeliveryTitle,
+                    subtitle: l.settingsReminderDeliverySubtitle,
+                    enabled: s['deliveryEnabled'] as bool? ?? true,
+                    hoursBefore: s['deliveryHoursBefore'] as int? ?? 24,
+                    onToggle: (v) => _update(context, ref, 'deliveryEnabled', v),
+                    onTimingChange: (h) =>
+                        _update(context, ref, 'deliveryHoursBefore', h),
+                    timingOptions: const [3, 6, 12, 24, 48],
+                  ));
+                }
+
+                // FREELANCE → deadline reminders
+                if (modes.contains('FREELANCE')) {
+                  tiles.add(_ReminderToggle(
+                    title: l.settingsReminderDeadlineTitle,
+                    subtitle: l.settingsReminderDeadlineSubtitle,
+                    enabled: s['deadlineEnabled'] as bool? ?? true,
+                    hoursBefore: s['deadlineHoursBefore'] as int? ?? 48,
+                    onToggle: (v) => _update(context, ref, 'deadlineEnabled', v),
+                    onTimingChange: (h) =>
+                        _update(context, ref, 'deadlineHoursBefore', h),
+                    timingOptions: const [12, 24, 48, 72, 168],
+                  ));
+                }
+
+                return Column(children: tiles);
+              },
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l.settingsRemindersFootnote,
+              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReminderToggle extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool enabled;
+  final int hoursBefore;
+  final ValueChanged<bool> onToggle;
+  final ValueChanged<int> onTimingChange;
+  final List<int> timingOptions;
+
+  const _ReminderToggle({
+    required this.title,
+    required this.subtitle,
+    required this.enabled,
+    required this.hoursBefore,
+    required this.onToggle,
+    required this.onTimingChange,
+    required this.timingOptions,
+  });
+
+  String _label(AppLocalizations l, int hours) {
+    if (hours < 24) return l.settingsReminderHoursBefore(hours);
+    final days = hours ~/ 24;
+    return l.settingsReminderDaysBefore(days);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    // Guard against a stored value that isn't in this type's option list so the
+    // dropdown never throws on a duplicate/absent value.
+    final dropdownValue =
+        timingOptions.contains(hoursBefore) ? hoursBefore : timingOptions.first;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    Text(subtitle,
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                  ],
+                ),
+              ),
+              Switch(value: enabled, onChanged: onToggle),
+            ],
+          ),
+          if (enabled) ...[
+            const SizedBox(height: 8),
+            DropdownButtonFormField<int>(
+              // ignore: deprecated_member_use
+              value: dropdownValue,
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              items: timingOptions
+                  .map((h) => DropdownMenuItem(value: h, child: Text(_label(l, h))))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) onTimingChange(v);
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _BotSection extends StatelessWidget {
   final SettingsState data;
   const _BotSection({required this.data});
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final hasBot = data.botUsername != null && data.botUsername!.isNotEmpty;
 
     return Card(
@@ -484,7 +952,7 @@ class _BotSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'TELEGRAM BOT',
+              l.settingsTelegramBot,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Colors.grey[600],
                     letterSpacing: 0.5,
@@ -494,7 +962,7 @@ class _BotSection extends StatelessWidget {
             const SizedBox(height: 12),
             if (!hasBot)
               Text(
-                'No bot configured. Contact support to set up your bot.',
+                l.settingsNoBotConfigured,
                 style: TextStyle(color: Colors.grey[600], fontSize: 13),
               )
             else ...[
@@ -534,13 +1002,13 @@ class _BotSection extends StatelessWidget {
                     const SizedBox(width: 8),
                     IconButton(
                       icon: const Icon(Icons.copy_outlined, size: 18),
-                      tooltip: 'Copy link',
+                      tooltip: l.settingsCopyLinkTooltip,
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: data.botLink!));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Bot link copied'),
-                            duration: Duration(seconds: 2),
+                          SnackBar(
+                            content: Text(l.settingsBotLinkCopied),
+                            duration: const Duration(seconds: 2),
                           ),
                         );
                       },
@@ -565,7 +1033,10 @@ class _LanguageSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final current = data.business.language;
+    final l = AppLocalizations.of(context)!;
+    // Reflect the app locale (what the user currently sees), not just the
+    // stored business language, so the highlighted option matches the UI.
+    final currentCode = ref.watch(localeProvider).languageCode;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -575,7 +1046,7 @@ class _LanguageSection extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'LANGUAGE',
+              l.settingsLanguage,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Colors.grey[600],
                     letterSpacing: 0.5,
@@ -584,21 +1055,28 @@ class _LanguageSection extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             SegmentedButton<String>(
+              showSelectedIcon: false,
               segments: const [
-                ButtonSegment(value: 'UZBEK', label: Text("O'zbek")),
-                ButtonSegment(value: 'RUSSIAN', label: Text('Русский')),
+                // Language names are always shown in their own language.
+                ButtonSegment(value: 'uz', label: Text("O'zbek")),
+                ButtonSegment(value: 'ru', label: Text('Русский')),
+                ButtonSegment(value: 'en', label: Text('English')),
               ],
-              selected: {current},
+              selected: {currentCode},
               onSelectionChanged: (s) async {
+                final code = s.first;
+                // Update the UI immediately.
+                await ref.read(localeProvider.notifier).setLocale(code);
                 try {
+                  // Persist on the business so the bot uses it too.
                   await ref
                       .read(settingsProvider.notifier)
-                      .saveLanguage(s.first);
+                      .saveLanguage(LocaleNotifier.codeToEnum(code));
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Error: $e'),
+                        content: Text(l.errorWithMessage(e.toString())),
                         backgroundColor: Colors.red,
                       ),
                     );
@@ -608,7 +1086,7 @@ class _LanguageSection extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'This sets the language your Telegram bot uses with customers.',
+              l.settingsLanguageFootnote,
               style: TextStyle(color: Colors.grey[500], fontSize: 12),
             ),
           ],
@@ -623,6 +1101,7 @@ class _LanguageSection extends ConsumerWidget {
 class _AccountSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -631,7 +1110,7 @@ class _AccountSection extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'ACCOUNT',
+              l.settingsAccount,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Colors.grey[600],
                     letterSpacing: 0.5,
@@ -643,9 +1122,9 @@ class _AccountSection extends ConsumerWidget {
               width: double.infinity,
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.logout, size: 18, color: Colors.red),
-                label: const Text(
-                  'Log out',
-                  style: TextStyle(color: Colors.red),
+                label: Text(
+                  l.settingsLogOut,
+                  style: const TextStyle(color: Colors.red),
                 ),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Colors.red),
@@ -696,7 +1175,10 @@ class _CustomerFieldsSectionState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -708,7 +1190,10 @@ class _CustomerFieldsSectionState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -716,6 +1201,7 @@ class _CustomerFieldsSectionState
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final fieldsAsync = ref.watch(customFieldsProvider);
 
     return Card(
@@ -728,7 +1214,7 @@ class _CustomerFieldsSectionState
             Row(
               children: [
                 Text(
-                  'CUSTOMER FIELDS',
+                  l.settingsCustomerFields,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: Colors.grey[600],
                         letterSpacing: 0.5,
@@ -738,7 +1224,7 @@ class _CustomerFieldsSectionState
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.add, size: 20),
-                  tooltip: 'Add field',
+                  tooltip: l.settingsAddFieldTooltip,
                   visualDensity: VisualDensity.compact,
                   onPressed: _addField,
                 ),
@@ -749,14 +1235,14 @@ class _CustomerFieldsSectionState
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: LinearProgressIndicator(),
               ),
-              error: (e, _) => Text('Error: $e',
+              error: (e, _) => Text(l.errorWithMessage(e.toString()),
                   style: const TextStyle(color: Colors.red, fontSize: 13)),
               data: (fields) {
                 if (fields.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      'No custom fields. Add fields to collect extra info about customers.',
+                      l.settingsNoCustomFields,
                       style: TextStyle(color: Colors.grey[500], fontSize: 12),
                     ),
                   );
@@ -788,13 +1274,6 @@ class _AddFieldDialog extends StatefulWidget {
 }
 
 class _AddFieldDialogState extends State<_AddFieldDialog> {
-  static const _fieldTypes = [
-    ('TEXT', 'Text'),
-    ('NUMBER', 'Number'),
-    ('DATE', 'Date'),
-    ('YESNO', 'Yes / No'),
-  ];
-
   final _nameCtrl = TextEditingController();
   String _selectedType = 'TEXT';
 
@@ -806,28 +1285,35 @@ class _AddFieldDialogState extends State<_AddFieldDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final fieldTypes = [
+      ('TEXT', l.settingsFieldTypeText),
+      ('NUMBER', l.settingsFieldTypeNumber),
+      ('DATE', l.settingsFieldTypeDate),
+      ('YESNO', l.settingsFieldTypeYesNo),
+    ];
     return AlertDialog(
-      title: const Text('Add customer field'),
+      title: Text(l.settingsAddCustomerField),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextField(
             controller: _nameCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Field name',
-              hintText: 'e.g. Company, Instagram handle',
+            decoration: InputDecoration(
+              labelText: l.settingsFieldNameLabel,
+              hintText: l.settingsFieldNameHint,
               isDense: true,
             ),
             autofocus: true,
           ),
           const SizedBox(height: 16),
-          Text('Field type',
+          Text(l.settingsFieldTypeLabel,
               style: TextStyle(fontSize: 12, color: Colors.grey[600])),
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
-            children: _fieldTypes.map((entry) {
+            children: fieldTypes.map((entry) {
               final (value, label) = entry;
               return ChoiceChip(
                 label: Text(label),
@@ -841,7 +1327,7 @@ class _AddFieldDialogState extends State<_AddFieldDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l.buttonCancel),
         ),
         FilledButton(
           onPressed: () {
@@ -849,7 +1335,7 @@ class _AddFieldDialogState extends State<_AddFieldDialog> {
             if (name.isEmpty) return;
             Navigator.pop(context, (name: name, fieldType: _selectedType));
           },
-          child: const Text('Add'),
+          child: Text(l.buttonAdd),
         ),
       ],
     );
@@ -903,7 +1389,10 @@ class _StagesSectionState extends ConsumerState<_StagesSection> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -915,7 +1404,10 @@ class _StagesSectionState extends ConsumerState<_StagesSection> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -923,6 +1415,7 @@ class _StagesSectionState extends ConsumerState<_StagesSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final stagesAsync = ref.watch(stagesProvider);
 
     return Card(
@@ -935,7 +1428,7 @@ class _StagesSectionState extends ConsumerState<_StagesSection> {
             Row(
               children: [
                 Text(
-                  'PIPELINE STAGES',
+                  l.settingsPipelineStages,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: Colors.grey[600],
                         letterSpacing: 0.5,
@@ -945,7 +1438,7 @@ class _StagesSectionState extends ConsumerState<_StagesSection> {
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.add, size: 20),
-                  tooltip: 'Add stage',
+                  tooltip: l.settingsAddStageTooltip,
                   visualDensity: VisualDensity.compact,
                   onPressed: _addStage,
                 ),
@@ -956,14 +1449,14 @@ class _StagesSectionState extends ConsumerState<_StagesSection> {
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: LinearProgressIndicator(),
               ),
-              error: (e, _) => Text('Error: $e',
+              error: (e, _) => Text(l.errorWithMessage(e.toString()),
                   style: const TextStyle(color: Colors.red, fontSize: 13)),
               data: (stages) {
                 if (stages.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      'No pipeline stages. Add stages to track where customers are in your sales process.',
+                      l.settingsNoStages,
                       style: TextStyle(color: Colors.grey[500], fontSize: 12),
                     ),
                   );
@@ -1011,23 +1504,24 @@ class _AddStageDialogState extends State<_AddStageDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('Add pipeline stage'),
+      title: Text(l.settingsAddStage),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextField(
             controller: _nameCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Stage name',
-              hintText: 'e.g. Lead, Negotiating, Won',
+            decoration: InputDecoration(
+              labelText: l.settingsStageNameLabel,
+              hintText: l.settingsStageNameHint,
               isDense: true,
             ),
             autofocus: true,
           ),
           const SizedBox(height: 16),
-          Text('Color',
+          Text(l.settingsColorLabel,
               style: TextStyle(fontSize: 12, color: Colors.grey[600])),
           const SizedBox(height: 8),
           Wrap(
@@ -1057,7 +1551,7 @@ class _AddStageDialogState extends State<_AddStageDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l.buttonCancel),
         ),
         FilledButton(
           onPressed: () {
@@ -1065,7 +1559,7 @@ class _AddStageDialogState extends State<_AddStageDialog> {
             if (name.isEmpty) return;
             Navigator.pop(context, (name: name, color: _selectedColor));
           },
-          child: const Text('Add'),
+          child: Text(l.buttonAdd),
         ),
       ],
     );
@@ -1124,7 +1618,10 @@ class _CheckoutQuestionsSectionState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -1136,7 +1633,10 @@ class _CheckoutQuestionsSectionState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -1144,6 +1644,7 @@ class _CheckoutQuestionsSectionState
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final questionsAsync = ref.watch(checkoutQuestionsProvider);
 
     return Card(
@@ -1156,7 +1657,7 @@ class _CheckoutQuestionsSectionState
             Row(
               children: [
                 Text(
-                  'CHECKOUT QUESTIONS',
+                  l.settingsCheckoutQuestions,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: Colors.grey[600],
                         letterSpacing: 0.5,
@@ -1166,7 +1667,7 @@ class _CheckoutQuestionsSectionState
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.add, size: 20),
-                  tooltip: 'Add question',
+                  tooltip: l.settingsAddQuestionTooltip,
                   visualDensity: VisualDensity.compact,
                   onPressed: _addQuestion,
                 ),
@@ -1177,14 +1678,14 @@ class _CheckoutQuestionsSectionState
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: LinearProgressIndicator(),
               ),
-              error: (e, _) => Text('Error: $e',
+              error: (e, _) => Text(l.errorWithMessage(e.toString()),
                   style: const TextStyle(color: Colors.red, fontSize: 13)),
               data: (questions) {
                 if (questions.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      'No checkout questions. Questions are asked in the Telegram bot during checkout.',
+                      l.settingsNoCheckoutQuestions,
                       style: TextStyle(color: Colors.grey[500], fontSize: 12),
                     ),
                   );
@@ -1226,16 +1727,17 @@ class _AddQuestionDialogState extends State<_AddQuestionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('Add checkout question'),
+      title: Text(l.settingsAddCheckoutQuestion),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _questionCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Question',
-              hintText: 'e.g. Any allergies or special requests?',
+            decoration: InputDecoration(
+              labelText: l.settingsQuestionLabel,
+              hintText: l.settingsQuestionHint,
               isDense: true,
             ),
             autofocus: true,
@@ -1244,7 +1746,7 @@ class _AddQuestionDialogState extends State<_AddQuestionDialog> {
           const SizedBox(height: 12),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Required', style: TextStyle(fontSize: 14)),
+            title: Text(l.commonRequired, style: const TextStyle(fontSize: 14)),
             value: _isRequired,
             onChanged: (v) => setState(() => _isRequired = v),
             dense: true,
@@ -1254,7 +1756,7 @@ class _AddQuestionDialogState extends State<_AddQuestionDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l.buttonCancel),
         ),
         FilledButton(
           onPressed: () {
@@ -1262,7 +1764,7 @@ class _AddQuestionDialogState extends State<_AddQuestionDialog> {
             if (text.isEmpty) return;
             Navigator.pop(context, (question: text, required: _isRequired));
           },
-          child: const Text('Add'),
+          child: Text(l.buttonAdd),
         ),
       ],
     );
@@ -1276,6 +1778,7 @@ class _QuestionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return ListTile(
       dense: true,
       contentPadding: EdgeInsets.zero,
@@ -1289,7 +1792,7 @@ class _QuestionTile extends StatelessWidget {
       title: Text(question.question,
           style: const TextStyle(fontSize: 13), maxLines: 2),
       subtitle: Text(
-        question.required ? 'Required' : 'Optional',
+        question.required ? l.commonRequired : l.commonOptionalLabel,
         style: TextStyle(
             fontSize: 11,
             color:
@@ -1311,6 +1814,7 @@ class _ServicesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -1319,7 +1823,7 @@ class _ServicesSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'SERVICES',
+              l.settingsServices,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Colors.grey[600],
                     letterSpacing: 0.5,
@@ -1329,7 +1833,7 @@ class _ServicesSection extends StatelessWidget {
             const SizedBox(height: 8),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Manage services'),
+              title: Text(l.settingsManageServices),
               trailing: const Icon(Icons.chevron_right),
               dense: true,
               onTap: () => context.push('/services'),
@@ -1348,6 +1852,7 @@ class _StaffSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -1356,7 +1861,7 @@ class _StaffSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'STAFF',
+              l.settingsStaff,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Colors.grey[600],
                     letterSpacing: 0.5,
@@ -1366,7 +1871,7 @@ class _StaffSection extends StatelessWidget {
             const SizedBox(height: 8),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Manage staff'),
+              title: Text(l.settingsManageStaff),
               trailing: const Icon(Icons.chevron_right),
               dense: true,
               onTap: () => context.push('/staff'),
@@ -1387,6 +1892,7 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -1397,7 +1903,7 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(onPressed: onRetry, child: Text(l.buttonRetry)),
           ],
         ),
       ),
