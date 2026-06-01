@@ -11,8 +11,10 @@ import '../../core/auth/auth_notifier.dart';
 import '../../core/models/business.dart';
 import '../../core/models/user.dart';
 import '../../core/services/fcm_service.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_spinner.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
   final String phone;
@@ -90,7 +92,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       }
       _focusNodes[0].requestFocus();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppTokens.of(context).error),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -107,7 +111,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppTokens.of(context).error),
       );
     }
   }
@@ -115,43 +121,40 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        foregroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: t.text1,
         elevation: 0,
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.s5),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(),
               Text(
                 l.otpTitle,
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: AppTextSizes.h2,
+                  fontWeight: AppFontWeights.extra,
+                  color: t.text1,
+                ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.s2),
               Text(
                 l.otpSubtitle(widget.phone),
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Colors.grey[600]),
+                style: TextStyle(fontSize: AppTextSizes.base, color: t.text2),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.s2),
               Text(
                 l.otpDevHint,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: Colors.orange[700]),
+                style: TextStyle(
+                    fontSize: AppTextSizes.caption, color: t.warningStrong),
                 textAlign: TextAlign.center,
               ),
               const Spacer(),
@@ -159,14 +162,14 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(4, (i) => _buildDigitBox(i)),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.s5),
               _buildConsentCheckbox(
                 value: _generalConsent,
                 onChanged: (v) => setState(() => _generalConsent = v ?? false),
                 text: l.consentGeneral,
                 linkText: l.consentGeneralLink,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.s2),
               _buildConsentCheckbox(
                 value: _crossBorderConsent,
                 onChanged: (v) =>
@@ -175,16 +178,19 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               ),
               const Spacer(),
               if (_loading)
-                const Center(child: CircularProgressIndicator())
+                const Center(child: AppSpinner(size: 28))
               else ...[
                 AppButton(
                   label: l.otpVerifyButton,
+                  fullWidth: true,
                   onPressed: _canVerify ? _verify : null,
                 ),
-                const SizedBox(height: 12),
-                TextButton(
+                const SizedBox(height: AppSpacing.s3),
+                AppButton(
+                  label: l.otpResendButton,
+                  variant: AppButtonVariant.ghost,
+                  fullWidth: true,
                   onPressed: _resend,
-                  child: Text(l.otpResendButton),
                 ),
               ],
               const Spacer(),
@@ -211,14 +217,13 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     required String text,
     String? linkText,
   }) {
-    final baseStyle = Theme.of(context)
-        .textTheme
-        .bodySmall
-        ?.copyWith(color: Colors.grey[800], height: 1.3);
-    final linkStyle = baseStyle?.copyWith(
-      color: Theme.of(context).colorScheme.primary,
+    final t = AppTokens.of(context);
+    final baseStyle = TextStyle(
+        fontSize: AppTextSizes.caption, color: t.text2, height: 1.3);
+    final linkStyle = baseStyle.copyWith(
+      color: t.accent,
       decoration: TextDecoration.underline,
-      fontWeight: FontWeight.w600,
+      fontWeight: AppFontWeights.semibold,
     );
 
     Widget label;
@@ -234,7 +239,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               style: linkStyle,
               recognizer: TapGestureRecognizer()..onTap = _openPrivacyPolicy,
             ),
-            TextSpan(text: parts.length > 1 ? parts.sublist(1).join(linkText) : ''),
+            TextSpan(
+                text: parts.length > 1 ? parts.sublist(1).join(linkText) : ''),
           ],
         ),
       );
@@ -251,10 +257,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           child: Checkbox(
             value: value,
             onChanged: onChanged,
+            activeColor: t.accent,
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppSpacing.s2),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(top: 2),
@@ -266,10 +273,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   }
 
   Widget _buildDigitBox(int index) {
+    final t = AppTokens.of(context);
     return Container(
       width: 60,
       height: 64,
-      margin: const EdgeInsets.symmetric(horizontal: 6),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s1),
       child: TextFormField(
         controller: _controllers[index],
         focusNode: _focusNodes[index],
@@ -279,18 +287,21 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           FilteringTextInputFormatter.digitsOnly,
           LengthLimitingTextInputFormatter(1),
         ],
-        style: Theme.of(context)
-            .textTheme
-            .headlineSmall
-            ?.copyWith(fontWeight: FontWeight.bold),
+        style: TextStyle(
+          fontSize: AppTextSizes.h3,
+          fontWeight: AppFontWeights.bold,
+          color: t.text1,
+        ),
         decoration: InputDecoration(
           filled: true,
-          fillColor: const Color(0xFFF5F7FF),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: Theme.of(context).colorScheme.primary,
-            ),
+          fillColor: t.surface2,
+          enabledBorder: OutlineInputBorder(
+            borderRadius: AppRadii.md,
+            borderSide: BorderSide(color: t.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: AppRadii.md,
+            borderSide: BorderSide(color: t.accent, width: 2),
           ),
           contentPadding: EdgeInsets.zero,
         ),

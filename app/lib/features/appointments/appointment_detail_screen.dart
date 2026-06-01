@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/icons/app_icon.dart';
 import '../../core/models/appointment.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
-import '../../shared/utils/status_labels.dart';
+import '../../shared/widgets/app_badge.dart';
+import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_spinner.dart';
 import 'appointments_provider.dart';
-
-const _statusColor = {
-  'REQUESTED': Color(0xFFD97706),
-  'CONFIRMED': Color(0xFF059669),
-  'COMPLETED': Color(0xFF1A56DB),
-  'CANCELLED': Color(0xFF6B7280),
-  'NO_SHOW': Color(0xFFDC2626),
-};
 
 class AppointmentDetailScreen extends ConsumerWidget {
   final String appointmentId;
@@ -22,26 +19,35 @@ class AppointmentDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final apptAsync = ref.watch(appointmentDetailProvider(appointmentId));
 
     return Scaffold(
       appBar: AppBar(title: Text(l.apptDetailTitle)),
       body: apptAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: AppSpinner(size: 32)),
         error: (e, _) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 12),
-              Text(e.toString(), textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () =>
-                    ref.invalidate(appointmentDetailProvider(appointmentId)),
-                child: Text(l.buttonRetry),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.s5),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppIcon(
+                    name: AppIconName.close, size: 48, color: t.errorStrong),
+                const SizedBox(height: AppSpacing.s3),
+                Text(e.toString(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: t.text2)),
+                const SizedBox(height: AppSpacing.s4),
+                AppButton(
+                  label: l.buttonRetry,
+                  variant: AppButtonVariant.secondary,
+                  size: AppButtonSize.sm,
+                  onPressed: () =>
+                      ref.invalidate(appointmentDetailProvider(appointmentId)),
+                ),
+              ],
+            ),
           ),
         ),
         data: (appt) => _AppointmentDetail(appointment: appt),
@@ -89,7 +95,9 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text(e.toString()),
+              backgroundColor: AppTokens.of(context).error),
         );
       }
     } finally {
@@ -107,7 +115,9 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text(e.toString()),
+              backgroundColor: AppTokens.of(context).error),
         );
       }
     } finally {
@@ -130,7 +140,9 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text(e.toString()),
+              backgroundColor: AppTokens.of(context).error),
         );
       }
     } finally {
@@ -141,102 +153,67 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final statusColor = _statusColor[_appt.status] ?? const Color(0xFF6B7280);
+    final t = AppTokens.of(context);
     final isTerminal = !_appt.isActive;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.s4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Status banner ─────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: statusColor.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              children: [
-                Icon(_statusIcon(_appt.status), color: statusColor, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  appointmentStatusLabel(l, _appt.status),
-                  style: TextStyle(
-                    color: statusColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: _appt.paymentStatus == 'CONFIRMED'
-                        ? const Color(0xFF059669).withValues(alpha: 0.1)
-                        : Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    _paymentLabel(l, _appt.paymentStatus),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: _appt.paymentStatus == 'CONFIRMED'
-                          ? const Color(0xFF059669)
-                          : Colors.orange[700],
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          // ── Status row ────────────────────────────────────────────
+          Row(
+            children: [
+              AppBadge(status: _appt.status, type: AppBadgeType.appointment),
+              const SizedBox(width: AppSpacing.s2),
+              _PaymentBadge(paymentStatus: _appt.paymentStatus),
+            ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.s4),
 
           // ── Customer ──────────────────────────────────────────────
-          _SectionCard(
-            title: l.orderSectionCustomer,
+          AppCard(
+            header: AppCardHeader(title: l.orderSectionCustomer),
             child: Column(
               children: [
-                _InfoRow(Icons.person_outline, _appt.customer.name),
+                _InfoRow(AppIconName.customers, _appt.customer.name),
                 if (_appt.customer.phone != null)
-                  _InfoRow(Icons.phone_outlined, _appt.customer.phone!),
+                  _InfoRow(AppIconName.customers, _appt.customer.phone!),
                 if (_appt.customer.telegramUsername != null)
                   _InfoRow(
-                    Icons.telegram,
+                    AppIconName.inbox,
                     '@${_appt.customer.telegramUsername!}',
                   ),
               ],
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s3),
 
           // ── Appointment info ──────────────────────────────────────
-          _SectionCard(
-            title: l.apptDetailTitle,
+          AppCard(
+            header: AppCardHeader(title: l.apptDetailTitle),
             child: Column(
               children: [
-                _InfoRow(Icons.design_services_outlined, _appt.service.name),
+                _InfoRow(AppIconName.staff, _appt.service.name),
                 if (_appt.staff != null)
-                  _InfoRow(Icons.badge_outlined, _appt.staff!.name),
+                  _InfoRow(AppIconName.staff, _appt.staff!.name),
                 _InfoRow(
-                  Icons.calendar_today_outlined,
+                  AppIconName.calendar,
                   formatDate(_appt.startTime.toLocal()),
                 ),
                 _InfoRow(
-                  Icons.access_time_outlined,
+                  AppIconName.pending,
                   '${_timeLabel(_appt.startTime.toLocal())} – ${_timeLabel(_appt.endTime.toLocal())}',
                 ),
                 _InfoRow(
-                  Icons.timer_outlined,
+                  AppIconName.pending,
                   l.durationMinutes(_appt.service.durationMinutes),
                 ),
-                _InfoRow(Icons.payments_outlined, formatUZS(_appt.price)),
+                _InfoRow(AppIconName.revenue, formatUZS(_appt.price)),
                 _InfoRow(
-                  Icons.payment_outlined,
+                  AppIconName.payment,
                   _appt.paymentType == 'IN_ADVANCE'
                       ? l.apptPayInAdvance
                       : l.apptPayAtAppointment,
@@ -245,19 +222,22 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s3),
 
           // ── Notes ─────────────────────────────────────────────────
-          _SectionCard(
-            title: l.orderSectionNotes,
-            trailing: _editingNotes
-                ? null
-                : IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 16),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () => setState(() => _editingNotes = true),
-                  ),
+          AppCard(
+            header: AppCardHeader(
+              title: l.orderSectionNotes,
+              trailing: _editingNotes
+                  ? null
+                  : IconButton(
+                      icon: AppIcon(
+                          name: AppIconName.settings, size: 16, color: t.text2),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => setState(() => _editingNotes = true),
+                    ),
+            ),
             child: _editingNotes
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -266,39 +246,38 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                         controller: _notesController,
                         maxLines: 4,
                         minLines: 2,
+                        autofocus: true,
+                        style: TextStyle(color: t.text1),
                         decoration: InputDecoration(
                           hintText: l.apptNotesHint,
-                          border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.all(10),
+                          hintStyle: TextStyle(color: t.text3),
+                          border: const OutlineInputBorder(
+                              borderRadius: AppRadii.md),
+                          contentPadding: const EdgeInsets.all(AppSpacing.s3),
                         ),
-                        autofocus: true,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.s2),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          TextButton(
+                          AppButton(
+                            label: l.buttonCancel,
+                            variant: AppButtonVariant.ghost,
+                            size: AppButtonSize.sm,
                             onPressed: _savingNotes
                                 ? null
                                 : () {
-                                    _notesController.text =
-                                        _appt.notes ?? '';
+                                    _notesController.text = _appt.notes ?? '';
                                     setState(() => _editingNotes = false);
                                   },
-                            child: Text(l.buttonCancel),
                           ),
-                          const SizedBox(width: 8),
-                          FilledButton(
+                          const SizedBox(width: AppSpacing.s2),
+                          AppButton(
+                            label: l.buttonSave,
+                            variant: AppButtonVariant.secondary,
+                            size: AppButtonSize.sm,
+                            loading: _savingNotes,
                             onPressed: _savingNotes ? null : _saveNotes,
-                            child: _savingNotes
-                                ? const SizedBox(
-                                    height: 14,
-                                    width: 14,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white),
-                                  )
-                                : Text(l.buttonSave),
                           ),
                         ],
                       ),
@@ -310,79 +289,66 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
                         : l.apptNoNotes,
                     style: TextStyle(
                       color: (_appt.notes?.isNotEmpty == true)
-                          ? Colors.grey[700]
-                          : Colors.grey[400],
+                          ? t.text1
+                          : t.text3,
                     ),
                   ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.s5),
 
           // ── Payment confirm button ────────────────────────────────
           if (_appt.paymentStatus != 'CONFIRMED' && _appt.isActive) ...[
-            FilledButton.icon(
+            AppButton(
+              label: l.apptConfirmPayment,
+              leftIcon: AppIconName.paid,
+              fullWidth: true,
+              loading: _updatingPayment,
               onPressed: _updatingPayment ? null : _confirmPayment,
-              icon: _updatingPayment
-                  ? const SizedBox(
-                      height: 16,
-                      width: 16,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.check_circle_outlined),
-              label: Text(l.apptConfirmPayment),
-              style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF059669)),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s3),
           ],
 
           // ── Status action buttons ─────────────────────────────────
           if (!isTerminal) ...[
             if (_appt.status == 'REQUESTED') ...[
-              _StatusButton(
+              AppButton(
                 label: l.apptConfirm,
-                icon: Icons.event_available_outlined,
-                color: const Color(0xFF059669),
+                leftIcon: AppIconName.paid,
+                fullWidth: true,
                 loading: _updatingStatus,
                 onPressed: () => _updateStatus('CONFIRMED'),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.s2),
             ],
             if (_appt.status == 'CONFIRMED') ...[
-              _StatusButton(
+              AppButton(
                 label: l.apptMarkCompleted,
-                icon: Icons.task_alt_outlined,
-                color: const Color(0xFF1A56DB),
+                variant: AppButtonVariant.secondary,
+                fullWidth: true,
                 loading: _updatingStatus,
                 onPressed: () => _updateStatus('COMPLETED'),
               ),
-              const SizedBox(height: 8),
-              _StatusButton(
+              const SizedBox(height: AppSpacing.s2),
+              AppButton(
                 label: l.apptMarkNoShow,
-                icon: Icons.person_off_outlined,
-                color: const Color(0xFFDC2626),
+                variant: AppButtonVariant.danger,
+                fullWidth: true,
                 loading: _updatingStatus,
                 onPressed: () => _updateStatus('NO_SHOW'),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.s2),
             ],
-            OutlinedButton.icon(
+            AppButton(
+              label: l.apptCancel,
+              variant: AppButtonVariant.danger,
+              fullWidth: true,
               onPressed:
                   _updatingStatus ? null : () => _updateStatus('CANCELLED'),
-              icon: const Icon(Icons.cancel_outlined,
-                  color: Color(0xFF6B7280)),
-              label: Text(
-                l.apptCancel,
-                style: const TextStyle(color: Color(0xFF6B7280)),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF6B7280)),
-              ),
             ),
           ],
 
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.s4),
         ],
       ),
     );
@@ -390,92 +356,35 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
 
   String _timeLabel(DateTime dt) =>
       '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-
-  IconData _statusIcon(String s) => switch (s) {
-        'REQUESTED' => Icons.hourglass_empty_outlined,
-        'CONFIRMED' => Icons.event_available_outlined,
-        'COMPLETED' => Icons.task_alt_outlined,
-        'CANCELLED' => Icons.cancel_outlined,
-        'NO_SHOW' => Icons.person_off_outlined,
-        _ => Icons.help_outline,
-      };
-
-  String _paymentLabel(AppLocalizations l, String s) => switch (s) {
-        'PENDING' => l.orderPaymentPending,
-        'PAYMENT_RECEIVED' => l.paymentStatusPaymentReceived,
-        'CONFIRMED' => l.orderTimelinePaymentConfirmed,
-        _ => s,
-      };
 }
 
-class _StatusButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final bool loading;
-  final VoidCallback onPressed;
-
-  const _StatusButton({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.loading,
-    required this.onPressed,
-  });
+class _PaymentBadge extends StatelessWidget {
+  final String paymentStatus;
+  const _PaymentBadge({required this.paymentStatus});
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton.icon(
-      onPressed: loading ? null : onPressed,
-      icon: loading
-          ? const SizedBox(
-              height: 16,
-              width: 16,
-              child:
-                  CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-            )
-          : Icon(icon),
-      label: Text(label),
-      style: FilledButton.styleFrom(backgroundColor: color),
-    );
-  }
-}
-
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final Widget child;
-  final Widget? trailing;
-  const _SectionCard({required this.title, required this.child, this.trailing});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[500],
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                if (trailing != null) ...[
-                  const Spacer(),
-                  trailing!,
-                ],
-              ],
-            ),
-            const SizedBox(height: 10),
-            child,
-          ],
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    final confirmed = paymentStatus == 'CONFIRMED';
+    final bg = confirmed ? t.successSoft : t.warningSoft;
+    final fg = confirmed ? t.successStrong : t.warningStrong;
+    final label = switch (paymentStatus) {
+      'PENDING' => l.orderPaymentPending,
+      'PAYMENT_RECEIVED' => l.paymentStatusPaymentReceived,
+      'CONFIRMED' => l.orderTimelinePaymentConfirmed,
+      _ => paymentStatus,
+    };
+    return Container(
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.s3, vertical: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: AppRadii.pill),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: AppTextSizes.caption,
+          fontWeight: AppFontWeights.semibold,
+          color: fg,
         ),
       ),
     );
@@ -483,20 +392,23 @@ class _SectionCard extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  final IconData icon;
+  final AppIconName icon;
   final String text;
   const _InfoRow(this.icon, this.text);
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AppSpacing.s2),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: Colors.grey[500]),
-          const SizedBox(width: 10),
+          AppIcon(name: icon, size: 16, color: t.text2),
+          const SizedBox(width: AppSpacing.s3),
           Expanded(
-            child: Text(text, style: const TextStyle(fontSize: 14)),
+            child: Text(text,
+                style:
+                    TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
           ),
         ],
       ),

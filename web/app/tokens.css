@@ -1,0 +1,122 @@
+/* Design tokens — Practical Soft Depth (Cobalt).
+   Loaded after globals.css so token-driven body font wins. */
+
+:root {
+  /* Accent */
+  --accent: #2563EB;
+  --accent-hover: #1D4ED8;
+  --accent-active: #1E40AF;
+  --accent-soft: #EAF0FF;
+  --accent-on: #FFFFFF;
+
+  /* Semantic status */
+  --success: #16A34A;
+  --success-soft: #DCFCE7;
+  --success-strong: #15803D;
+  --warning: #D97706;
+  --warning-soft: #FEF3C7;
+  --warning-strong: #B45309;
+  --error: #DC2626;
+  --error-soft: #FEE2E2;
+  --error-strong: #B91C1C;
+
+  /* Surfaces */
+  --bg: #EEF2FB;
+  --surface: #FFFFFF;
+  --surface-2: #F7F9FE;
+  --border: #E3EAFA;
+  --border-strong: #D4DDEE;
+
+  /* Text */
+  --text-1: #1A2540;
+  --text-2: #6B7A9C;
+  --text-3: #97A3BC;
+
+  /* Radii */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+
+  /* Spacing (8pt) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* Elevation — soft outer shadows */
+  --shadow-sm: 0 1px 2px rgba(26, 37, 64, .05), 0 4px 12px -8px rgba(26, 37, 64, .12);
+  --shadow-md: 0 8px 20px -12px rgba(26, 37, 64, .18);
+  --shadow-lg: 0 16px 40px -20px rgba(26, 37, 64, .28);
+  --shadow-accent: 0 12px 26px -10px rgba(37, 99, 235, .45);
+  /* The one neumorphic accent — reserved for quick-action buttons only */
+  --shadow-neu: 5px 5px 12px #d2dbef, -5px -5px 12px #ffffff;
+  --shadow-neu-inset: inset 4px 4px 9px #d2dbef, inset -4px -4px 9px #ffffff;
+
+  /* Typography scale */
+  --fs-caption: 12px;
+  --fs-sm: 14px;
+  --fs-base: 16px;
+  --fs-lg: 18px;
+  --fs-h3: 24px;
+  --fs-h2: 30px;
+  --fs-h1: 38px;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-extra: 800;
+
+  /* Motion */
+  --ease: cubic-bezier(.22, .61, .36, 1);
+  --dur-fast: 140ms;
+  --dur-base: 200ms;
+  --dur-slow: 280ms;
+}
+
+.dark {
+  --accent: #3B82F6;
+  --accent-hover: #60A5FA;
+  --accent-active: #93C5FD;
+  --accent-soft: rgba(59, 130, 246, .16);
+  --accent-on: #0B1322;
+
+  --success: #22C55E;
+  --success-soft: rgba(34, 197, 94, .16);
+  --success-strong: #4ADE80;
+  --warning: #F59E0B;
+  --warning-soft: rgba(245, 158, 11, .16);
+  --warning-strong: #FBBF24;
+  --error: #F87171;
+  --error-soft: rgba(248, 113, 113, .16);
+  --error-strong: #FCA5A5;
+
+  --bg: #0B1322;
+  --surface: #111B2E;
+  --surface-2: #0E1626;
+  --border: #22324D;
+  --border-strong: #2C3E5C;
+
+  --text-1: #EEF3FB;
+  --text-2: #8DA0C0;
+  --text-3: #5D7299;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 16px -10px rgba(0, 0, 0, .5);
+  --shadow-md: 0 8px 24px -12px rgba(0, 0, 0, .55);
+  --shadow-lg: 0 16px 40px -18px rgba(0, 0, 0, .65);
+  --shadow-accent: 0 12px 26px -10px rgba(59, 130, 246, .5);
+  /* Neumorphic dual-shadow doesn't work in dark — flatten to a soft outer shadow */
+  --shadow-neu: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 16px -10px rgba(0, 0, 0, .5);
+  --shadow-neu-inset: inset 0 1px 2px rgba(0, 0, 0, .4);
+}
+
+/* Apply the typeface via the next/font CSS var. This is additive to globals.css
+   (which sets a generic Arial fallback) and wins because tokens.css loads after. */
+body {
+  font-family: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}

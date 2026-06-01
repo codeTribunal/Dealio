@@ -1,3 +1,8 @@
+// Working hours: keys "0".."6" (0=Sunday … 6=Saturday, Asia/Tashkent local),
+// each value { start: "HH:MM", end: "HH:MM" } or null = closed that day.
+export type WorkingDay = { start: string; end: string }
+export type WorkingHours = Record<string, WorkingDay | null>
+
 export interface Business {
   id: string
   name: string
@@ -8,6 +13,17 @@ export interface Business {
   cardBank: string | null
   botUsername: string | null
   calendarToken?: string | null
+  workingHours?: WorkingHours | null
+  bufferMinutes?: number
+}
+
+export interface BlockedSlot {
+  id: string
+  staffId: string | null
+  startTime: string
+  endTime: string
+  reason: string | null
+  staff: { id: string; name: string } | null
 }
 
 export interface Customer {
@@ -207,6 +223,7 @@ export interface StaffMember {
   id: string
   name: string
   telegramHandle: string | null
+  daysOff?: string[]
   createdAt: string
   staffServices: {
     service: {
@@ -232,6 +249,72 @@ export interface Service {
 
 export interface ServicesResponse {
   services: Service[]
+}
+
+export interface HomeData {
+  overdueReminders: {
+    id: string
+    note: string
+    dueDate: string
+    customer: { id: string; name: string; telegramUsername: string | null }
+  }[]
+  dormantCustomers: {
+    id: string
+    name: string
+    telegramUsername: string | null
+    daysSince: number
+    orderCount: number
+  }[]
+  todayOrders: {
+    id: string
+    orderNumber: number
+    total: number
+    orderStatus: string
+    paymentStatus: string
+    createdAt: string
+    customer: { id: string; name: string; telegramUsername: string | null }
+    items: { quantity: number; price: number; product: { id: string; name: string } }[]
+  }[]
+  pendingPayments: {
+    id: string
+    orderNumber: number
+    total: number
+    customer: { id: string; name: string }
+  }[]
+  newCustomers: {
+    id: string
+    name: string
+    telegramUsername: string | null
+    createdAt: string
+  }[]
+  todayAppointments: {
+    id: string
+    customerName: string
+    serviceName: string
+    startTime: string
+    status: string
+  }[]
+  recentCancellations: {
+    id: string
+    customerName: string
+    serviceName: string
+    startTime: string
+    status: string
+  }[]
+  todayProjects: {
+    id: string
+    name: string
+    customerName: string
+    createdAt: string
+  }[]
+  recentMilestones: {
+    id: string
+    milestoneName: string
+    projectName: string
+    customerName: string
+    projectId: string
+    updatedAt: string
+  }[]
 }
 
 export interface AnalyticsData {

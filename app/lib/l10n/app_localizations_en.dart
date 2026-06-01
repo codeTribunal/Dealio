@@ -762,6 +762,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeNoActivity => 'No activity today';
 
   @override
+  String get homeWelcome => 'Welcome';
+
+  @override
+  String get homeHeroTodayOrders => 'Today\'s orders';
+
+  @override
+  String get homeStatPending => 'Pending payments';
+
+  @override
+  String get homeStatNewCustomers => 'New customers';
+
+  @override
+  String homePendingPaymentsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pending payments',
+      one: '1 pending payment',
+      zero: 'No pending payments',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get ordersTitle => 'Orders';
 
   @override
@@ -1473,4 +1497,108 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get schedulingWorkingHours => 'Working hours';
+
+  @override
+  String get schedulingWorkingHoursHint =>
+      'When customers can book. Times are Tashkent time, 24-hour.';
+
+  @override
+  String get schedulingOpen => 'Open';
+
+  @override
+  String get schedulingClosed => 'Closed';
+
+  @override
+  String get schedulingDayMon => 'Monday';
+
+  @override
+  String get schedulingDayTue => 'Tuesday';
+
+  @override
+  String get schedulingDayWed => 'Wednesday';
+
+  @override
+  String get schedulingDayThu => 'Thursday';
+
+  @override
+  String get schedulingDayFri => 'Friday';
+
+  @override
+  String get schedulingDaySat => 'Saturday';
+
+  @override
+  String get schedulingDaySun => 'Sunday';
+
+  @override
+  String get schedulingStart => 'Start';
+
+  @override
+  String get schedulingEnd => 'End';
+
+  @override
+  String get schedulingTimeInvalid => 'Start time must be before end time.';
+
+  @override
+  String get schedulingBuffer => 'Buffer between appointments';
+
+  @override
+  String get schedulingBufferHint =>
+      'Gap added after each appointment, e.g. for cleanup.';
+
+  @override
+  String get schedulingBufferUnit => 'minutes';
+
+  @override
+  String get schedulingWorkingHoursSaved => 'Working hours saved';
+
+  @override
+  String get schedulingBlockedTime => 'Blocked time';
+
+  @override
+  String get schedulingBlockedTimeHint =>
+      'Block off vacations, breaks or one-off closures so customers cannot book them.';
+
+  @override
+  String get schedulingAddBlocked => 'Add blocked time';
+
+  @override
+  String get schedulingNoBlocked => 'No blocked time';
+
+  @override
+  String get schedulingScope => 'Applies to';
+
+  @override
+  String get schedulingWholeBusiness => 'Whole business';
+
+  @override
+  String get schedulingDate => 'Date';
+
+  @override
+  String get schedulingReason => 'Reason';
+
+  @override
+  String get schedulingReasonHint => 'Optional, e.g. Public holiday';
+
+  @override
+  String get schedulingAddBlockedSubmit => 'Add block';
+
+  @override
+  String get schedulingDeleteBlockedTitle => 'Delete blocked time?';
+
+  @override
+  String get schedulingDeleteBlockedConfirm =>
+      'This time will become bookable again.';
+
+  @override
+  String get staffFormDaysOffLabel => 'Days off';
+
+  @override
+  String get staffFormDaysOffHint =>
+      'Specific dates this staff member is unavailable.';
+
+  @override
+  String get staffFormAddDayOff => 'Add day off';
 }

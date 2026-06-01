@@ -1,13 +1,21 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { WifiOff, Clock } from 'lucide-react'
 import AuthLayout from '@/components/AuthLayout'
-import LoadingSpinner from '@/components/LoadingSpinner'
-import ActivityBadge from '@/components/ActivityBadge'
+import { Card, CardHeader } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Textarea } from '@/components/ui/Input'
+import { Avatar } from '@/components/ui/Avatar'
+import { Badge } from '@/components/ui/Badge'
+import { Spinner } from '@/components/ui/Spinner'
+import { Icon } from '@/components/icons/Icon'
 import { getCustomerDetail, updateCustomerNotes } from '@/lib/api'
-import { formatUZS, formatDate, formatDateTime, formatRelativeTime, getInitials } from '@/lib/format'
+import { formatUZS, formatDate, formatDateTime, formatRelativeTime } from '@/lib/format'
 import type { CustomerDetail } from '@/types'
+
+type Tab = 'orders' | 'appointments' | 'projects'
+
+const TABS: Tab[] = ['orders', 'appointments', 'projects']
 
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -16,7 +24,7 @@ export default function CustomerDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
   const [savingNotes, setSavingNotes] = useState(false)
-  const [activeTab, setActiveTab] = useState<'orders' | 'appointments' | 'projects'>('orders')
+  const [activeTab, setActiveTab] = useState<Tab>('orders')
 
   function fetchCustomer() {
     setLoading(true)
@@ -33,7 +41,7 @@ export default function CustomerDetailPage() {
   async function handleRetry() {
     setError(null)
     setLoading(true)
-    await new Promise(resolve => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, 500))
     fetchCustomer()
   }
 
@@ -52,179 +60,215 @@ export default function CustomerDetailPage() {
   return (
     <AuthLayout title={customer?.name || 'Customer'}>
       {loading ? (
-        <LoadingSpinner />
+        <div className="flex items-center justify-center py-16">
+          <Spinner size={32} />
+        </div>
       ) : error ? (
-        <div className="text-center py-16">
-          <WifiOff className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-lg font-semibold text-gray-900 mb-2">Could not load customer</p>
-          <p className="text-sm text-gray-500 mb-6">Check your connection and try again</p>
-          <button
-            onClick={handleRetry}
-            className="px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700"
-          >
+        <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+          <p className="text-base font-semibold text-error-strong">{error}</p>
+          <Button variant="primary" onClick={handleRetry}>
             Try again
-          </button>
+          </Button>
         </div>
       ) : customer ? (
         <div className="flex flex-col lg:flex-row gap-6 items-start">
           {/* LEFT COLUMN */}
-          <div className="w-full lg:w-80 lg:flex-shrink-0">
-            {/* Identity card */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-4">
-              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-2xl font-bold text-blue-700 mx-auto mb-4">
-                {getInitials(customer.name)}
+          <div className="w-full lg:w-80 lg:flex-shrink-0 space-y-4">
+            {/* Identity */}
+            <Card>
+              <div className="flex justify-center mb-4">
+                <Avatar name={customer.name} size="lg" />
               </div>
-              <h1 className="text-xl font-bold text-gray-900 text-center mb-1">{customer.name}</h1>
+              <h1
+                className="text-text-1 text-center"
+                style={{ fontSize: 'var(--fs-h3)', fontWeight: 'var(--fw-extra)', lineHeight: 1.1 }}
+              >
+                {customer.name}
+              </h1>
               {customer.telegramUsername && (
-                <p className="text-sm text-gray-500 text-center">@{customer.telegramUsername}</p>
+                <p className="text-sm text-text-2 text-center mt-1">@{customer.telegramUsername}</p>
               )}
               {customer.phone && (
-                <p className="text-sm text-gray-500 text-center">{customer.phone}</p>
+                <p className="text-sm text-text-2 text-center mt-1">{customer.phone}</p>
               )}
-              <p className="text-xs text-gray-400 text-center mt-2">
+              <p className="text-xs text-text-3 text-center mt-3">
                 Customer since {formatDate(customer.createdAt)}
               </p>
-            </div>
+            </Card>
 
-            {/* Stats card */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-4">
-              <div className="flex justify-between items-center py-3 border-b border-gray-50">
-                <p className="text-sm text-gray-600">Total orders</p>
-                <p className="text-sm font-semibold text-gray-900">{customer.totalOrders}</p>
+            {/* Stats */}
+            <Card>
+              <CardHeader title="Overview" />
+              <div>
+                <div className="flex justify-between items-center py-3 border-b border-border">
+                  <p className="text-sm text-text-2">Total orders</p>
+                  <p className="text-sm font-semibold text-text-1 tabular-nums">
+                    {customer.totalOrders}
+                  </p>
+                </div>
+                <div className="flex justify-between items-center py-3 border-b border-border">
+                  <p className="text-sm text-text-2">Total spent</p>
+                  <p className="text-sm font-semibold text-text-1 tabular-nums">
+                    {formatUZS(customer.totalSpent)}
+                  </p>
+                </div>
+                <div className="flex justify-between items-center py-3">
+                  <p className="text-sm text-text-2">Last active</p>
+                  <p className="text-sm font-semibold text-text-1">
+                    {formatRelativeTime(customer.lastInteractionAt)}
+                  </p>
+                </div>
               </div>
-              <div className="flex justify-between items-center py-3 border-b border-gray-50">
-                <p className="text-sm text-gray-600">Total spent</p>
-                <p className="text-sm font-semibold text-gray-900">{formatUZS(customer.totalSpent)}</p>
-              </div>
-              <div className="flex justify-between items-center py-3">
-                <p className="text-sm text-gray-600">Last active</p>
-                <p className="text-sm font-semibold text-gray-900">{formatRelativeTime(customer.lastInteractionAt)}</p>
-              </div>
-            </div>
+            </Card>
 
-            {/* Notes card */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-4">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Notes</h3>
-              <textarea
+            {/* Notes */}
+            <Card>
+              <CardHeader title="Notes" />
+              <Textarea
                 rows={4}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add notes about this customer..."
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <button
-                onClick={handleSaveNotes}
-                disabled={savingNotes}
-                className="w-full mt-3 border-2 border-gray-300 bg-white text-gray-800 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {savingNotes ? 'Saving...' : 'Save notes'}
-              </button>
-            </div>
-
-            {/* Custom fields card */}
-            {customer.customFieldValues.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Custom fields</h3>
-                {customer.customFieldValues.map((fieldValue) => (
-                  <div
-                    key={fieldValue.id}
-                    className="flex justify-between items-center py-2 border-b border-gray-50 last:border-b-0"
-                  >
-                    <p className="text-sm text-gray-600">{fieldValue.field.name}</p>
-                    <p className="text-sm font-medium text-gray-900">{fieldValue.value || '—'}</p>
-                  </div>
-                ))}
+              <div className="mt-3">
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes}
+                >
+                  {savingNotes ? 'Saving...' : 'Save notes'}
+                </Button>
               </div>
+            </Card>
+
+            {/* Custom fields */}
+            {customer.customFieldValues.length > 0 && (
+              <Card>
+                <CardHeader title="Custom fields" />
+                <div>
+                  {customer.customFieldValues.map((fieldValue) => (
+                    <div
+                      key={fieldValue.id}
+                      className="flex justify-between items-center py-2 border-b border-border last:border-b-0"
+                    >
+                      <p className="text-sm text-text-2">{fieldValue.field.name}</p>
+                      <p className="text-sm font-medium text-text-1">
+                        {fieldValue.value || '—'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
             )}
 
-            {/* Tags card */}
+            {/* Tags — accent chips (not semantic Badge) */}
             {customer.tags.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Tags</h3>
+              <Card>
+                <CardHeader title="Tags" />
                 <div className="flex flex-wrap gap-2">
                   {customer.tags.map((tag) => (
                     <span
                       key={tag.id}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700"
+                      className="inline-flex items-center px-2.5 py-1 rounded-pill text-xs font-semibold bg-accent-soft text-accent"
                     >
                       {tag.label}
                     </span>
                   ))}
                 </div>
-              </div>
+              </Card>
             )}
 
-            {/* Reminders card */}
+            {/* Reminders */}
             {customer.reminders.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Reminders</h3>
-                {customer.reminders.map((reminder) => (
-                  <div
-                    key={reminder.id}
-                    className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-b-0"
-                  >
-                    <Clock className="w-4 h-4 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-900">{reminder.note}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Due {formatDate(reminder.dueDate)}</p>
+              <Card>
+                <CardHeader title="Reminders" />
+                <div>
+                  {customer.reminders.map((reminder) => (
+                    <div
+                      key={reminder.id}
+                      className="flex items-start gap-3 py-2 border-b border-border last:border-b-0"
+                    >
+                      <span className="text-text-3 mt-0.5 flex-shrink-0">
+                        <Icon name="bell" size={16} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm text-text-1">{reminder.note}</p>
+                        <p className="text-xs text-text-3 mt-0.5">
+                          Due {formatDate(reminder.dueDate)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </Card>
             )}
           </div>
 
-          {/* RIGHT COLUMN */}
-          <div className="flex-1">
-            {/* Tab navigation */}
-            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-6 w-fit">
-              {(['orders', 'appointments', 'projects'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer capitalize ${
-                    activeTab === tab
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </button>
-              ))}
+          {/* RIGHT COLUMN — tabbed content */}
+          <div className="flex-1 w-full min-w-0">
+            {/* Segmented control */}
+            <div className="inline-flex bg-surface-2 rounded-lg p-1 mb-6">
+              {TABS.map((tab) => {
+                const isActive = activeTab === tab
+                return (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors capitalize ${
+                      isActive
+                        ? 'bg-surface text-text-1 shadow-sm'
+                        : 'text-text-2 hover:text-text-1'
+                    }`}
+                    style={{ transitionDuration: 'var(--dur-base)' }}
+                  >
+                    {tab}
+                  </button>
+                )
+              })}
             </div>
 
             {/* Orders tab */}
             {activeTab === 'orders' && (
               <>
                 {customer.orders.length === 0 ? (
-                  <div className="text-center py-12 text-sm text-gray-500">No orders yet</div>
+                  <div className="text-center py-12 text-sm text-text-2">No orders yet</div>
                 ) : (
-                  customer.orders.map((order) => (
-                    <div key={order.id} className="bg-white rounded-2xl border border-gray-200 p-5 mb-3">
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-sm font-bold text-gray-900">Order #{order.orderNumber}</span>
-                        <div className="flex gap-2">
-                          <ActivityBadge status={order.paymentStatus} type="payment" />
-                          <ActivityBadge status={order.orderStatus} type="order" />
+                  <div className="space-y-3">
+                    {customer.orders.map((order) => (
+                      <Card key={order.id}>
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="text-sm font-bold text-text-1">
+                            Order #{order.orderNumber}
+                          </span>
+                          <div className="flex gap-2">
+                            <Badge status={order.paymentStatus} type="payment" />
+                            <Badge status={order.orderStatus} type="order" />
+                          </div>
                         </div>
-                      </div>
-                      {order.items.map((item, i) => (
-                        <div key={i} className="flex justify-between text-sm py-1">
-                          <p className="text-gray-700">
-                            {item.product.name} × {item.quantity}
-                          </p>
-                          <p className="text-gray-900 font-medium">
-                            {formatUZS(item.price * item.quantity)}
+                        <div className="space-y-1">
+                          {order.items.map((item, i) => (
+                            <div key={i} className="flex justify-between text-sm py-1">
+                              <p className="text-text-2">
+                                {item.product.name} × {item.quantity}
+                              </p>
+                              <p className="text-text-1 font-medium tabular-nums">
+                                {formatUZS(item.price * item.quantity)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="border-t border-border my-3" />
+                        <div className="flex justify-between items-center">
+                          <p className="text-xs text-text-3">{formatDateTime(order.createdAt)}</p>
+                          <p className="text-sm font-bold text-text-1 tabular-nums">
+                            Total: {formatUZS(order.total)}
                           </p>
                         </div>
-                      ))}
-                      <div className="border-t border-gray-100 my-3" />
-                      <div className="flex justify-between">
-                        <p className="text-xs text-gray-500">{formatDateTime(order.createdAt)}</p>
-                        <p className="text-sm font-bold text-gray-900">Total: {formatUZS(order.total)}</p>
-                      </div>
-                    </div>
-                  ))
+                      </Card>
+                    ))}
+                  </div>
                 )}
               </>
             )}
@@ -233,20 +277,26 @@ export default function CustomerDetailPage() {
             {activeTab === 'appointments' && (
               <>
                 {customer.appointments.length === 0 ? (
-                  <div className="text-center py-12 text-sm text-gray-500">No appointments yet</div>
+                  <div className="text-center py-12 text-sm text-text-2">
+                    No appointments yet
+                  </div>
                 ) : (
-                  customer.appointments.map((appt) => (
-                    <div key={appt.id} className="bg-white rounded-2xl border border-gray-200 p-5 mb-3">
-                      <div className="flex justify-between items-center">
-                        <p className="text-sm font-bold text-gray-900">{appt.service.name}</p>
-                        <ActivityBadge status={appt.status} type="appointment" />
-                      </div>
-                      <div className="flex items-center gap-4 mt-2">
-                        <p className="text-sm text-gray-600">{formatDateTime(appt.startTime)}</p>
-                        <p className="text-sm text-gray-500">{formatUZS(appt.price)}</p>
-                      </div>
-                    </div>
-                  ))
+                  <div className="space-y-3">
+                    {customer.appointments.map((appt) => (
+                      <Card key={appt.id}>
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm font-bold text-text-1">{appt.service.name}</p>
+                          <Badge status={appt.status} type="appointment" />
+                        </div>
+                        <div className="flex items-center gap-4 mt-2">
+                          <p className="text-sm text-text-2">{formatDateTime(appt.startTime)}</p>
+                          <p className="text-sm text-text-1 font-medium tabular-nums">
+                            {formatUZS(appt.price)}
+                          </p>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
                 )}
               </>
             )}
@@ -255,22 +305,28 @@ export default function CustomerDetailPage() {
             {activeTab === 'projects' && (
               <>
                 {customer.projects.length === 0 ? (
-                  <div className="text-center py-12 text-sm text-gray-500">No projects yet</div>
+                  <div className="text-center py-12 text-sm text-text-2">No projects yet</div>
                 ) : (
-                  customer.projects.map((project) => (
-                    <div key={project.id} className="bg-white rounded-2xl border border-gray-200 p-5 mb-3">
-                      <div className="flex justify-between items-center">
-                        <p className="text-sm font-bold text-gray-900">{project.name}</p>
-                        <ActivityBadge status={project.status} type="project" />
-                      </div>
-                      <div className="flex items-center gap-4 mt-2">
-                        <p className="text-sm text-gray-600">{formatUZS(project.totalPrice)}</p>
-                        {project.deadline && (
-                          <p className="text-sm text-gray-500">Due {formatDate(project.deadline)}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))
+                  <div className="space-y-3">
+                    {customer.projects.map((project) => (
+                      <Card key={project.id}>
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm font-bold text-text-1">{project.name}</p>
+                          <Badge status={project.status} type="project" />
+                        </div>
+                        <div className="flex items-center gap-4 mt-2">
+                          <p className="text-sm text-text-1 font-medium tabular-nums">
+                            {formatUZS(project.totalPrice)}
+                          </p>
+                          {project.deadline && (
+                            <p className="text-sm text-text-2">
+                              Due {formatDate(project.deadline)}
+                            </p>
+                          )}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
                 )}
               </>
             )}

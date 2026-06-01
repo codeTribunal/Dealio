@@ -5,6 +5,9 @@ import { requestOtp, verifyOtp, getBusiness } from '@/lib/api'
 import { setToken } from '@/lib/auth'
 import { useI18n } from '@/lib/i18n/i18nContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import { Card } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
+import { Button } from '@/components/ui/Button'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -44,7 +47,7 @@ export default function LoginPage() {
       // Check whether this user already has a business; if not, send to onboarding
       try {
         await getBusiness()
-        router.replace('/customers')
+        router.replace('/')
       } catch {
         router.replace('/onboarding')
       }
@@ -67,7 +70,7 @@ export default function LoginPage() {
           href="/privacy"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 underline font-medium"
+          className="text-accent underline font-medium"
         >
           {link}
         </a>
@@ -77,47 +80,73 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-10 w-full max-w-md mx-4 md:mx-auto">
-        <div className="flex justify-end mb-4">
+    <div className="min-h-screen flex items-center justify-center bg-bg relative overflow-hidden p-4">
+      {/* Decorative radial cobalt glow */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 640px 420px at 50% 40%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%)',
+        }}
+      />
+
+      <Card padded={false} className="relative w-full max-w-md shadow-lg p-8 sm:p-10">
+        {/* Top row: brand + language switcher */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="w-11 h-11 rounded-md bg-accent text-accent-on flex items-center justify-center font-extrabold text-lg shadow-accent">
+            C
+          </div>
           <LanguageSwitcher />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">{t('login.title')}</h1>
+
+        {/* Heading */}
+        <h1
+          className="text-text-1"
+          style={{ fontSize: 'var(--fs-h2)', fontWeight: 'var(--fw-extra)', lineHeight: 1.1 }}
+        >
+          {t('login.title')}
+        </h1>
 
         {step === 'phone' ? (
           <>
-            <p className="text-sm text-gray-500 mt-1 mb-6">
-              {t('login.subtitle')}
-            </p>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <p className="text-sm text-text-2 mt-2 mb-6">{t('login.subtitle')}</p>
+
+            <label className="block text-sm font-medium text-text-2 mb-1.5">
               {t('login.phoneLabel')}
             </label>
-            <input
+            <Input
               type="tel"
               placeholder={t('login.phonePlaceholder')}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !loading && handleSendCode()}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
-            <button
-              onClick={handleSendCode}
-              disabled={loading || !phone}
-              className="w-full mt-4 bg-blue-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              {loading ? t('login.sending') : t('login.sendCode')}
-            </button>
+
+            {error && <p className="text-sm text-error-strong mt-2">{error}</p>}
+
+            <div className="mt-5">
+              <Button
+                variant="primary"
+                fullWidth
+                loading={loading}
+                disabled={!phone}
+                onClick={handleSendCode}
+              >
+                {loading ? t('login.sending') : t('login.sendCode')}
+              </Button>
+            </div>
           </>
         ) : (
           <>
-            <p className="text-sm text-gray-500 mt-1 mb-6">
+            <p className="text-sm text-text-2 mt-2 mb-6">
               {t('login.otpSubtitle', { phone })}
             </p>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+
+            <label className="block text-sm font-medium text-text-2 mb-1.5">
               {t('login.verificationCode')}
             </label>
-            <input
+            <Input
               type="text"
               inputMode="numeric"
               maxLength={6}
@@ -125,50 +154,58 @@ export default function LoginPage() {
               value={code}
               onChange={(e) => setCode(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !loading && handleVerify()}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
 
-            <label className="flex items-start gap-2 mt-5 text-sm text-gray-700">
+            {error && <p className="text-sm text-error-strong mt-2">{error}</p>}
+
+            {/* Consent checkboxes — preserved logic, restyled */}
+            <label className="flex items-start gap-2.5 mt-5 text-sm text-text-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={generalConsent}
                 onChange={(e) => setGeneralConsent(e.target.checked)}
                 className="mt-0.5 h-4 w-4 shrink-0"
+                style={{ accentColor: 'var(--accent)' }}
               />
               <span>{renderConsentGeneral()}</span>
             </label>
 
-            <label className="flex items-start gap-2 mt-3 text-sm text-gray-700">
+            <label className="flex items-start gap-2.5 mt-3 text-sm text-text-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={crossBorderConsent}
                 onChange={(e) => setCrossBorderConsent(e.target.checked)}
                 className="mt-0.5 h-4 w-4 shrink-0"
+                style={{ accentColor: 'var(--accent)' }}
               />
               <span>{t('login.consentCrossBorder')}</span>
             </label>
 
-            <button
-              onClick={handleVerify}
-              disabled={loading || !canVerify}
-              className="w-full mt-4 bg-blue-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              {loading ? t('login.verifying') : t('login.verify')}
-            </button>
-            <button
-              onClick={() => {
-                setStep('phone')
-                setCode('')
-                setError(null)
-              }}
-              className="w-full mt-3 text-sm text-blue-600"
-            >
-              {t('login.changeNumber')}
-            </button>
+            <div className="mt-5 space-y-2">
+              <Button
+                variant="primary"
+                fullWidth
+                loading={loading}
+                disabled={!canVerify}
+                onClick={handleVerify}
+              >
+                {loading ? t('login.verifying') : t('login.verify')}
+              </Button>
+              <Button
+                variant="ghost"
+                fullWidth
+                onClick={() => {
+                  setStep('phone')
+                  setCode('')
+                  setError(null)
+                }}
+              >
+                {t('login.changeNumber')}
+              </Button>
+            </div>
           </>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

@@ -1474,6 +1474,36 @@ abstract class AppLocalizations {
   /// **'No activity today'**
   String get homeNoActivity;
 
+  /// No description provided for @homeWelcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome'**
+  String get homeWelcome;
+
+  /// No description provided for @homeHeroTodayOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s orders'**
+  String get homeHeroTodayOrders;
+
+  /// No description provided for @homeStatPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending payments'**
+  String get homeStatPending;
+
+  /// No description provided for @homeStatNewCustomers.
+  ///
+  /// In en, this message translates to:
+  /// **'New customers'**
+  String get homeStatNewCustomers;
+
+  /// No description provided for @homePendingPaymentsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No pending payments} =1{1 pending payment} other{{count} pending payments}}'**
+  String homePendingPaymentsCount(int count);
+
   /// No description provided for @ordersTitle.
   ///
   /// In en, this message translates to:
@@ -2823,6 +2853,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 unit sold} other{{count} units sold}}'**
   String analyticsUnitsSold(int count);
+
+  /// No description provided for @schedulingWorkingHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Working hours'**
+  String get schedulingWorkingHours;
+
+  /// No description provided for @schedulingWorkingHoursHint.
+  ///
+  /// In en, this message translates to:
+  /// **'When customers can book. Times are Tashkent time, 24-hour.'**
+  String get schedulingWorkingHoursHint;
+
+  /// No description provided for @schedulingOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get schedulingOpen;
+
+  /// No description provided for @schedulingClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get schedulingClosed;
+
+  /// No description provided for @schedulingDayMon.
+  ///
+  /// In en, this message translates to:
+  /// **'Monday'**
+  String get schedulingDayMon;
+
+  /// No description provided for @schedulingDayTue.
+  ///
+  /// In en, this message translates to:
+  /// **'Tuesday'**
+  String get schedulingDayTue;
+
+  /// No description provided for @schedulingDayWed.
+  ///
+  /// In en, this message translates to:
+  /// **'Wednesday'**
+  String get schedulingDayWed;
+
+  /// No description provided for @schedulingDayThu.
+  ///
+  /// In en, this message translates to:
+  /// **'Thursday'**
+  String get schedulingDayThu;
+
+  /// No description provided for @schedulingDayFri.
+  ///
+  /// In en, this message translates to:
+  /// **'Friday'**
+  String get schedulingDayFri;
+
+  /// No description provided for @schedulingDaySat.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturday'**
+  String get schedulingDaySat;
+
+  /// No description provided for @schedulingDaySun.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday'**
+  String get schedulingDaySun;
+
+  /// No description provided for @schedulingStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get schedulingStart;
+
+  /// No description provided for @schedulingEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get schedulingEnd;
+
+  /// No description provided for @schedulingTimeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Start time must be before end time.'**
+  String get schedulingTimeInvalid;
+
+  /// No description provided for @schedulingBuffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Buffer between appointments'**
+  String get schedulingBuffer;
+
+  /// No description provided for @schedulingBufferHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Gap added after each appointment, e.g. for cleanup.'**
+  String get schedulingBufferHint;
+
+  /// No description provided for @schedulingBufferUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'minutes'**
+  String get schedulingBufferUnit;
+
+  /// No description provided for @schedulingWorkingHoursSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Working hours saved'**
+  String get schedulingWorkingHoursSaved;
+
+  /// No description provided for @schedulingBlockedTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked time'**
+  String get schedulingBlockedTime;
+
+  /// No description provided for @schedulingBlockedTimeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Block off vacations, breaks or one-off closures so customers cannot book them.'**
+  String get schedulingBlockedTimeHint;
+
+  /// No description provided for @schedulingAddBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Add blocked time'**
+  String get schedulingAddBlocked;
+
+  /// No description provided for @schedulingNoBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'No blocked time'**
+  String get schedulingNoBlocked;
+
+  /// No description provided for @schedulingScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Applies to'**
+  String get schedulingScope;
+
+  /// No description provided for @schedulingWholeBusiness.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole business'**
+  String get schedulingWholeBusiness;
+
+  /// No description provided for @schedulingDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get schedulingDate;
+
+  /// No description provided for @schedulingReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get schedulingReason;
+
+  /// No description provided for @schedulingReasonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional, e.g. Public holiday'**
+  String get schedulingReasonHint;
+
+  /// No description provided for @schedulingAddBlockedSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Add block'**
+  String get schedulingAddBlockedSubmit;
+
+  /// No description provided for @schedulingDeleteBlockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete blocked time?'**
+  String get schedulingDeleteBlockedTitle;
+
+  /// No description provided for @schedulingDeleteBlockedConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'This time will become bookable again.'**
+  String get schedulingDeleteBlockedConfirm;
+
+  /// No description provided for @staffFormDaysOffLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Days off'**
+  String get staffFormDaysOffLabel;
+
+  /// No description provided for @staffFormDaysOffHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Specific dates this staff member is unavailable.'**
+  String get staffFormDaysOffHint;
+
+  /// No description provided for @staffFormAddDayOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Add day off'**
+  String get staffFormAddDayOff;
 }
 
 class _AppLocalizationsDelegate

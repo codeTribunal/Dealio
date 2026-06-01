@@ -6,8 +6,18 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_service.dart';
 import '../../core/auth/auth_notifier.dart';
+import '../../core/icons/app_icon.dart';
 import '../../core/locale/locale_provider.dart';
+import '../../core/models/blocked_slot.dart';
+import '../../core/models/staff.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/utils/format.dart';
+import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_spinner.dart';
+import '../staff/staff_provider.dart';
+import 'blocked_time_provider.dart';
 import 'customization_provider.dart';
 import 'reminder_settings_provider.dart';
 import 'settings_provider.dart';
@@ -18,55 +28,178 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final settingsAsync = ref.watch(settingsProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(l.settingsTitle)),
       body: settingsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: AppSpinner(size: 32)),
         error: (e, _) => _ErrorView(
           message: e.toString(),
           onRetry: () => ref.read(settingsProvider.notifier).refresh(),
         ),
         data: (data) => RefreshIndicator(
+          color: t.accent,
           onRefresh: () => ref.read(settingsProvider.notifier).refresh(),
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.s4),
             children: [
               _ProfileSection(data: data),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s3),
               _BusinessModeSection(data: data),
               if (data.business.mode.contains('SERVICES')) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.s3),
                 const _ServicesSection(),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.s3),
                 const _StaffSection(),
+                const SizedBox(height: AppSpacing.s3),
+                _WorkingHoursSection(data: data),
+                const SizedBox(height: AppSpacing.s3),
+                const _BlockedTimeSection(),
               ],
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s3),
               _PaymentSection(data: data),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s3),
               _CalendarSection(data: data),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s3),
               _RemindersSection(data: data),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s3),
               _BotSection(data: data),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s3),
               const _CustomerFieldsSection(),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s3),
               const _StagesSection(),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s3),
               const _CheckoutQuestionsSection(),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s3),
               _LanguageSection(data: data),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s3),
               _AccountSection(),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.s6),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+// ── Shared section scaffold ──────────────────────────────────────────
+
+class _SectionCard extends StatelessWidget {
+  final AppIconName? icon;
+  final String title;
+  final Widget? trailing;
+  final Widget child;
+  const _SectionCard({
+    this.icon,
+    required this.title,
+    this.trailing,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (icon != null) ...[
+                AppIcon(name: icon!, size: 18, color: t.text2),
+                const SizedBox(width: AppSpacing.s2),
+              ],
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: AppTextSizes.sm,
+                    fontWeight: AppFontWeights.semibold,
+                    color: t.text1,
+                  ),
+                ),
+              ),
+              if (trailing != null) trailing!,
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s3),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _EditButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  final String? tooltip;
+  const _EditButton({required this.onPressed, this.tooltip});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
+    return IconButton(
+      icon: AppIcon(name: AppIconName.settings, size: 18, color: t.text2),
+      onPressed: onPressed,
+      tooltip: tooltip,
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
+class _AddButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  final String? tooltip;
+  const _AddButton({required this.onPressed, this.tooltip});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
+    return IconButton(
+      icon: AppIcon(name: AppIconName.add, size: 20, color: t.accent),
+      onPressed: onPressed,
+      tooltip: tooltip,
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
+InputDecoration _decoration(
+  BuildContext context, {
+  String? label,
+  String? hint,
+}) {
+  final t = AppTokens.of(context);
+  OutlineInputBorder border(Color color, [double width = 1]) =>
+      OutlineInputBorder(
+        borderRadius: AppRadii.md,
+        borderSide: BorderSide(color: color, width: width),
+      );
+  return InputDecoration(
+    labelText: label,
+    labelStyle: TextStyle(color: t.text2),
+    hintText: hint,
+    hintStyle: TextStyle(color: t.text3),
+    isDense: true,
+    filled: true,
+    fillColor: t.surface,
+    border: border(t.border),
+    enabledBorder: border(t.border),
+    focusedBorder: border(t.accent, 2),
+  );
+}
+
+void _snackErr(BuildContext context, Object e) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content:
+          Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
+      backgroundColor: AppTokens.of(context).error,
+    ),
+  );
 }
 
 // ── Profile section ──────────────────────────────────────────────────
@@ -89,7 +222,8 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.data.business.name);
-    _descCtrl = TextEditingController(text: widget.data.business.description ?? '');
+    _descCtrl =
+        TextEditingController(text: widget.data.business.description ?? '');
   }
 
   @override
@@ -115,12 +249,7 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _snackErr(context, e);
     }
   }
 
@@ -135,90 +264,78 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    final t = AppTokens.of(context);
+    return _SectionCard(
+      icon: AppIconName.settings,
+      title: l.settingsBusinessProfile,
+      trailing: _editing
+          ? null
+          : _EditButton(
+              onPressed: () => setState(() => _editing = true),
+              tooltip: l.settingsEditProfileTooltip,
+            ),
+      child: _editing
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _nameCtrl,
+                  autofocus: true,
+                  style: TextStyle(color: t.text1),
+                  decoration:
+                      _decoration(context, label: l.onboardingBusinessNameLabel),
+                ),
+                const SizedBox(height: AppSpacing.s3),
+                TextField(
+                  controller: _descCtrl,
+                  maxLines: 3,
+                  style: TextStyle(color: t.text1),
+                  decoration: _decoration(context,
+                      label: l.settingsDescriptionLabel(l.commonOptional)),
+                ),
+                const SizedBox(height: AppSpacing.s3),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    AppButton(
+                      label: l.buttonCancel,
+                      variant: AppButtonVariant.ghost,
+                      size: AppButtonSize.sm,
+                      onPressed: _saving ? null : _cancel,
+                    ),
+                    const SizedBox(width: AppSpacing.s2),
+                    AppButton(
+                      label: l.buttonSave,
+                      variant: AppButtonVariant.secondary,
+                      size: AppButtonSize.sm,
+                      loading: _saving,
+                      onPressed: _saving ? null : _save,
+                    ),
+                  ],
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l.settingsBusinessProfile,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Colors.grey[600],
-                        letterSpacing: 0.5,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  widget.data.business.name,
+                  style: TextStyle(
+                      fontWeight: AppFontWeights.bold,
+                      fontSize: AppTextSizes.base,
+                      color: t.text1),
                 ),
-                const Spacer(),
-                if (!_editing)
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 18),
-                    onPressed: () => setState(() => _editing = true),
-                    tooltip: l.settingsEditProfileTooltip,
-                    visualDensity: VisualDensity.compact,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (_editing) ...[
-              TextField(
-                controller: _nameCtrl,
-                decoration: InputDecoration(
-                  labelText: l.onboardingBusinessNameLabel,
-                  isDense: true,
-                ),
-                autofocus: true,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _descCtrl,
-                decoration: InputDecoration(
-                  labelText: l.settingsDescriptionLabel(l.commonOptional),
-                  isDense: true,
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: _saving ? null : _cancel,
-                    child: Text(l.buttonCancel),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: _saving ? null : _save,
-                    child: _saving
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(l.buttonSave),
+                if (widget.data.business.description != null &&
+                    widget.data.business.description!.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.s1),
+                  Text(
+                    widget.data.business.description!,
+                    style:
+                        TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
                   ),
                 ],
-              ),
-            ] else ...[
-              Text(
-                widget.data.business.name,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              if (widget.data.business.description != null &&
-                  widget.data.business.description!.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  widget.data.business.description!,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                ),
               ],
-            ],
-          ],
-        ),
-      ),
+            ),
     );
   }
 }
@@ -229,7 +346,8 @@ class _BusinessModeSection extends ConsumerWidget {
   final SettingsState data;
   const _BusinessModeSection({required this.data});
 
-  Future<void> _toggle(BuildContext context, WidgetRef ref, String mode, List<String> current) async {
+  Future<void> _toggle(BuildContext context, WidgetRef ref, String mode,
+      List<String> current) async {
     final l = AppLocalizations.of(context)!;
     final isOn = current.contains(mode);
     if (isOn && current.length == 1) {
@@ -238,23 +356,19 @@ class _BusinessModeSection extends ConsumerWidget {
       );
       return;
     }
-    final updated = isOn
-        ? current.where((m) => m != mode).toList()
-        : [...current, mode];
+    final updated =
+        isOn ? current.where((m) => m != mode).toList() : [...current, mode];
     try {
       await ref.read(settingsProvider.notifier).saveMode(updated);
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.errorWithMessage(e.toString())), backgroundColor: Colors.red),
-        );
-      }
+      if (context.mounted) _snackErr(context, e);
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final current = data.business.mode;
     final modes = [
       ('PRODUCTS', l.settingsModeProductsLabel, l.settingsModeProductsDesc),
@@ -262,34 +376,25 @@ class _BusinessModeSection extends ConsumerWidget {
       ('FREELANCE', l.settingsModeFreelanceLabel, l.settingsModeFreelanceDesc),
     ];
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l.settingsBusinessMode,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Colors.grey[600],
-                    letterSpacing: 0.5,
-                    fontWeight: FontWeight.w600,
-                  ),
+    return _SectionCard(
+      icon: AppIconName.catalog,
+      title: l.settingsBusinessMode,
+      child: Column(
+        children: [
+          for (final (value, label, subtitle) in modes)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(label,
+                  style: TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
+              subtitle: Text(subtitle,
+                  style:
+                      TextStyle(fontSize: AppTextSizes.caption, color: t.text2)),
+              value: current.contains(value),
+              activeThumbColor: t.accent,
+              onChanged: (_) => _toggle(context, ref, value, current),
+              dense: true,
             ),
-            const SizedBox(height: 4),
-            for (final (value, label, subtitle) in modes)
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(label, style: const TextStyle(fontSize: 14)),
-                subtitle: Text(subtitle,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                value: current.contains(value),
-                onChanged: (_) => _toggle(context, ref, value, current),
-                dense: true,
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -314,7 +419,8 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
   @override
   void initState() {
     super.initState();
-    _cardCtrl = TextEditingController(text: widget.data.business.cardNumber ?? '');
+    _cardCtrl =
+        TextEditingController(text: widget.data.business.cardNumber ?? '');
     _selectedBank = widget.data.business.cardBank ?? 'UZCARD';
   }
 
@@ -340,12 +446,7 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _snackErr(context, e);
     }
   }
 
@@ -360,117 +461,105 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final hasCard = widget.data.business.cardNumber != null &&
         widget.data.business.cardNumber!.isNotEmpty;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  l.settingsPaymentMethod,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Colors.grey[600],
-                        letterSpacing: 0.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const Spacer(),
-                if (!_editing)
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 18),
-                    onPressed: () => setState(() => _editing = true),
-                    tooltip: l.settingsEditPaymentTooltip,
-                    visualDensity: VisualDensity.compact,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (_editing) ...[
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'UZCARD', label: Text('Uzcard')),
-                  ButtonSegment(value: 'HUMO', label: Text('Humo')),
-                ],
-                selected: {_selectedBank},
-                onSelectionChanged: (s) => setState(() => _selectedBank = s.first),
+    Widget body;
+    if (_editing) {
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'UZCARD', label: Text('Uzcard')),
+              ButtonSegment(value: 'HUMO', label: Text('Humo')),
+            ],
+            selected: {_selectedBank},
+            onSelectionChanged: (s) => setState(() => _selectedBank = s.first),
+          ),
+          const SizedBox(height: AppSpacing.s3),
+          TextField(
+            controller: _cardCtrl,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            maxLength: 16,
+            style: TextStyle(color: t.text1),
+            decoration: _decoration(context,
+                    label: l.settingsCardNumberLabel,
+                    hint: '8600 0000 0000 0000')
+                .copyWith(counterText: ''),
+          ),
+          const SizedBox(height: AppSpacing.s2),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              AppButton(
+                label: l.buttonCancel,
+                variant: AppButtonVariant.ghost,
+                size: AppButtonSize.sm,
+                onPressed: _saving ? null : _cancel,
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _cardCtrl,
-                decoration: InputDecoration(
-                  labelText: l.settingsCardNumberLabel,
-                  hintText: '8600 0000 0000 0000',
-                  isDense: true,
-                ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                maxLength: 16,
-              ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: _saving ? null : _cancel,
-                    child: Text(l.buttonCancel),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: _saving ? null : _save,
-                    child: _saving
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(l.buttonSave),
-                  ),
-                ],
-              ),
-            ] else if (hasCard) ...[
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      widget.data.business.cardBank ?? 'UZCARD',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _formatCardNumber(widget.data.business.cardNumber!),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ] else ...[
-              Text(
-                l.settingsNoCardWarning,
-                style: TextStyle(color: Colors.orange[700], fontSize: 13),
+              const SizedBox(width: AppSpacing.s2),
+              AppButton(
+                label: l.buttonSave,
+                variant: AppButtonVariant.secondary,
+                size: AppButtonSize.sm,
+                loading: _saving,
+                onPressed: _saving ? null : _save,
               ),
             ],
-          ],
-        ),
-      ),
+          ),
+        ],
+      );
+    } else if (hasCard) {
+      body = Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s2, vertical: 3),
+            decoration: BoxDecoration(
+              color: t.accentSoft,
+              borderRadius: AppRadii.sm,
+            ),
+            child: Text(
+              widget.data.business.cardBank ?? 'UZCARD',
+              style: TextStyle(
+                fontSize: AppTextSizes.caption,
+                fontWeight: AppFontWeights.bold,
+                color: t.accent,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s2),
+          Text(
+            _formatCardNumber(widget.data.business.cardNumber!),
+            style: TextStyle(
+              fontSize: AppTextSizes.base,
+              fontWeight: AppFontWeights.medium,
+              letterSpacing: 1,
+              color: t.text1,
+            ),
+          ),
+        ],
+      );
+    } else {
+      body = Text(
+        l.settingsNoCardWarning,
+        style: TextStyle(color: t.warningStrong, fontSize: AppTextSizes.sm),
+      );
+    }
+
+    return _SectionCard(
+      icon: AppIconName.payment,
+      title: l.settingsPaymentMethod,
+      trailing: _editing
+          ? null
+          : _EditButton(
+              onPressed: () => setState(() => _editing = true),
+              tooltip: l.settingsEditPaymentTooltip,
+            ),
+      child: body,
     );
   }
 
@@ -484,8 +573,6 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
     return buf.toString();
   }
 }
-
-// ── Bot section ──────────────────────────────────────────────────────
 
 // ── Calendar sync section ────────────────────────────────────────────
 
@@ -520,7 +607,9 @@ class _CalendarSectionState extends ConsumerState<_CalendarSection> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.settingsCalendarSyncFailed)),
+          SnackBar(
+              content: Text(
+                  AppLocalizations.of(context)!.settingsCalendarSyncFailed)),
         );
       }
     } finally {
@@ -532,7 +621,8 @@ class _CalendarSectionState extends ConsumerState<_CalendarSection> {
     Clipboard.setData(ClipboardData(text: _calendarUrl));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(AppLocalizations.of(context)!.settingsCalendarLinkCopied),
+        content:
+            Text(AppLocalizations.of(context)!.settingsCalendarLinkCopied),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -549,7 +639,6 @@ class _CalendarSectionState extends ConsumerState<_CalendarSection> {
   }
 
   Future<void> _addToAppleCalendar() async {
-    // Apple Calendar subscribes via the webcal:// protocol
     final webcalUrl = _calendarUrl
         .replaceFirst('https://', 'webcal://')
         .replaceFirst('http://', 'webcal://');
@@ -557,7 +646,6 @@ class _CalendarSectionState extends ConsumerState<_CalendarSection> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      // Fallback: open the https URL directly
       final httpsUri = Uri.parse(_calendarUrl);
       if (await canLaunchUrl(httpsUri)) {
         await launchUrl(httpsUri, mode: LaunchMode.externalApplication);
@@ -568,149 +656,117 @@ class _CalendarSectionState extends ConsumerState<_CalendarSection> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final enabled = _token != null;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l.settingsCalendarSync,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Colors.grey[600],
-                    letterSpacing: 0.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l.settingsCalendarSyncTitle,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        l.settingsCalendarSyncSubtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_loading)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  )
-                else
-                  Switch(
-                    value: enabled,
-                    onChanged: _toggleCalendar,
-                  ),
-              ],
-            ),
-            if (enabled) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 16),
-              Text(
-                l.settingsCalendarLinkLabel,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
+    return _SectionCard(
+      icon: AppIconName.calendar,
+      title: l.settingsCalendarSync,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        _calendarUrl,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[700],
-                          fontFamily: 'monospace',
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      l.settingsCalendarSyncTitle,
+                      style: TextStyle(
+                        fontSize: AppTextSizes.base,
+                        fontWeight: AppFontWeights.semibold,
+                        color: t.text1,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: _copyCalendarUrl,
-                      child: Icon(
-                        Icons.copy,
-                        size: 18,
-                        color: Theme.of(context).primaryColor,
-                      ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l.settingsCalendarSyncSubtitle,
+                      style: TextStyle(
+                          fontSize: AppTextSizes.caption, color: t.text2),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _addToGoogleCalendar,
-                  icon: const Icon(Icons.calendar_today, size: 18),
-                  label: Text(l.settingsAddToGoogleCalendar),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+              if (_loading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.s3),
+                  child: AppSpinner(),
+                )
+              else
+                Switch(
+                  value: enabled,
+                  activeThumbColor: t.accent,
+                  onChanged: _toggleCalendar,
                 ),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _addToAppleCalendar,
-                  icon: const Icon(Icons.apple, size: 18),
-                  label: Text(l.settingsAddToAppleCalendar),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l.settingsCalendarSamsungNote,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey[500],
-                ),
-              ),
             ],
+          ),
+          if (enabled) ...[
+            const SizedBox(height: AppSpacing.s4),
+            Divider(height: 1, color: t.border),
+            const SizedBox(height: AppSpacing.s4),
+            Text(
+              l.settingsCalendarLinkLabel,
+              style: TextStyle(
+                fontSize: AppTextSizes.caption,
+                fontWeight: AppFontWeights.semibold,
+                color: t.text2,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s2),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s3, vertical: AppSpacing.s3),
+              decoration: BoxDecoration(
+                color: t.surface2,
+                borderRadius: AppRadii.md,
+                border: Border.all(color: t.border),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _calendarUrl,
+                      style: TextStyle(
+                        fontSize: AppTextSizes.caption,
+                        color: t.text2,
+                        fontFamily: 'monospace',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _copyCalendarUrl,
+                    child:
+                        AppIcon(name: AppIconName.add, size: 18, color: t.accent),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s4),
+            AppButton(
+              label: l.settingsAddToGoogleCalendar,
+              variant: AppButtonVariant.secondary,
+              leftIcon: AppIconName.calendar,
+              fullWidth: true,
+              onPressed: _addToGoogleCalendar,
+            ),
+            const SizedBox(height: AppSpacing.s2),
+            AppButton(
+              label: l.settingsAddToAppleCalendar,
+              variant: AppButtonVariant.secondary,
+              leftIcon: AppIconName.calendar,
+              fullWidth: true,
+              onPressed: _addToAppleCalendar,
+            ),
+            const SizedBox(height: AppSpacing.s2),
+            Text(
+              l.settingsCalendarSamsungNote,
+              style: TextStyle(fontSize: AppTextSizes.caption, color: t.text3),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -729,11 +785,15 @@ class _RemindersSection extends ConsumerWidget {
     Object value,
   ) async {
     try {
-      await ref.read(reminderSettingsProvider.notifier).updateSetting(key, value);
+      await ref
+          .read(reminderSettingsProvider.notifier)
+          .updateSetting(key, value);
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.settingsReminderSaveFailed)),
+          SnackBar(
+              content: Text(
+                  AppLocalizations.of(context)!.settingsReminderSaveFailed)),
         );
       }
     }
@@ -742,111 +802,99 @@ class _RemindersSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final modes = data.business.mode;
     final settingsAsync = ref.watch(reminderSettingsProvider);
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l.settingsReminders,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Colors.grey[600],
-                    letterSpacing: 0.5,
-                    fontWeight: FontWeight.w600,
-                  ),
+    return _SectionCard(
+      icon: AppIconName.bell,
+      title: l.settingsReminders,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l.settingsRemindersSubtitle,
+            style: TextStyle(fontSize: AppTextSizes.caption, color: t.text2),
+          ),
+          const SizedBox(height: AppSpacing.s2),
+          settingsAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.s2),
+              child: LinearProgressIndicator(),
             ),
-            const SizedBox(height: 4),
-            Text(
-              l.settingsRemindersSubtitle,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 8),
-            settingsAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: LinearProgressIndicator(),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.s1),
+              child: Text(
+                l.settingsRemindersLoadFailed,
+                style: TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
               ),
-              error: (e, _) => Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  l.settingsRemindersLoadFailed,
-                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                ),
-              ),
-              data: (s) {
-                final tiles = <Widget>[];
-
-                // SERVICES → appointment reminders
-                if (modes.contains('SERVICES')) {
-                  final apptEnabled = s['appointmentEnabled'] as bool? ?? true;
-                  tiles.add(_ReminderToggle(
-                    title: l.settingsReminderAppointmentTitle,
-                    subtitle: l.settingsReminderAppointmentSubtitle,
-                    enabled: apptEnabled,
-                    hoursBefore: s['appointmentHoursBefore'] as int? ?? 24,
-                    onToggle: (v) => _update(context, ref, 'appointmentEnabled', v),
-                    onTimingChange: (h) =>
-                        _update(context, ref, 'appointmentHoursBefore', h),
-                    timingOptions: const [1, 2, 3, 6, 12, 24, 48],
-                  ));
-                  if (apptEnabled) {
-                    tiles.add(_ReminderToggle(
-                      title: l.settingsReminderSecondTitle,
-                      subtitle: l.settingsReminderSecondSubtitle,
-                      enabled: s['appointmentSecondEnabled'] as bool? ?? true,
-                      hoursBefore: s['appointmentSecondHoursBefore'] as int? ?? 1,
-                      onToggle: (v) =>
-                          _update(context, ref, 'appointmentSecondEnabled', v),
-                      onTimingChange: (h) => _update(
-                          context, ref, 'appointmentSecondHoursBefore', h),
-                      timingOptions: const [1, 2, 3, 6],
-                    ));
-                  }
-                }
-
-                // PRODUCTS → delivery reminders
-                if (modes.contains('PRODUCTS')) {
-                  tiles.add(_ReminderToggle(
-                    title: l.settingsReminderDeliveryTitle,
-                    subtitle: l.settingsReminderDeliverySubtitle,
-                    enabled: s['deliveryEnabled'] as bool? ?? true,
-                    hoursBefore: s['deliveryHoursBefore'] as int? ?? 24,
-                    onToggle: (v) => _update(context, ref, 'deliveryEnabled', v),
-                    onTimingChange: (h) =>
-                        _update(context, ref, 'deliveryHoursBefore', h),
-                    timingOptions: const [3, 6, 12, 24, 48],
-                  ));
-                }
-
-                // FREELANCE → deadline reminders
-                if (modes.contains('FREELANCE')) {
-                  tiles.add(_ReminderToggle(
-                    title: l.settingsReminderDeadlineTitle,
-                    subtitle: l.settingsReminderDeadlineSubtitle,
-                    enabled: s['deadlineEnabled'] as bool? ?? true,
-                    hoursBefore: s['deadlineHoursBefore'] as int? ?? 48,
-                    onToggle: (v) => _update(context, ref, 'deadlineEnabled', v),
-                    onTimingChange: (h) =>
-                        _update(context, ref, 'deadlineHoursBefore', h),
-                    timingOptions: const [12, 24, 48, 72, 168],
-                  ));
-                }
-
-                return Column(children: tiles);
-              },
             ),
-            const SizedBox(height: 8),
-            Text(
-              l.settingsRemindersFootnote,
-              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-            ),
-          ],
-        ),
+            data: (s) {
+              final tiles = <Widget>[];
+
+              if (modes.contains('SERVICES')) {
+                final apptEnabled = s['appointmentEnabled'] as bool? ?? true;
+                tiles.add(_ReminderToggle(
+                  title: l.settingsReminderAppointmentTitle,
+                  subtitle: l.settingsReminderAppointmentSubtitle,
+                  enabled: apptEnabled,
+                  hoursBefore: s['appointmentHoursBefore'] as int? ?? 24,
+                  onToggle: (v) =>
+                      _update(context, ref, 'appointmentEnabled', v),
+                  onTimingChange: (h) =>
+                      _update(context, ref, 'appointmentHoursBefore', h),
+                  timingOptions: const [1, 2, 3, 6, 12, 24, 48],
+                ));
+                if (apptEnabled) {
+                  tiles.add(_ReminderToggle(
+                    title: l.settingsReminderSecondTitle,
+                    subtitle: l.settingsReminderSecondSubtitle,
+                    enabled: s['appointmentSecondEnabled'] as bool? ?? true,
+                    hoursBefore: s['appointmentSecondHoursBefore'] as int? ?? 1,
+                    onToggle: (v) =>
+                        _update(context, ref, 'appointmentSecondEnabled', v),
+                    onTimingChange: (h) => _update(
+                        context, ref, 'appointmentSecondHoursBefore', h),
+                    timingOptions: const [1, 2, 3, 6],
+                  ));
+                }
+              }
+
+              if (modes.contains('PRODUCTS')) {
+                tiles.add(_ReminderToggle(
+                  title: l.settingsReminderDeliveryTitle,
+                  subtitle: l.settingsReminderDeliverySubtitle,
+                  enabled: s['deliveryEnabled'] as bool? ?? true,
+                  hoursBefore: s['deliveryHoursBefore'] as int? ?? 24,
+                  onToggle: (v) => _update(context, ref, 'deliveryEnabled', v),
+                  onTimingChange: (h) =>
+                      _update(context, ref, 'deliveryHoursBefore', h),
+                  timingOptions: const [3, 6, 12, 24, 48],
+                ));
+              }
+
+              if (modes.contains('FREELANCE')) {
+                tiles.add(_ReminderToggle(
+                  title: l.settingsReminderDeadlineTitle,
+                  subtitle: l.settingsReminderDeadlineSubtitle,
+                  enabled: s['deadlineEnabled'] as bool? ?? true,
+                  hoursBefore: s['deadlineHoursBefore'] as int? ?? 48,
+                  onToggle: (v) => _update(context, ref, 'deadlineEnabled', v),
+                  onTimingChange: (h) =>
+                      _update(context, ref, 'deadlineHoursBefore', h),
+                  timingOptions: const [12, 24, 48, 72, 168],
+                ));
+              }
+
+              return Column(children: tiles);
+            },
+          ),
+          const SizedBox(height: AppSpacing.s2),
+          Text(
+            l.settingsRemindersFootnote,
+            style: TextStyle(fontSize: AppTextSizes.caption, color: t.text3),
+          ),
+        ],
       ),
     );
   }
@@ -880,13 +928,12 @@ class _ReminderToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    // Guard against a stored value that isn't in this type's option list so the
-    // dropdown never throws on a duplicate/absent value.
+    final t = AppTokens.of(context);
     final dropdownValue =
         timingOptions.contains(hoursBefore) ? hoursBefore : timingOptions.first;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -897,32 +944,33 @@ class _ReminderToggle extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title,
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w600)),
+                        style: TextStyle(
+                            fontSize: AppTextSizes.sm,
+                            fontWeight: AppFontWeights.semibold,
+                            color: t.text1)),
                     Text(subtitle,
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                        style: TextStyle(
+                            fontSize: AppTextSizes.caption, color: t.text2)),
                   ],
                 ),
               ),
-              Switch(value: enabled, onChanged: onToggle),
+              Switch(
+                  value: enabled,
+                  activeThumbColor: t.accent,
+                  onChanged: onToggle),
             ],
           ),
           if (enabled) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.s2),
             DropdownButtonFormField<int>(
               // ignore: deprecated_member_use
               value: dropdownValue,
-              decoration: InputDecoration(
-                isDense: true,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
+              dropdownColor: t.surface,
+              style: TextStyle(color: t.text1),
+              decoration: _decoration(context),
               items: timingOptions
-                  .map((h) => DropdownMenuItem(value: h, child: Text(_label(l, h))))
+                  .map((h) =>
+                      DropdownMenuItem(value: h, child: Text(_label(l, h))))
                   .toList(),
               onChanged: (v) {
                 if (v != null) onTimingChange(v);
@@ -935,6 +983,8 @@ class _ReminderToggle extends StatelessWidget {
   }
 }
 
+// ── Bot section ──────────────────────────────────────────────────────
+
 class _BotSection extends StatelessWidget {
   final SettingsState data;
   const _BotSection({required this.data});
@@ -942,85 +992,78 @@ class _BotSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final hasBot = data.botUsername != null && data.botUsername!.isNotEmpty;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l.settingsTelegramBot,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Colors.grey[600],
-                    letterSpacing: 0.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            if (!hasBot)
-              Text(
-                l.settingsNoBotConfigured,
-                style: TextStyle(color: Colors.grey[600], fontSize: 13),
-              )
-            else ...[
-              Row(
-                children: [
-                  const Icon(Icons.telegram, size: 18, color: Color(0xFF229ED9)),
-                  const SizedBox(width: 6),
-                  Text(
-                    '@${data.botUsername}',
-                    style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-                  ),
-                ],
-              ),
-              if (data.botLink != null) ...[
-                const SizedBox(height: 10),
+    return _SectionCard(
+      icon: AppIconName.inbox,
+      title: l.settingsTelegramBot,
+      child: !hasBot
+          ? Text(
+              l.settingsNoBotConfigured,
+              style: TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Row(
                   children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: Text(
-                          data.botLink!,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[700],
-                            fontFamily: 'monospace',
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.copy_outlined, size: 18),
-                      tooltip: l.settingsCopyLinkTooltip,
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: data.botLink!));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(l.settingsBotLinkCopied),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                      visualDensity: VisualDensity.compact,
+                    AppIcon(name: AppIconName.inbox, size: 18, color: t.accent),
+                    const SizedBox(width: AppSpacing.s1),
+                    Text(
+                      '@${data.botUsername}',
+                      style: TextStyle(
+                          fontWeight: AppFontWeights.medium,
+                          fontSize: AppTextSizes.sm,
+                          color: t.text1),
                     ),
                   ],
                 ),
+                if (data.botLink != null) ...[
+                  const SizedBox(height: AppSpacing.s2),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.s3, vertical: AppSpacing.s2),
+                          decoration: BoxDecoration(
+                            color: t.surface2,
+                            borderRadius: AppRadii.sm,
+                            border: Border.all(color: t.border),
+                          ),
+                          child: Text(
+                            data.botLink!,
+                            style: TextStyle(
+                              fontSize: AppTextSizes.caption,
+                              color: t.text2,
+                              fontFamily: 'monospace',
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.s2),
+                      IconButton(
+                        icon: AppIcon(
+                            name: AppIconName.add, size: 18, color: t.accent),
+                        tooltip: l.settingsCopyLinkTooltip,
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: data.botLink!));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(l.settingsBotLinkCopied),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                ],
               ],
-            ],
-          ],
-        ),
-      ),
+            ),
     );
   }
 }
@@ -1034,63 +1077,44 @@ class _LanguageSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
-    // Reflect the app locale (what the user currently sees), not just the
-    // stored business language, so the highlighted option matches the UI.
+    final t = AppTokens.of(context);
+    // Reflect the app locale (what the user currently sees).
     final currentCode = ref.watch(localeProvider).languageCode;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l.settingsLanguage,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Colors.grey[600],
-                    letterSpacing: 0.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            SegmentedButton<String>(
-              showSelectedIcon: false,
-              segments: const [
-                // Language names are always shown in their own language.
-                ButtonSegment(value: 'uz', label: Text("O'zbek")),
-                ButtonSegment(value: 'ru', label: Text('Русский')),
-                ButtonSegment(value: 'en', label: Text('English')),
-              ],
-              selected: {currentCode},
-              onSelectionChanged: (s) async {
-                final code = s.first;
-                // Update the UI immediately.
-                await ref.read(localeProvider.notifier).setLocale(code);
-                try {
-                  // Persist on the business so the bot uses it too.
-                  await ref
-                      .read(settingsProvider.notifier)
-                      .saveLanguage(LocaleNotifier.codeToEnum(code));
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l.errorWithMessage(e.toString())),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l.settingsLanguageFootnote,
-              style: TextStyle(color: Colors.grey[500], fontSize: 12),
-            ),
-          ],
-        ),
+    return _SectionCard(
+      icon: AppIconName.settings,
+      title: l.settingsLanguage,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SegmentedButton<String>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: 'uz', label: Text("O'zbek")),
+              ButtonSegment(value: 'ru', label: Text('Русский')),
+              ButtonSegment(value: 'en', label: Text('English')),
+            ],
+            selected: {currentCode},
+            onSelectionChanged: (s) async {
+              final code = s.first;
+              // Update the UI immediately.
+              await ref.read(localeProvider.notifier).setLocale(code);
+              try {
+                // Persist on the business so the bot uses it too.
+                await ref
+                    .read(settingsProvider.notifier)
+                    .saveLanguage(LocaleNotifier.codeToEnum(code));
+              } catch (e) {
+                if (context.mounted) _snackErr(context, e);
+              }
+            },
+          ),
+          const SizedBox(height: AppSpacing.s2),
+          Text(
+            l.settingsLanguageFootnote,
+            style: TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
+          ),
+        ],
       ),
     );
   }
@@ -1102,42 +1126,18 @@ class _AccountSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l.settingsAccount,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Colors.grey[600],
-                    letterSpacing: 0.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.logout, size: 18, color: Colors.red),
-                label: Text(
-                  l.settingsLogOut,
-                  style: const TextStyle(color: Colors.red),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.red),
-                  alignment: Alignment.centerLeft,
-                ),
-                onPressed: () async {
-                  await ref.read(authNotifierProvider).logout();
-                  if (context.mounted) context.go('/login');
-                },
-              ),
-            ),
-          ],
-        ),
+    return _SectionCard(
+      icon: AppIconName.logout,
+      title: l.settingsAccount,
+      child: AppButton(
+        label: l.settingsLogOut,
+        variant: AppButtonVariant.danger,
+        leftIcon: AppIconName.logout,
+        fullWidth: true,
+        onPressed: () async {
+          await ref.read(authNotifierProvider).logout();
+          if (context.mounted) context.go('/login');
+        },
       ),
     );
   }
@@ -1156,10 +1156,10 @@ class _CustomerFieldsSection extends ConsumerStatefulWidget {
 class _CustomerFieldsSectionState
     extends ConsumerState<_CustomerFieldsSection> {
   static const _typeIcons = {
-    'TEXT': Icons.text_fields,
-    'NUMBER': Icons.pin_outlined,
-    'DATE': Icons.calendar_today_outlined,
-    'YESNO': Icons.toggle_on_outlined,
+    'TEXT': AppIconName.settings,
+    'NUMBER': AppIconName.analytics,
+    'DATE': AppIconName.calendar,
+    'YESNO': AppIconName.paid,
   };
 
   Future<void> _addField() async {
@@ -1173,14 +1173,7 @@ class _CustomerFieldsSectionState
           .read(customFieldsProvider.notifier)
           .add(result.name, result.fieldType);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (mounted) _snackErr(context, e);
     }
   }
 
@@ -1188,84 +1181,50 @@ class _CustomerFieldsSectionState
     try {
       await ref.read(customFieldsProvider.notifier).remove(fieldId);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (mounted) _snackErr(context, e);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final fieldsAsync = ref.watch(customFieldsProvider);
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  l.settingsCustomerFields,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Colors.grey[600],
-                        letterSpacing: 0.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.add, size: 20),
-                  tooltip: l.settingsAddFieldTooltip,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: _addField,
-                ),
-              ],
-            ),
-            fieldsAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: LinearProgressIndicator(),
-              ),
-              error: (e, _) => Text(l.errorWithMessage(e.toString()),
-                  style: const TextStyle(color: Colors.red, fontSize: 13)),
-              data: (fields) {
-                if (fields.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      l.settingsNoCustomFields,
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                    ),
-                  );
-                }
-                return Column(
-                  children: fields
-                      .map((f) => _FieldTile(
-                            field: f,
-                            typeIcons: _typeIcons,
-                            onDelete: () => _removeField(f.id),
-                          ))
-                      .toList(),
-                );
-              },
-            ),
-          ],
+    return _SectionCard(
+      icon: AppIconName.customers,
+      title: l.settingsCustomerFields,
+      trailing: _AddButton(
+          onPressed: _addField, tooltip: l.settingsAddFieldTooltip),
+      child: fieldsAsync.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.s2),
+          child: LinearProgressIndicator(),
         ),
+        error: (e, _) => Text(l.errorWithMessage(e.toString()),
+            style: TextStyle(color: t.errorStrong, fontSize: AppTextSizes.sm)),
+        data: (fields) {
+          if (fields.isEmpty) {
+            return Text(
+              l.settingsNoCustomFields,
+              style: TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
+            );
+          }
+          return Column(
+            children: fields
+                .map((f) => _FieldTile(
+                      field: f,
+                      icon: _typeIcons[f.fieldType] ?? AppIconName.settings,
+                      onDelete: () => _removeField(f.id),
+                    ))
+                .toList(),
+          );
+        },
       ),
     );
   }
 }
 
-// Dialog returns typed data — no Riverpod inside
 class _AddFieldDialog extends StatefulWidget {
   const _AddFieldDialog();
 
@@ -1286,6 +1245,7 @@ class _AddFieldDialogState extends State<_AddFieldDialog> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final fieldTypes = [
       ('TEXT', l.settingsFieldTypeText),
       ('NUMBER', l.settingsFieldTypeNumber),
@@ -1293,26 +1253,25 @@ class _AddFieldDialogState extends State<_AddFieldDialog> {
       ('YESNO', l.settingsFieldTypeYesNo),
     ];
     return AlertDialog(
-      title: Text(l.settingsAddCustomerField),
+      backgroundColor: t.surface,
+      title: Text(l.settingsAddCustomerField, style: TextStyle(color: t.text1)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextField(
             controller: _nameCtrl,
-            decoration: InputDecoration(
-              labelText: l.settingsFieldNameLabel,
-              hintText: l.settingsFieldNameHint,
-              isDense: true,
-            ),
             autofocus: true,
+            style: TextStyle(color: t.text1),
+            decoration: _decoration(context,
+                label: l.settingsFieldNameLabel, hint: l.settingsFieldNameHint),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.s4),
           Text(l.settingsFieldTypeLabel,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-          const SizedBox(height: 6),
+              style: TextStyle(fontSize: AppTextSizes.caption, color: t.text2)),
+          const SizedBox(height: AppSpacing.s2),
           Wrap(
-            spacing: 8,
+            spacing: AppSpacing.s2,
             children: fieldTypes.map((entry) {
               final (value, label) = entry;
               return ChoiceChip(
@@ -1325,17 +1284,20 @@ class _AddFieldDialogState extends State<_AddFieldDialog> {
         ],
       ),
       actions: [
-        TextButton(
+        AppButton(
+          label: l.buttonCancel,
+          variant: AppButtonVariant.ghost,
+          size: AppButtonSize.sm,
           onPressed: () => Navigator.pop(context),
-          child: Text(l.buttonCancel),
         ),
-        FilledButton(
+        AppButton(
+          label: l.buttonAdd,
+          size: AppButtonSize.sm,
           onPressed: () {
             final name = _nameCtrl.text.trim();
             if (name.isEmpty) return;
             Navigator.pop(context, (name: name, fieldType: _selectedType));
           },
-          child: Text(l.buttonAdd),
         ),
       ],
     );
@@ -1344,23 +1306,24 @@ class _AddFieldDialogState extends State<_AddFieldDialog> {
 
 class _FieldTile extends StatelessWidget {
   final BusinessCustomField field;
-  final Map<String, IconData> typeIcons;
+  final AppIconName icon;
   final VoidCallback onDelete;
   const _FieldTile(
-      {required this.field, required this.typeIcons, required this.onDelete});
+      {required this.field, required this.icon, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
     return ListTile(
       dense: true,
       contentPadding: EdgeInsets.zero,
-      leading: Icon(typeIcons[field.fieldType] ?? Icons.text_fields,
-          size: 18, color: Colors.grey[600]),
-      title: Text(field.name, style: const TextStyle(fontSize: 14)),
+      leading: AppIcon(name: icon, size: 18, color: t.text2),
+      title: Text(field.name,
+          style: TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
       subtitle: Text(field.fieldType.toLowerCase(),
-          style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+          style: TextStyle(fontSize: AppTextSizes.caption, color: t.text3)),
       trailing: IconButton(
-        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+        icon: AppIcon(name: AppIconName.close, size: 18, color: t.errorStrong),
         visualDensity: VisualDensity.compact,
         onPressed: onDelete,
       ),
@@ -1387,14 +1350,7 @@ class _StagesSectionState extends ConsumerState<_StagesSection> {
     try {
       await ref.read(stagesProvider.notifier).add(result.name, result.color);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (mounted) _snackErr(context, e);
     }
   }
 
@@ -1402,83 +1358,47 @@ class _StagesSectionState extends ConsumerState<_StagesSection> {
     try {
       await ref.read(stagesProvider.notifier).remove(stageId);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (mounted) _snackErr(context, e);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final stagesAsync = ref.watch(stagesProvider);
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  l.settingsPipelineStages,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Colors.grey[600],
-                        letterSpacing: 0.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.add, size: 20),
-                  tooltip: l.settingsAddStageTooltip,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: _addStage,
-                ),
-              ],
-            ),
-            stagesAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: LinearProgressIndicator(),
-              ),
-              error: (e, _) => Text(l.errorWithMessage(e.toString()),
-                  style: const TextStyle(color: Colors.red, fontSize: 13)),
-              data: (stages) {
-                if (stages.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      l.settingsNoStages,
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                    ),
-                  );
-                }
-                return Column(
-                  children: stages
-                      .map((s) => _StageTile(
-                            stage: s,
-                            onDelete: () => _removeStage(s.id),
-                          ))
-                      .toList(),
-                );
-              },
-            ),
-          ],
+    return _SectionCard(
+      icon: AppIconName.growth,
+      title: l.settingsPipelineStages,
+      trailing:
+          _AddButton(onPressed: _addStage, tooltip: l.settingsAddStageTooltip),
+      child: stagesAsync.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.s2),
+          child: LinearProgressIndicator(),
         ),
+        error: (e, _) => Text(l.errorWithMessage(e.toString()),
+            style: TextStyle(color: t.errorStrong, fontSize: AppTextSizes.sm)),
+        data: (stages) {
+          if (stages.isEmpty) {
+            return Text(
+              l.settingsNoStages,
+              style: TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
+            );
+          }
+          return Column(
+            children: stages
+                .map((s) =>
+                    _StageTile(stage: s, onDelete: () => _removeStage(s.id)))
+                .toList(),
+          );
+        },
       ),
     );
   }
 }
 
-// Dialog returns typed data — no Riverpod inside
 class _AddStageDialog extends StatefulWidget {
   const _AddStageDialog();
 
@@ -1505,28 +1425,29 @@ class _AddStageDialogState extends State<_AddStageDialog> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return AlertDialog(
-      title: Text(l.settingsAddStage),
+      backgroundColor: t.surface,
+      title: Text(l.settingsAddStage, style: TextStyle(color: t.text1)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextField(
             controller: _nameCtrl,
-            decoration: InputDecoration(
-              labelText: l.settingsStageNameLabel,
-              hintText: l.settingsStageNameHint,
-              isDense: true,
-            ),
             autofocus: true,
+            style: TextStyle(color: t.text1),
+            decoration: _decoration(context,
+                label: l.settingsStageNameLabel,
+                hint: l.settingsStageNameHint),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.s4),
           Text(l.settingsColorLabel,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-          const SizedBox(height: 8),
+              style: TextStyle(fontSize: AppTextSizes.caption, color: t.text2)),
+          const SizedBox(height: AppSpacing.s2),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.s2,
+            runSpacing: AppSpacing.s2,
             children: _palette.map((hex) {
               final color = Color(
                   int.parse('FF${hex.replaceFirst('#', '')}', radix: 16));
@@ -1539,7 +1460,7 @@ class _AddStageDialogState extends State<_AddStageDialog> {
                     color: color,
                     shape: BoxShape.circle,
                     border: _selectedColor == hex
-                        ? Border.all(color: Colors.black, width: 2)
+                        ? Border.all(color: t.text1, width: 2)
                         : null,
                   ),
                 ),
@@ -1549,17 +1470,20 @@ class _AddStageDialogState extends State<_AddStageDialog> {
         ],
       ),
       actions: [
-        TextButton(
+        AppButton(
+          label: l.buttonCancel,
+          variant: AppButtonVariant.ghost,
+          size: AppButtonSize.sm,
           onPressed: () => Navigator.pop(context),
-          child: Text(l.buttonCancel),
         ),
-        FilledButton(
+        AppButton(
+          label: l.buttonAdd,
+          size: AppButtonSize.sm,
           onPressed: () {
             final name = _nameCtrl.text.trim();
             if (name.isEmpty) return;
             Navigator.pop(context, (name: name, color: _selectedColor));
           },
-          child: Text(l.buttonAdd),
         ),
       ],
     );
@@ -1573,8 +1497,9 @@ class _StageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Color(
-        int.parse('FF${stage.color.replaceFirst('#', '')}', radix: 16));
+    final t = AppTokens.of(context);
+    final color =
+        Color(int.parse('FF${stage.color.replaceFirst('#', '')}', radix: 16));
     return ListTile(
       dense: true,
       contentPadding: EdgeInsets.zero,
@@ -1583,9 +1508,10 @@ class _StageTile extends StatelessWidget {
         height: 14,
         decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
-      title: Text(stage.name, style: const TextStyle(fontSize: 14)),
+      title: Text(stage.name,
+          style: TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
       trailing: IconButton(
-        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+        icon: AppIcon(name: AppIconName.close, size: 18, color: t.errorStrong),
         visualDensity: VisualDensity.compact,
         onPressed: onDelete,
       ),
@@ -1616,14 +1542,7 @@ class _CheckoutQuestionsSectionState
           .read(checkoutQuestionsProvider.notifier)
           .add(result.question, result.required);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (mounted) _snackErr(context, e);
     }
   }
 
@@ -1631,83 +1550,49 @@ class _CheckoutQuestionsSectionState
     try {
       await ref.read(checkoutQuestionsProvider.notifier).remove(id);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (mounted) _snackErr(context, e);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final questionsAsync = ref.watch(checkoutQuestionsProvider);
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  l.settingsCheckoutQuestions,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Colors.grey[600],
-                        letterSpacing: 0.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.add, size: 20),
-                  tooltip: l.settingsAddQuestionTooltip,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: _addQuestion,
-                ),
-              ],
-            ),
-            questionsAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: LinearProgressIndicator(),
-              ),
-              error: (e, _) => Text(l.errorWithMessage(e.toString()),
-                  style: const TextStyle(color: Colors.red, fontSize: 13)),
-              data: (questions) {
-                if (questions.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      l.settingsNoCheckoutQuestions,
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                    ),
-                  );
-                }
-                return Column(
-                  children: questions
-                      .map((q) => _QuestionTile(
-                            question: q,
-                            onDelete: () => _removeQuestion(q.id),
-                          ))
-                      .toList(),
-                );
-              },
-            ),
-          ],
+    return _SectionCard(
+      icon: AppIconName.orders,
+      title: l.settingsCheckoutQuestions,
+      trailing: _AddButton(
+          onPressed: _addQuestion, tooltip: l.settingsAddQuestionTooltip),
+      child: questionsAsync.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.s2),
+          child: LinearProgressIndicator(),
         ),
+        error: (e, _) => Text(l.errorWithMessage(e.toString()),
+            style: TextStyle(color: t.errorStrong, fontSize: AppTextSizes.sm)),
+        data: (questions) {
+          if (questions.isEmpty) {
+            return Text(
+              l.settingsNoCheckoutQuestions,
+              style: TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
+            );
+          }
+          return Column(
+            children: questions
+                .map((q) => _QuestionTile(
+                      question: q,
+                      onDelete: () => _removeQuestion(q.id),
+                    ))
+                .toList(),
+          );
+        },
       ),
     );
   }
 }
 
-// Dialog returns typed data — no Riverpod inside
 class _AddQuestionDialog extends StatefulWidget {
   const _AddQuestionDialog();
 
@@ -1728,43 +1613,49 @@ class _AddQuestionDialogState extends State<_AddQuestionDialog> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return AlertDialog(
-      title: Text(l.settingsAddCheckoutQuestion),
+      backgroundColor: t.surface,
+      title:
+          Text(l.settingsAddCheckoutQuestion, style: TextStyle(color: t.text1)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _questionCtrl,
-            decoration: InputDecoration(
-              labelText: l.settingsQuestionLabel,
-              hintText: l.settingsQuestionHint,
-              isDense: true,
-            ),
             autofocus: true,
             maxLines: 3,
+            style: TextStyle(color: t.text1),
+            decoration: _decoration(context,
+                label: l.settingsQuestionLabel, hint: l.settingsQuestionHint),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s3),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(l.commonRequired, style: const TextStyle(fontSize: 14)),
+            title: Text(l.commonRequired,
+                style: TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
             value: _isRequired,
+            activeThumbColor: t.accent,
             onChanged: (v) => setState(() => _isRequired = v),
             dense: true,
           ),
         ],
       ),
       actions: [
-        TextButton(
+        AppButton(
+          label: l.buttonCancel,
+          variant: AppButtonVariant.ghost,
+          size: AppButtonSize.sm,
           onPressed: () => Navigator.pop(context),
-          child: Text(l.buttonCancel),
         ),
-        FilledButton(
+        AppButton(
+          label: l.buttonAdd,
+          size: AppButtonSize.sm,
           onPressed: () {
             final text = _questionCtrl.text.trim();
             if (text.isEmpty) return;
             Navigator.pop(context, (question: text, required: _isRequired));
           },
-          child: Text(l.buttonAdd),
         ),
       ],
     );
@@ -1779,27 +1670,21 @@ class _QuestionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    final reqColor = question.required ? t.warningStrong : t.text3;
     return ListTile(
       dense: true,
       contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        question.required
-            ? Icons.help_outline
-            : Icons.help_center_outlined,
-        size: 18,
-        color: question.required ? Colors.orange[700] : Colors.grey[400],
-      ),
+      leading: AppIcon(name: AppIconName.orders, size: 18, color: reqColor),
       title: Text(question.question,
-          style: const TextStyle(fontSize: 13), maxLines: 2),
+          style: TextStyle(fontSize: AppTextSizes.sm, color: t.text1),
+          maxLines: 2),
       subtitle: Text(
         question.required ? l.commonRequired : l.commonOptionalLabel,
-        style: TextStyle(
-            fontSize: 11,
-            color:
-                question.required ? Colors.orange[700] : Colors.grey[500]),
+        style: TextStyle(fontSize: AppTextSizes.caption, color: reqColor),
       ),
       trailing: IconButton(
-        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+        icon: AppIcon(name: AppIconName.close, size: 18, color: t.errorStrong),
         visualDensity: VisualDensity.compact,
         onPressed: onDelete,
       ),
@@ -1807,7 +1692,7 @@ class _QuestionTile extends StatelessWidget {
   }
 }
 
-// ── Services section ─────────────────────────────────────────────────
+// ── Services / Staff links ────────────────────────────────────────────
 
 class _ServicesSection extends StatelessWidget {
   const _ServicesSection();
@@ -1815,37 +1700,20 @@ class _ServicesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l.settingsServices,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Colors.grey[600],
-                    letterSpacing: 0.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(l.settingsManageServices),
-              trailing: const Icon(Icons.chevron_right),
-              dense: true,
-              onTap: () => context.push('/services'),
-            ),
-          ],
-        ),
+    final t = AppTokens.of(context);
+    return _SectionCard(
+      icon: AppIconName.calendar,
+      title: l.settingsServices,
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(l.settingsManageServices, style: TextStyle(color: t.text1)),
+        trailing: AppIcon(name: AppIconName.menu, size: 18, color: t.text3),
+        dense: true,
+        onTap: () => context.push('/services'),
       ),
     );
   }
 }
-
-// ── Staff section ─────────────────────────────────────────────────────
 
 class _StaffSection extends StatelessWidget {
   const _StaffSection();
@@ -1853,32 +1721,692 @@ class _StaffSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    final t = AppTokens.of(context);
+    return _SectionCard(
+      icon: AppIconName.staff,
+      title: l.settingsStaff,
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(l.settingsManageStaff, style: TextStyle(color: t.text1)),
+        trailing: AppIcon(name: AppIconName.menu, size: 18, color: t.text3),
+        dense: true,
+        onTap: () => context.push('/staff'),
+      ),
+    );
+  }
+}
+
+// ── Working hours section ────────────────────────────────────────────
+
+// UI renders Monday → Sunday, but each row carries its BACKEND key: the
+// backend convention is 0=Sunday … 6=Saturday, so Sunday is "0", Monday "1".
+// Never write Monday as "0".
+const _kDayKeys = <String>['1', '2', '3', '4', '5', '6', '0'];
+
+class _DayHours {
+  final TimeOfDay start;
+  final TimeOfDay end;
+  const _DayHours(this.start, this.end);
+}
+
+int _todMinutes(TimeOfDay t) => t.hour * 60 + t.minute;
+
+TimeOfDay _parseHHMM(String s, TimeOfDay fallback) {
+  final parts = s.split(':');
+  if (parts.length != 2) return fallback;
+  final h = int.tryParse(parts[0]);
+  final m = int.tryParse(parts[1]);
+  if (h == null || m == null) return fallback;
+  return TimeOfDay(hour: h, minute: m);
+}
+
+class _WorkingHoursSection extends ConsumerStatefulWidget {
+  final SettingsState data;
+  const _WorkingHoursSection({required this.data});
+
+  @override
+  ConsumerState<_WorkingHoursSection> createState() =>
+      _WorkingHoursSectionState();
+}
+
+class _WorkingHoursSectionState extends ConsumerState<_WorkingHoursSection> {
+  // Per backend day key → hours, or null = closed.
+  late final Map<String, _DayHours?> _days;
+  late final TextEditingController _bufferCtrl;
+  bool _saving = false;
+  String? _error;
+
+  static const _defaultOpen =
+      _DayHours(TimeOfDay(hour: 9, minute: 0), TimeOfDay(hour: 18, minute: 0));
+
+  @override
+  void initState() {
+    super.initState();
+    final wh = widget.data.business.workingHours;
+    final configured = wh != null && wh.isNotEmpty;
+    _days = {
+      for (final key in _kDayKeys)
+        key: !configured
+            ? _defaultOpen
+            : _parseDay(wh[key]),
+    };
+    _bufferCtrl =
+        TextEditingController(text: widget.data.business.bufferMinutes.toString());
+  }
+
+  _DayHours? _parseDay(dynamic v) {
+    if (v is Map) {
+      return _DayHours(
+        _parseHHMM(v['start']?.toString() ?? '09:00', _defaultOpen.start),
+        _parseHHMM(v['end']?.toString() ?? '18:00', _defaultOpen.end),
+      );
+    }
+    return null; // null or absent = closed
+  }
+
+  @override
+  void dispose() {
+    _bufferCtrl.dispose();
+    super.dispose();
+  }
+
+  String _dayLabel(AppLocalizations l, String key) {
+    switch (key) {
+      case '1':
+        return l.schedulingDayMon;
+      case '2':
+        return l.schedulingDayTue;
+      case '3':
+        return l.schedulingDayWed;
+      case '4':
+        return l.schedulingDayThu;
+      case '5':
+        return l.schedulingDayFri;
+      case '6':
+        return l.schedulingDaySat;
+      default:
+        return l.schedulingDaySun;
+    }
+  }
+
+  Future<void> _pickTime(String key, bool isStart) async {
+    final current = _days[key];
+    if (current == null) return;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: isStart ? current.start : current.end,
+    );
+    if (picked == null) return;
+    setState(() {
+      _error = null;
+      _days[key] = isStart
+          ? _DayHours(picked, current.end)
+          : _DayHours(current.start, picked);
+    });
+  }
+
+  Future<void> _save() async {
+    final l = AppLocalizations.of(context)!;
+    // Validate open days: start < end.
+    for (final key in _kDayKeys) {
+      final d = _days[key];
+      if (d != null && _todMinutes(d.start) >= _todMinutes(d.end)) {
+        setState(() => _error = l.schedulingTimeInvalid);
+        return;
+      }
+    }
+    // Assemble the backend map keyed "0".."6" (Sunday="0"). Closed = null.
+    final workingHours = <String, dynamic>{
+      for (final key in _kDayKeys)
+        key: _days[key] == null
+            ? null
+            : {
+                'start': formatTimeOfDay(_days[key]!.start),
+                'end': formatTimeOfDay(_days[key]!.end),
+              },
+    };
+    final buffer = (int.tryParse(_bufferCtrl.text.trim()) ?? 0).clamp(0, 120);
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await ref
+          .read(settingsProvider.notifier)
+          .saveWorkingHours(workingHours, buffer);
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.schedulingWorkingHoursSaved)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      _snackErr(context, e);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+
+    return _SectionCard(
+      icon: AppIconName.calendar,
+      title: l.schedulingWorkingHours,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l.schedulingWorkingHoursHint,
+            style: TextStyle(fontSize: AppTextSizes.caption, color: t.text2),
+          ),
+          const SizedBox(height: AppSpacing.s2),
+          for (final key in _kDayKeys) _dayRow(context, l, t, key),
+          const SizedBox(height: AppSpacing.s3),
+          Divider(height: 1, color: t.border),
+          const SizedBox(height: AppSpacing.s3),
+          Text(
+            l.schedulingBuffer,
+            style: TextStyle(
+                fontSize: AppTextSizes.sm,
+                fontWeight: AppFontWeights.semibold,
+                color: t.text1),
+          ),
+          const SizedBox(height: AppSpacing.s2),
+          Row(
+            children: [
+              SizedBox(
+                width: 88,
+                child: TextField(
+                  controller: _bufferCtrl,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  style: TextStyle(color: t.text1),
+                  textAlign: TextAlign.center,
+                  decoration: _decoration(context),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s2),
+              Text(l.schedulingBufferUnit,
+                  style: TextStyle(fontSize: AppTextSizes.sm, color: t.text2)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s1),
+          Text(
+            l.schedulingBufferHint,
+            style: TextStyle(fontSize: AppTextSizes.caption, color: t.text3),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: AppSpacing.s3),
+            Text(_error!,
+                style:
+                    TextStyle(color: t.errorStrong, fontSize: AppTextSizes.sm)),
+          ],
+          const SizedBox(height: AppSpacing.s3),
+          Align(
+            alignment: Alignment.centerRight,
+            child: AppButton(
+              label: l.buttonSave,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              loading: _saving,
+              onPressed: _saving ? null : _save,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dayRow(
+      BuildContext context, AppLocalizations l, AppTokens t, String key) {
+    final hours = _days[key];
+    final open = hours != null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s1),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(_dayLabel(l, key),
+                    style:
+                        TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
+              ),
+              Text(
+                open ? l.schedulingOpen : l.schedulingClosed,
+                style: TextStyle(
+                    fontSize: AppTextSizes.caption,
+                    color: open ? t.text2 : t.text3),
+              ),
+              Switch(
+                value: open,
+                activeThumbColor: t.accent,
+                onChanged: (v) => setState(() {
+                  _error = null;
+                  _days[key] = v ? _defaultOpen : null;
+                }),
+              ),
+            ],
+          ),
+          if (open)
+            Padding(
+              padding: const EdgeInsets.only(
+                  left: AppSpacing.s1, bottom: AppSpacing.s2),
+              child: Row(
+                children: [
+                  _TimeChip(
+                    label: formatTimeOfDay(hours.start),
+                    onTap: () => _pickTime(key, true),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.s2),
+                    child: Text('–', style: TextStyle(color: t.text3)),
+                  ),
+                  _TimeChip(
+                    label: formatTimeOfDay(hours.end),
+                    onTap: () => _pickTime(key, false),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TimeChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _TimeChip({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s3, vertical: AppSpacing.s2),
+        decoration: BoxDecoration(
+          color: t.surface,
+          borderRadius: AppRadii.sm,
+          border: Border.all(color: t.border),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: AppTextSizes.sm,
+            fontWeight: AppFontWeights.semibold,
+            color: t.text1,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Blocked time section ─────────────────────────────────────────────
+
+class _BlockedTimeSection extends ConsumerWidget {
+  const _BlockedTimeSection();
+
+  Future<void> _add(BuildContext context, WidgetRef ref) async {
+    final result = await showDialog<_BlockedDraft>(
+      context: context,
+      builder: (_) => const _AddBlockedDialog(),
+    );
+    if (result == null || !context.mounted) return;
+    try {
+      await ref.read(blockedTimeProvider.notifier).add(
+            staffId: result.staffId,
+            startTime: tashkentWallClockToIso(result.date, result.start),
+            endTime: tashkentWallClockToIso(result.date, result.end),
+            reason: result.reason,
+          );
+    } catch (e) {
+      if (context.mounted) _snackErr(context, e);
+    }
+  }
+
+  Future<void> _delete(
+      BuildContext context, WidgetRef ref, BlockedSlot slot) async {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: t.surface,
+        title: Text(l.schedulingDeleteBlockedTitle,
+            style: TextStyle(color: t.text1)),
+        content: Text(l.schedulingDeleteBlockedConfirm,
+            style: TextStyle(color: t.text2)),
+        actions: [
+          AppButton(
+            label: l.buttonCancel,
+            variant: AppButtonVariant.ghost,
+            size: AppButtonSize.sm,
+            onPressed: () => Navigator.pop(ctx, false),
+          ),
+          AppButton(
+            label: l.buttonDelete,
+            variant: AppButtonVariant.danger,
+            size: AppButtonSize.sm,
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    try {
+      await ref.read(blockedTimeProvider.notifier).remove(slot.id);
+    } catch (e) {
+      if (context.mounted) _snackErr(context, e);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    final blockedAsync = ref.watch(blockedTimeProvider);
+
+    return _SectionCard(
+      icon: AppIconName.calendar,
+      title: l.schedulingBlockedTime,
+      trailing: _AddButton(
+        onPressed: () => _add(context, ref),
+        tooltip: l.schedulingAddBlocked,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l.schedulingBlockedTimeHint,
+            style: TextStyle(fontSize: AppTextSizes.caption, color: t.text2),
+          ),
+          const SizedBox(height: AppSpacing.s2),
+          blockedAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.s2),
+              child: LinearProgressIndicator(),
+            ),
+            error: (e, _) => Text(l.errorWithMessage(e.toString()),
+                style: TextStyle(
+                    color: t.errorStrong, fontSize: AppTextSizes.sm)),
+            data: (slots) {
+              if (slots.isEmpty) {
+                return Text(
+                  l.schedulingNoBlocked,
+                  style:
+                      TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
+                );
+              }
+              return Column(
+                children: slots
+                    .map((s) => _BlockedTile(
+                          slot: s,
+                          onDelete: () => _delete(context, ref, s),
+                        ))
+                    .toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BlockedTile extends StatelessWidget {
+  final BlockedSlot slot;
+  final VoidCallback onDelete;
+  const _BlockedTile({required this.slot, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    final scope = slot.staffName ?? l.schedulingWholeBusiness;
+    final subtitle = slot.reason != null && slot.reason!.isNotEmpty
+        ? '$scope · ${slot.reason}'
+        : scope;
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      title: Text(
+        '${formatTashkentDate(slot.startTime)} · '
+        '${formatTashkentTime(slot.startTime)}–${formatTashkentTime(slot.endTime)}',
+        style: TextStyle(
+            fontSize: AppTextSizes.sm,
+            fontWeight: AppFontWeights.semibold,
+            color: t.text1),
+      ),
+      subtitle: Text(subtitle,
+          style: TextStyle(fontSize: AppTextSizes.caption, color: t.text2)),
+      trailing: IconButton(
+        icon: AppIcon(name: AppIconName.close, size: 18, color: t.errorStrong),
+        visualDensity: VisualDensity.compact,
+        onPressed: onDelete,
+      ),
+    );
+  }
+}
+
+class _BlockedDraft {
+  final DateTime date;
+  final TimeOfDay start;
+  final TimeOfDay end;
+  final String? staffId;
+  final String? reason;
+  const _BlockedDraft({
+    required this.date,
+    required this.start,
+    required this.end,
+    this.staffId,
+    this.reason,
+  });
+}
+
+class _AddBlockedDialog extends ConsumerStatefulWidget {
+  const _AddBlockedDialog();
+
+  @override
+  ConsumerState<_AddBlockedDialog> createState() => _AddBlockedDialogState();
+}
+
+class _AddBlockedDialogState extends ConsumerState<_AddBlockedDialog> {
+  // Tashkent "today" as the initial/min date (device-tz independent).
+  DateTime get _tashkentToday {
+    final n = DateTime.now().toUtc().add(const Duration(hours: 5));
+    return DateTime(n.year, n.month, n.day);
+  }
+
+  late DateTime _date = _tashkentToday;
+  TimeOfDay _start = const TimeOfDay(hour: 9, minute: 0);
+  TimeOfDay _end = const TimeOfDay(hour: 18, minute: 0);
+  String? _staffId; // null = whole business
+  final _reasonCtrl = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _reasonCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: _tashkentToday,
+      lastDate: DateTime(_tashkentToday.year + 2),
+    );
+    if (picked != null) setState(() => _date = picked);
+  }
+
+  Future<void> _pickTime(bool isStart) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: isStart ? _start : _end,
+    );
+    if (picked == null) return;
+    setState(() {
+      _error = null;
+      if (isStart) {
+        _start = picked;
+      } else {
+        _end = picked;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    final staffAsync = ref.watch(staffProvider);
+    final staff = staffAsync.valueOrNull ?? const <Staff>[];
+
+    return AlertDialog(
+      backgroundColor: t.surface,
+      title: Text(l.schedulingAddBlocked, style: TextStyle(color: t.text1)),
+      content: SingleChildScrollView(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              l.settingsStaff,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Colors.grey[600],
-                    letterSpacing: 0.5,
-                    fontWeight: FontWeight.w600,
+            // Date
+            Text(l.schedulingDate,
+                style:
+                    TextStyle(fontSize: AppTextSizes.caption, color: t.text2)),
+            const SizedBox(height: AppSpacing.s1),
+            GestureDetector(
+              onTap: _pickDate,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s3, vertical: AppSpacing.s3),
+                decoration: BoxDecoration(
+                  color: t.surface,
+                  borderRadius: AppRadii.sm,
+                  border: Border.all(color: t.border),
+                ),
+                child: Text(formatDate(_date),
+                    style: TextStyle(color: t.text1)),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s3),
+            // Start / End
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l.schedulingStart,
+                          style: TextStyle(
+                              fontSize: AppTextSizes.caption, color: t.text2)),
+                      const SizedBox(height: AppSpacing.s1),
+                      _TimeChip(
+                          label: formatTimeOfDay(_start),
+                          onTap: () => _pickTime(true)),
+                    ],
                   ),
+                ),
+                const SizedBox(width: AppSpacing.s3),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l.schedulingEnd,
+                          style: TextStyle(
+                              fontSize: AppTextSizes.caption, color: t.text2)),
+                      const SizedBox(height: AppSpacing.s1),
+                      _TimeChip(
+                          label: formatTimeOfDay(_end),
+                          onTap: () => _pickTime(false)),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(l.settingsManageStaff),
-              trailing: const Icon(Icons.chevron_right),
-              dense: true,
-              onTap: () => context.push('/staff'),
+            const SizedBox(height: AppSpacing.s3),
+            // Scope
+            Text(l.schedulingScope,
+                style:
+                    TextStyle(fontSize: AppTextSizes.caption, color: t.text2)),
+            const SizedBox(height: AppSpacing.s1),
+            DropdownButtonFormField<String?>(
+              // ignore: deprecated_member_use
+              value: _staffId,
+              dropdownColor: t.surface,
+              style: TextStyle(color: t.text1),
+              decoration: _decoration(context),
+              items: [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text(l.schedulingWholeBusiness),
+                ),
+                ...staff.map((m) => DropdownMenuItem<String?>(
+                      value: m.id,
+                      child: Text(m.name),
+                    )),
+              ],
+              onChanged: (v) => setState(() => _staffId = v),
             ),
+            const SizedBox(height: AppSpacing.s3),
+            // Reason
+            TextField(
+              controller: _reasonCtrl,
+              style: TextStyle(color: t.text1),
+              decoration: _decoration(context,
+                  label: l.schedulingReason, hint: l.schedulingReasonHint),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: AppSpacing.s2),
+              Text(_error!,
+                  style: TextStyle(
+                      color: t.errorStrong, fontSize: AppTextSizes.caption)),
+            ],
           ],
         ),
       ),
+      actions: [
+        AppButton(
+          label: l.buttonCancel,
+          variant: AppButtonVariant.ghost,
+          size: AppButtonSize.sm,
+          onPressed: () => Navigator.pop(context),
+        ),
+        AppButton(
+          label: l.schedulingAddBlockedSubmit,
+          size: AppButtonSize.sm,
+          onPressed: () {
+            if (_todMinutes(_start) >= _todMinutes(_end)) {
+              setState(() => _error = l.schedulingTimeInvalid);
+              return;
+            }
+            Navigator.pop(
+              context,
+              _BlockedDraft(
+                date: _date,
+                start: _start,
+                end: _end,
+                staffId: _staffId,
+                reason: _reasonCtrl.text.trim().isEmpty
+                    ? null
+                    : _reasonCtrl.text.trim(),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
@@ -1893,17 +2421,25 @@ class _ErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.s5),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: Text(l.buttonRetry)),
+            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
+            const SizedBox(height: AppSpacing.s3),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: t.text2)),
+            const SizedBox(height: AppSpacing.s4),
+            AppButton(
+              label: l.buttonRetry,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              onPressed: onRetry,
+            ),
           ],
         ),
       ),

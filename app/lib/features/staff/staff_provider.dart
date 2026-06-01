@@ -15,23 +15,27 @@ class StaffNotifier extends AsyncNotifier<List<Staff>> {
   }
 
   Future<void> createStaff(
-      String name, String? telegramHandle, List<String> serviceIds) async {
+      String name, String? telegramHandle, List<String> serviceIds,
+      {List<String> daysOff = const []}) async {
     await ref.read(apiServiceProvider).createStaff({
       'name': name,
       if (telegramHandle != null && telegramHandle.isNotEmpty)
         'telegramHandle': telegramHandle,
       'serviceIds': serviceIds,
+      'daysOff': daysOff,
     });
     ref.invalidateSelf();
   }
 
   Future<void> updateStaff(String id, String name, String? telegramHandle,
-      List<String> serviceIds) async {
+      List<String> serviceIds,
+      {List<String> daysOff = const []}) async {
     await ref.read(apiServiceProvider).updateStaff(id, {
       'name': name,
       if (telegramHandle != null && telegramHandle.isNotEmpty)
         'telegramHandle': telegramHandle,
       'serviceIds': serviceIds,
+      'daysOff': daysOff,
     });
     ref.invalidateSelf();
   }

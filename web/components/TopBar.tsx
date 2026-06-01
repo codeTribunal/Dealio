@@ -1,15 +1,33 @@
+import { Avatar } from '@/components/ui/Avatar'
+import { Icon } from '@/components/icons/Icon'
+
 interface TopBarProps {
   title: string
+  /** Name used for the avatar initials. Defaults to "CRM". */
+  userName?: string
+  /** When provided, renders a hamburger button on the left (visible only below the lg breakpoint). */
+  onMenuClick?: () => void
+  /** Whether the mobile menu is currently open. Swaps the hamburger for an X. */
+  menuOpen?: boolean
 }
 
-export default function TopBar({ title }: TopBarProps) {
+export default function TopBar({ title, userName = 'CRM', onMenuClick, menuOpen = false }: TopBarProps) {
   return (
-    <div className="h-16 bg-white border-b border-gray-200 flex items-center px-8">
-      <span className="text-lg font-semibold text-gray-900">{title}</span>
-      <div className="ml-auto flex items-center gap-4">
-        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700">
-          CRM
-        </div>
+    <div className="h-16 bg-surface border-b border-border flex items-center px-4 lg:px-6 flex-shrink-0">
+      {onMenuClick && (
+        <button
+          type="button"
+          onClick={onMenuClick}
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          className="lg:hidden mr-3 p-2 rounded-md text-text-2 hover:bg-surface-2 hover:text-text-1 transition-colors flex-shrink-0"
+          style={{ transitionDuration: 'var(--dur-base)' }}
+        >
+          <Icon name={menuOpen ? 'close' : 'menu'} size={20} />
+        </button>
+      )}
+      <span className="text-lg font-bold text-text-1 truncate flex-1">{title}</span>
+      <div className="ml-4">
+        <Avatar name={userName} size="md" />
       </div>
     </div>
   )

@@ -10,6 +10,7 @@ import type {
   OrdersResponse,
   AppointmentsResponse,
   AnalyticsData,
+  HomeData,
   Project,
   ProjectsResponse,
   ProjectMilestone,
@@ -17,6 +18,8 @@ import type {
   Appointment,
   StaffMember,
   Service,
+  WorkingHours,
+  BlockedSlot,
 } from '@/types'
 
 const api = axios.create({
@@ -82,6 +85,11 @@ export async function verifyOtp(
 
 export async function getBusiness(): Promise<Business> {
   const res = await api.get('/business')
+  return res.data
+}
+
+export async function getHome(): Promise<HomeData> {
+  const res = await api.get('/home')
   return res.data
 }
 
@@ -216,7 +224,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
     revenueThisMonth: d.revenueThisMonth ?? d.revenue?.thisMonth ?? 0,
     revenueLastMonth: d.revenueLastMonth ?? d.revenue?.lastMonth ?? 0,
     ordersThisMonth: d.ordersThisMonth ?? d.orders?.thisMonth ?? d.orderCount ?? 0,
-    completedThisMonth: d.completedThisMonth ?? d.completed ?? 0,
+    completedThisMonth: d.completedThisMonth ?? d.ordersCompletedThisMonth ?? d.completed ?? 0,
     averageOrderValue: d.averageOrderValue ?? d.avgOrderValue ?? 0,
     pendingPaymentsTotal: d.pendingPaymentsTotal ?? d.pendingTotal ?? 0,
     topCustomers: d.topCustomers ?? d.customers ?? [],
@@ -229,6 +237,8 @@ export async function updateBusiness(data: {
   description?: string
   language?: string
   mode?: string[]
+  workingHours?: WorkingHours
+  bufferMinutes?: number
 }): Promise<Business> {
   const res = await api.patch('/business', data)
   return res.data
@@ -398,6 +408,7 @@ export async function createStaff(data: {
   name: string
   telegramHandle?: string
   serviceIds: string[]
+  daysOff?: string[]
 }): Promise<StaffMember> {
   const res = await api.post('/staff', data)
   return res.data
@@ -409,10 +420,43 @@ export async function updateStaff(
     name: string
     telegramHandle?: string
     serviceIds: string[]
+    daysOff?: string[]
   }
 ): Promise<StaffMember> {
   const res = await api.patch(`/staff/${id}`, data)
   return res.data
+}
+
+// ── Blocked time (scheduling) ───────────────────────────────────────────────
+
+export async function getBlockedSlots(params: {
+  from?: string
+  to?: string
+  staffId?: string
+} = {}): Promise<BlockedSlot[]> {
+  const res = await api.get('/blocked-slots', {
+    params: {
+      from: params.from || undefined,
+      to: params.to || undefined,
+      staffId: params.staffId || undefined,
+    },
+  })
+  const data = res.data
+  return Array.isArray(data) ? data : []
+}
+
+export async function createBlockedSlot(data: {
+  staffId?: string
+  startTime: string
+  endTime: string
+  reason?: string
+}): Promise<BlockedSlot> {
+  const res = await api.post('/blocked-slots', data)
+  return res.data
+}
+
+export async function deleteBlockedSlot(id: string): Promise<void> {
+  await api.delete(`/blocked-slots/${id}`)
 }
 
 export async function deleteStaff(id: string): Promise<void> {

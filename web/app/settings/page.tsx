@@ -1,8 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Copy, CheckCircle, Calendar } from 'lucide-react'
 import AuthLayout from '@/components/AuthLayout'
 import LoadingSpinner from '@/components/LoadingSpinner'
+import { Card, CardHeader } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Input, Textarea } from '@/components/ui/Input'
+import { Icon } from '@/components/icons/Icon'
 import {
   getBusiness,
   updateBusiness,
@@ -16,6 +19,8 @@ import {
 import { useBusiness } from '@/lib/businessContext'
 import { useI18n, codeToEnum, type Locale } from '@/lib/i18n/i18nContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import { WorkingHoursCard } from '@/components/scheduling/WorkingHoursCard'
+import { BlockedTimeCard } from '@/components/scheduling/BlockedTimeCard'
 import type { Business } from '@/types'
 
 function formatCardNumber(raw: string): string {
@@ -32,40 +37,37 @@ function timingLabel(t: TFn, hours: number): string {
   return days === 1 ? t('settings.dayBefore') : t('settings.daysBefore', { count: days })
 }
 
+// Token-styled toggle switch. Same a11y as the previous div-toggle but a button.
 function Toggle({
   active,
   onClick,
+  disabled = false,
 }: {
   active: boolean
   onClick: () => void
+  disabled?: boolean
 }) {
   return (
-    <div
+    <button
+      type="button"
+      aria-pressed={active}
       onClick={onClick}
-      className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${
-        active ? 'bg-blue-600' : 'bg-gray-200'
-      }`}
+      disabled={disabled}
+      className={`w-11 h-6 rounded-pill relative cursor-pointer transition-colors flex-shrink-0 ${
+        active ? 'bg-accent' : 'bg-border-strong'
+      } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       <span
-        className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+        className={`absolute top-0.5 w-5 h-5 bg-surface rounded-pill shadow-sm transition-transform ${
           active ? 'right-0.5' : 'left-0.5'
         }`}
       />
-    </div>
+    </button>
   )
 }
 
-const inputClass =
-  'w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-
-const btnSave =
-  'bg-blue-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors'
-
-const btnCancel =
-  'border border-gray-300 text-gray-700 px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors'
-
-const btnActive = 'bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors'
-const btnInactive = 'border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors'
+const SELECT_CLASS =
+  'bg-surface border border-border rounded-md py-2.5 px-3.5 text-sm text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors'
 
 // Public base URL for ICS feeds — the API root without the /api/v1 prefix.
 const calendarBaseUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace('/api/v1', '')
@@ -231,54 +233,62 @@ export default function SettingsPage() {
   if (error || !business) {
     return (
       <AuthLayout title={t('settings.title')}>
-        <div className="text-center py-16">
-          <p className="text-lg font-semibold text-gray-900 mb-2">
+        <Card className="text-center">
+          <p className="text-lg font-semibold text-text-1 mb-3">
             {t('settings.failedLoad')}
           </p>
-          <button
-            onClick={fetchBusiness}
-            className="bg-blue-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
-          >
+          <Button variant="primary" onClick={fetchBusiness}>
             {t('common.tryAgain')}
-          </button>
-        </div>
+          </Button>
+        </Card>
       </AuthLayout>
     )
   }
+
+  // Pill segmented button (Uzcard/Humo). Stays local to settings.
+  const segButton = (active: boolean) =>
+    `px-4 py-2 rounded-md text-sm font-semibold transition-colors ${
+      active
+        ? 'bg-accent text-accent-on'
+        : 'border border-border bg-surface text-text-1 hover:bg-surface-2'
+    }`
 
   return (
     <AuthLayout title={t('settings.title')}>
       <div className="max-w-2xl w-full space-y-6">
 
-        {/* Business Profile */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-gray-900">{t('settings.businessProfile')}</h2>
-            {!editingProfile && (
-              <button
-                onClick={() => setEditingProfile(true)}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-              >
-                {t('common.edit')}
-              </button>
-            )}
-          </div>
+        {/* ── Business Profile ─────────────────────────────────── */}
+        <Card>
+          <CardHeader
+            title={t('settings.businessProfile')}
+            right={
+              !editingProfile ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditingProfile(true)}
+                >
+                  {t('common.edit')}
+                </Button>
+              ) : undefined
+            }
+          />
 
           {!editingProfile ? (
             <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                <p className="text-sm text-gray-600">{t('settings.businessName')}</p>
-                <p className="text-sm font-medium text-gray-900">{business.name}</p>
+              <div className="flex justify-between items-center py-2 border-b border-border">
+                <p className="text-sm text-text-2">{t('settings.businessName')}</p>
+                <p className="text-sm font-medium text-text-1">{business.name}</p>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                <p className="text-sm text-gray-600">{t('settings.description')}</p>
-                <p className="text-sm font-medium text-gray-900">
+              <div className="flex justify-between items-center py-2 border-b border-border">
+                <p className="text-sm text-text-2">{t('settings.description')}</p>
+                <p className="text-sm font-medium text-text-1">
                   {business.description || '—'}
                 </p>
               </div>
               <div className="flex justify-between items-center py-2">
-                <p className="text-sm text-gray-600">{t('settings.language')}</p>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm text-text-2">{t('settings.language')}</p>
+                <p className="text-sm font-medium text-text-1">
                   {business.language === 'UZBEK'
                     ? "O'zbek"
                     : business.language === 'ENGLISH'
@@ -290,62 +300,62 @@ export default function SettingsPage() {
           ) : (
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   {t('settings.businessName')}
                 </label>
-                <input
+                <Input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className={inputClass}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   {t('settings.description')}
                 </label>
-                <textarea
+                <Textarea
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className={`${inputClass} resize-none`}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   {t('settings.language')}
                 </label>
                 <LanguageSwitcher onChange={selectLanguage} />
-                <p className="text-xs text-gray-400 mt-2">{t('settings.languageHint')}</p>
+                <p className="text-xs text-text-3 mt-2">
+                  {t('settings.languageHint')}
+                </p>
               </div>
-              <div className="flex gap-3 mt-4">
-                <button
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="primary"
+                  loading={saving}
                   onClick={saveProfile}
-                  disabled={saving}
-                  className={btnSave}
                 >
                   {t('common.save')}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="secondary"
                   onClick={() => {
                     setName(business.name)
                     setDescription(business.description || '')
                     setLanguage(business.language)
                     setEditingProfile(false)
                   }}
-                  className={btnCancel}
                 >
                   {t('common.cancel')}
-                </button>
+                </Button>
               </div>
             </div>
           )}
-        </div>
+        </Card>
 
-        {/* Business Mode */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">{t('settings.businessMode')}</h2>
-          <p className="text-sm text-gray-500 mb-4">
+        {/* ── Business Mode ────────────────────────────────────── */}
+        <Card>
+          <CardHeader title={t('settings.businessMode')} />
+          <p className="text-sm text-text-2 mb-4">
             {t('settings.businessModeHint')}
           </p>
 
@@ -368,11 +378,11 @@ export default function SettingsPage() {
           ].map(({ value, title, subtitle }) => (
             <div
               key={value}
-              className="flex items-center justify-between py-3 border-b border-gray-50 last:border-b-0"
+              className="flex items-center justify-between py-3 border-b border-border last:border-b-0"
             >
               <div>
-                <p className="text-sm font-medium text-gray-900">{title}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>
+                <p className="text-sm font-medium text-text-1">{title}</p>
+                <p className="text-xs text-text-2 mt-0.5">{subtitle}</p>
               </div>
               <Toggle
                 active={modes.includes(value)}
@@ -380,35 +390,53 @@ export default function SettingsPage() {
               />
             </div>
           ))}
-        </div>
+        </Card>
 
-        {/* Payment Method */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-gray-900">{t('settings.paymentMethod')}</h2>
-            {!editingPayment && (
-              <button
-                onClick={() => setEditingPayment(true)}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-              >
-                {t('common.edit')}
-              </button>
-            )}
-          </div>
+        {/* ── Scheduling (SERVICES mode only) ──────────────────── */}
+        {business.mode.includes('SERVICES') && (
+          <>
+            <WorkingHoursCard
+              business={business}
+              onSaved={(updated) => {
+                setBusiness(updated)
+                refetchContext()
+              }}
+              notify={showSaved}
+            />
+            <BlockedTimeCard notify={showSaved} />
+          </>
+        )}
+
+        {/* ── Payment Method ───────────────────────────────────── */}
+        <Card>
+          <CardHeader
+            title={t('settings.paymentMethod')}
+            right={
+              !editingPayment ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditingPayment(true)}
+                >
+                  {t('common.edit')}
+                </Button>
+              ) : undefined
+            }
+          />
 
           {!editingPayment ? (
             <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                <p className="text-sm text-gray-600">{t('settings.cardNumber')}</p>
-                <p className="text-sm font-medium text-gray-900 font-mono">
+              <div className="flex justify-between items-center py-2 border-b border-border">
+                <p className="text-sm text-text-2">{t('settings.cardNumber')}</p>
+                <p className="text-sm font-medium text-text-1 font-mono tabular-nums">
                   {business.cardNumber
                     ? formatCardNumber(business.cardNumber)
                     : '—'}
                 </p>
               </div>
               <div className="flex justify-between items-center py-2">
-                <p className="text-sm text-gray-600">{t('settings.bank')}</p>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm text-text-2">{t('settings.bank')}</p>
+                <p className="text-sm font-medium text-text-1">
                   {business.cardBank === 'UZCARD'
                     ? 'Uzcard'
                     : business.cardBank === 'HUMO'
@@ -420,98 +448,102 @@ export default function SettingsPage() {
           ) : (
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   {t('settings.cardNumber')}
                 </label>
-                <input
+                <Input
                   type="text"
                   value={cardNumber}
                   onChange={(e) => setCardNumber(e.target.value)}
                   maxLength={16}
                   placeholder="8600123456781234"
-                  className={inputClass}
+                  className="font-mono tabular-nums"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   {t('settings.bank')}
                 </label>
                 <div className="flex gap-3">
                   <button
+                    type="button"
                     onClick={() => setCardBank('UZCARD')}
-                    className={cardBank === 'UZCARD' ? btnActive : btnInactive}
+                    className={segButton(cardBank === 'UZCARD')}
                   >
                     Uzcard
                   </button>
                   <button
+                    type="button"
                     onClick={() => setCardBank('HUMO')}
-                    className={cardBank === 'HUMO' ? btnActive : btnInactive}
+                    className={segButton(cardBank === 'HUMO')}
                   >
                     Humo
                   </button>
                 </div>
               </div>
-              <div className="flex gap-3 mt-4">
-                <button
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="primary"
+                  loading={saving}
                   onClick={savePayment}
-                  disabled={saving}
-                  className={btnSave}
                 >
                   {t('common.save')}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="secondary"
                   onClick={() => {
                     setCardNumber(business.cardNumber || '')
                     setCardBank(business.cardBank || 'UZCARD')
                     setEditingPayment(false)
                   }}
-                  className={btnCancel}
                 >
                   {t('common.cancel')}
-                </button>
+                </Button>
               </div>
             </div>
           )}
-        </div>
+        </Card>
 
-        {/* Calendar sync */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-1">{t('settings.calendarSync')}</h2>
-          <p className="text-sm text-gray-500 mb-5">
+        {/* ── Calendar sync ────────────────────────────────────── */}
+        <Card>
+          <CardHeader title={t('settings.calendarSync')} />
+          <p className="text-sm text-text-2 mb-5">
             {t('settings.calendarSyncHint')}
           </p>
 
-          <div className="flex items-center justify-between py-3 border-t border-gray-100">
+          <div className="flex items-center justify-between py-3 border-t border-border">
             <div>
-              <p className="text-sm font-medium text-gray-900">{t('settings.syncToCalendar')}</p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-sm font-medium text-text-1">
+                {t('settings.syncToCalendar')}
+              </p>
+              <p className="text-xs text-text-2 mt-0.5">
                 {t('settings.calendarWorksWith')}
               </p>
             </div>
-            <div className={calendarLoading ? 'opacity-50 pointer-events-none' : ''}>
-              <Toggle
-                active={!!calendarToken}
-                onClick={() => handleToggleCalendar(!calendarToken)}
-              />
-            </div>
+            <Toggle
+              active={!!calendarToken}
+              onClick={() => handleToggleCalendar(!calendarToken)}
+              disabled={calendarLoading}
+            />
           </div>
 
           {calendarToken && (
-            <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
+            <div className="mt-4 pt-4 border-t border-border space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">
+                <label className="block text-xs font-semibold text-text-2 mb-2">
                   {t('settings.calendarLink')}
                 </label>
-                <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-xl">
-                  <span className="flex-1 text-xs text-gray-600 font-mono truncate">
+                <div className="flex items-center gap-2 px-3 py-2 bg-surface-2 border border-border rounded-md">
+                  <span className="flex-1 text-xs text-text-2 font-mono truncate">
                     {calendarUrl}
                   </span>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={handleCopyCalendarUrl}
-                    className="text-blue-600 hover:text-blue-700 flex-shrink-0"
                   >
-                    <Copy className="w-4 h-4" />
-                  </button>
+                    Copy
+                  </Button>
                 </div>
               </div>
 
@@ -520,36 +552,38 @@ export default function SettingsPage() {
                   href={`https://calendar.google.com/calendar/r/settings/addbyurl?url=${encodeURIComponent(calendarUrl)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="flex-1"
                 >
-                  <Calendar className="w-4 h-4" />
-                  {t('settings.addGoogle')}
+                  <Button variant="secondary" fullWidth leftIcon="calendar">
+                    {t('settings.addGoogle')}
+                  </Button>
                 </a>
                 <a
                   href={calendarUrl.replace(/^https?:\/\//, 'webcal://')}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="flex-1"
                 >
-                  <Calendar className="w-4 h-4" />
-                  {t('settings.addApple')}
+                  <Button variant="secondary" fullWidth leftIcon="calendar">
+                    {t('settings.addApple')}
+                  </Button>
                 </a>
               </div>
 
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-text-3">
                 {t('settings.samsungNote')}
               </p>
             </div>
           )}
-        </div>
+        </Card>
 
-        {/* Reminders */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <h2 className="text-base font-bold text-gray-900 mb-1">{t('settings.reminders')}</h2>
-          <p className="text-sm text-gray-500 mb-5">
+        {/* ── Reminders ────────────────────────────────────────── */}
+        <Card>
+          <CardHeader title={t('settings.reminders')} />
+          <p className="text-sm text-text-2 mb-5">
             {t('settings.remindersHint')}
           </p>
 
           {reminderSettings && (
-            <div className="space-y-1 divide-y divide-gray-100">
+            <div className="divide-y divide-border">
               {/* SERVICES → appointment reminders */}
               {business.mode.includes('SERVICES') && (
                 <ReminderRow
@@ -610,51 +644,56 @@ export default function SettingsPage() {
             </div>
           )}
 
-          <p className="text-xs text-gray-400 mt-4">
+          <p className="text-xs text-text-3 mt-4">
             {t('settings.remindersFootnote')}
           </p>
-        </div>
+        </Card>
 
-        {/* Telegram Bot */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">{t('settings.telegramBot')}</h2>
+        {/* ── Telegram Bot ─────────────────────────────────────── */}
+        <Card>
+          <CardHeader title={t('settings.telegramBot')} />
           <div className="space-y-3">
-            <div className="flex justify-between items-center py-2 border-b border-gray-50">
-              <p className="text-sm text-gray-600">{t('settings.botUsername')}</p>
-              <p className="text-sm font-medium text-gray-900">
+            <div className="flex justify-between items-center py-2 border-b border-border">
+              <p className="text-sm text-text-2">{t('settings.botUsername')}</p>
+              <p className="text-sm font-medium text-text-1">
                 {business.botUsername
                   ? `@${business.botUsername}`
                   : t('settings.notConfigured')}
               </p>
             </div>
             <div className="flex justify-between items-center py-2">
-              <p className="text-sm text-gray-600">{t('settings.botLink')}</p>
+              <p className="text-sm text-text-2">{t('settings.botLink')}</p>
               {business.botUsername ? (
                 <div className="flex items-center gap-2">
-                  <p className="text-sm text-blue-600 font-medium">
+                  <p className="text-sm text-accent font-medium">
                     https://t.me/{business.botUsername}
                   </p>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() =>
                       navigator.clipboard.writeText(
                         `https://t.me/${business.botUsername}`
                       )
                     }
                   >
-                    <Copy className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-                  </button>
+                    Copy
+                  </Button>
                 </div>
               ) : (
-                <p className="text-sm text-gray-400">—</p>
+                <p className="text-sm text-text-3">—</p>
               )}
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
+      {/* Success toast */}
       {savedMessage && (
-        <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-4 py-3 rounded-xl text-sm font-medium shadow-lg z-50 flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 text-green-400" />
+        <div className="fixed bottom-6 right-6 bg-text-1 text-surface px-4 py-3 rounded-md text-sm font-medium shadow-md z-50 flex items-center gap-2">
+          <span className="text-success-soft">
+            <Icon name="paid" size={16} />
+          </span>
           <span>{savedMessage}</span>
         </div>
       )}
@@ -685,27 +724,16 @@ function ReminderRow({
     <div className="py-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-900">{title}</p>
-          <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>
+          <p className="text-sm font-medium text-text-1">{title}</p>
+          <p className="text-xs text-text-2 mt-0.5">{subtitle}</p>
         </div>
-        <button
-          onClick={() => onToggle(!enabled)}
-          className={`w-12 h-6 rounded-full relative transition-colors flex-shrink-0 ${
-            enabled ? 'bg-blue-600' : 'bg-gray-200'
-          }`}
-        >
-          <span
-            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-              enabled ? 'right-0.5' : 'left-0.5'
-            }`}
-          />
-        </button>
+        <Toggle active={enabled} onClick={() => onToggle(!enabled)} />
       </div>
       {enabled && (
         <select
           value={hoursBefore}
           onChange={(e) => onTiming(Number(e.target.value))}
-          className="mt-3 px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={`mt-3 ${SELECT_CLASS}`}
         >
           {options.map((h) => (
             <option key={h} value={h}>

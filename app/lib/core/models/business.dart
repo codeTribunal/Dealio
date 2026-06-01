@@ -11,6 +11,10 @@ class Business {
   final String? botUsername;
   final String? calendarToken;
   final String? ownerTelegramChatId;
+  // Working hours: keys "0".."6" (0=Sunday … 6=Saturday, Tashkent local), each
+  // value { start: "HH:MM", end: "HH:MM" } or null = closed that day.
+  final Map<String, dynamic>? workingHours;
+  final int bufferMinutes;
 
   const Business({
     required this.id,
@@ -25,6 +29,8 @@ class Business {
     this.botUsername,
     this.calendarToken,
     this.ownerTelegramChatId,
+    this.workingHours,
+    this.bufferMinutes = 0,
   });
 
   factory Business.fromJson(Map<String, dynamic> json) => Business(
@@ -40,6 +46,10 @@ class Business {
         botUsername: json['botUsername'] as String?,
         calendarToken: json['calendarToken'] as String?,
         ownerTelegramChatId: json['ownerTelegramChatId'] as String?,
+        workingHours: json['workingHours'] != null
+            ? Map<String, dynamic>.from(json['workingHours'] as Map)
+            : null,
+        bufferMinutes: json['bufferMinutes'] as int? ?? 0,
       );
 
   Business copyWith({
@@ -53,6 +63,8 @@ class Business {
     String? botUsername,
     String? calendarToken,
     bool clearCalendarToken = false,
+    Map<String, dynamic>? workingHours,
+    int? bufferMinutes,
   }) =>
       Business(
         id: id,
@@ -68,5 +80,7 @@ class Business {
         calendarToken:
             clearCalendarToken ? null : (calendarToken ?? this.calendarToken),
         ownerTelegramChatId: ownerTelegramChatId,
+        workingHours: workingHours ?? this.workingHours,
+        bufferMinutes: bufferMinutes ?? this.bufferMinutes,
       );
 }

@@ -1,9 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Briefcase, X, Link2, Plus } from 'lucide-react'
 import AuthLayout from '@/components/AuthLayout'
 import LoadingSpinner from '@/components/LoadingSpinner'
-import ActivityBadge from '@/components/ActivityBadge'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Input, Textarea } from '@/components/ui/Input'
+import { Badge } from '@/components/ui/Badge'
+import { Avatar } from '@/components/ui/Avatar'
+import { Icon } from '@/components/icons/Icon'
 import {
   getProjects,
   getCustomers,
@@ -14,7 +18,7 @@ import {
   updateMilestoneStatus,
   markInvoicePaid,
 } from '@/lib/api'
-import { formatUZS, formatDate, getInitials } from '@/lib/format'
+import { formatUZS, formatDate } from '@/lib/format'
 import type { Project, ProjectMilestone, ProjectInvoice, Customer } from '@/types'
 
 const LIMIT = 30
@@ -36,14 +40,21 @@ const STATUS_OPTIONS = [
   { label: 'Cancelled', value: 'CANCELLED' },
 ]
 
-function getMilestoneStatusColor(status: string): string {
-  const map: Record<string, string> = {
-    PENDING: 'bg-gray-100 text-gray-700',
-    SUBMITTED_FOR_REVIEW: 'bg-yellow-50 text-yellow-700',
-    APPROVED: 'bg-green-50 text-green-700',
-    PAYMENT_RECEIVED: 'bg-blue-50 text-blue-700',
+// Milestone status tone — token-driven inline pill (Badge primitive doesn't
+// cover milestone codes, so we render a small span with the same shape).
+function milestoneTone(status: string): string {
+  switch (status) {
+    case 'PENDING':
+      return 'bg-surface-2 text-text-2 border border-border'
+    case 'SUBMITTED_FOR_REVIEW':
+      return 'bg-warning-soft text-warning-strong'
+    case 'APPROVED':
+      return 'bg-success-soft text-success-strong'
+    case 'PAYMENT_RECEIVED':
+      return 'bg-accent-soft text-accent'
+    default:
+      return 'bg-surface-2 text-text-2 border border-border'
   }
-  return map[status] || 'bg-gray-100 text-gray-700'
 }
 
 function getMilestoneStatusLabel(status: string): string {
@@ -61,6 +72,9 @@ function completedMilestoneCount(milestones: ProjectMilestone[]): number {
     (m) => m.status === 'APPROVED' || m.status === 'PAYMENT_RECEIVED'
   ).length
 }
+
+const SELECT_CLASS =
+  'w-full bg-surface border border-border rounded-md py-2.5 px-3.5 text-sm text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors'
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
@@ -320,50 +334,58 @@ export default function ProjectsPage() {
     }
   }
 
+  // Shared style helpers
+  const chip = (active: boolean, sm = false) =>
+    `${sm ? 'px-3 py-1.5 text-xs' : 'px-3 py-1.5 text-sm'} rounded-md font-semibold transition-colors ${
+      active
+        ? 'bg-accent-soft text-accent'
+        : 'bg-surface border border-border text-text-2 hover:bg-surface-2'
+    }`
+
   return (
     <AuthLayout title="Projects">
+      {/* ── Header ───────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-          <p className="text-sm text-gray-500 mt-1">{total} total projects</p>
+          <h1 className="text-2xl font-extrabold text-text-1">Projects</h1>
+          <p className="text-sm text-text-2 mt-1">{total} total projects</p>
         </div>
-        <button
+        <Button
+          variant="primary"
+          leftIcon="add"
           onClick={() => setShowCreateForm(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors"
         >
-          <Plus className="w-4 h-4" />
           New project
-        </button>
+        </Button>
       </div>
 
+      {/* ── Status filters ──────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 mb-6">
         {STATUS_FILTERS.map(({ label, value }) => (
           <button
             key={value}
+            type="button"
             onClick={() => {
               setStatusFilter(value)
               setPage(1)
             }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              statusFilter === value
-                ? 'bg-gray-900 text-white'
-                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-            }`}
+            className={chip(statusFilter === value)}
           >
             {label}
           </button>
         ))}
       </div>
 
+      {/* ── List ─────────────────────────────────────────────────── */}
       <div className="space-y-3">
         {loading ? (
           <LoadingSpinner />
         ) : error ? (
-          <div className="p-6">
-            <p className="text-sm text-red-600">
+          <Card>
+            <p className="text-sm text-error-strong">
               {error}
               <button
-                className="text-sm text-blue-600 ml-2"
+                className="ml-2 text-sm font-semibold text-accent hover:text-accent-hover"
                 onClick={() => {
                   setError(null)
                   fetchProjects()
@@ -372,99 +394,106 @@ export default function ProjectsPage() {
                 Try again
               </button>
             </p>
-          </div>
+          </Card>
         ) : projects.length === 0 ? (
-          <div className="text-center py-16">
-            <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-sm">No projects found</p>
-          </div>
+          <Card className="text-center py-12">
+            <div className="mx-auto mb-4 w-16 h-16 rounded-lg bg-accent-soft flex items-center justify-center text-accent">
+              <Icon name="projects" size={28} />
+            </div>
+            <p className="text-sm text-text-2">No projects found</p>
+          </Card>
         ) : (
           projects.map((project) => (
-            <div
+            <Card
               key={project.id}
+              padded={false}
               onClick={() => openProject(project)}
-              className="bg-white rounded-2xl border border-gray-200 p-6 cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all"
+              className="p-6 cursor-pointer hover:border-border-strong hover:shadow-md transition-shadow"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0 mr-4">
-                  <p className="text-base font-bold text-gray-900 mb-1">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-bold text-text-1 mb-1 truncate">
                     {project.name}
                   </p>
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold flex items-center justify-center flex-shrink-0">
-                      {getInitials(project.customer.name)}
-                    </div>
-                    <p className="text-sm text-gray-600">{project.customer.name}</p>
+                    <Avatar name={project.customer.name} size="sm" />
+                    <p className="text-sm text-text-2 truncate">
+                      {project.customer.name}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1">
-                      <p className="text-xs text-gray-500">
-                        {completedMilestoneCount(project.milestones)}/
-                        {project.milestones.length} milestones
-                      </p>
-                    </div>
+                  <div className="flex items-center gap-4 text-xs text-text-2">
+                    <p className="tabular-nums">
+                      {completedMilestoneCount(project.milestones)}/
+                      {project.milestones.length} milestones
+                    </p>
                     {project.deadline && (
-                      <p className="text-xs text-gray-400">
+                      <p className="text-text-3">
                         Due {formatDate(project.deadline)}
                       </p>
                     )}
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                  <ActivityBadge status={project.status} type="project" />
-                  <p className="text-sm font-bold text-gray-900">
+                  <Badge status={project.status} type="project" />
+                  <p className="text-sm font-bold text-text-1 tabular-nums">
                     {formatUZS(project.totalPrice)}
                   </p>
                 </div>
               </div>
-            </div>
+            </Card>
           ))
         )}
       </div>
 
+      {/* ── Pagination ──────────────────────────────────────────── */}
       {total > LIMIT && (
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 mt-4">
-          <p className="text-sm text-gray-600">
+        <div className="flex items-center justify-between px-1 py-4 mt-4">
+          <p className="text-sm text-text-2">
             Showing {(page - 1) * LIMIT + 1}–{Math.min(page * LIMIT, total)} of {total}
           </p>
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               disabled={page === 1}
               onClick={() => setPage(page - 1)}
-              className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Previous
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
               disabled={page * LIMIT >= total}
               onClick={() => setPage(page + 1)}
-              className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Next
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
+      {/* ── Detail slide-over ───────────────────────────────────── */}
       {selectedProject && (
         <div className="fixed inset-0 z-50 flex">
           <div
-            className="flex-1 bg-black/30"
+            className="flex-1 bg-text-1/30"
             onClick={() => setSelectedProject(null)}
           />
-          <div className="relative z-50 w-full md:max-w-xl bg-white shadow-2xl flex flex-col h-full overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
-              <div>
-                <p className="text-lg font-bold text-gray-900">
+          <div className="relative z-50 w-full md:max-w-xl bg-surface border-l border-border shadow-lg flex flex-col h-full overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
+              <div className="min-w-0 mr-3">
+                <p className="text-lg font-bold text-text-1 truncate">
                   {selectedProject.name}
                 </p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-text-2 mt-1 truncate">
                   Client: {selectedProject.customer.name}
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {!showEditProject && (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setEditProjectName(selectedProject.name)
                       setEditProjectDescription(selectedProject.description || '')
@@ -478,16 +507,17 @@ export default function ProjectsPage() {
                       setEditError(null)
                       setShowEditProject(true)
                     }}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                   >
                     Edit
-                  </button>
+                  </Button>
                 )}
                 <button
+                  type="button"
                   onClick={() => setSelectedProject(null)}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  aria-label="Close"
+                  className="text-text-3 hover:text-text-1 transition-colors"
                 >
-                  <X size={20} className="text-gray-500" />
+                  <Icon name="close" size={20} />
                 </button>
               </div>
             </div>
@@ -497,58 +527,55 @@ export default function ProjectsPage() {
                 /* Edit project inline form */
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label className="block text-sm font-medium text-text-2 mb-1.5">
                       Project name *
                     </label>
-                    <input
+                    <Input
                       type="text"
                       value={editProjectName}
                       onChange={(e) => setEditProjectName(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label className="block text-sm font-medium text-text-2 mb-1.5">
                       Total price (UZS) *
                     </label>
-                    <input
+                    <Input
                       type="number"
                       value={editProjectTotalPrice}
                       onChange={(e) => setEditProjectTotalPrice(e.target.value)}
                       min="0"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="tabular-nums"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label className="block text-sm font-medium text-text-2 mb-1.5">
                       Scope of work
                     </label>
-                    <textarea
+                    <Textarea
                       rows={4}
                       value={editProjectDescription}
                       onChange={(e) => setEditProjectDescription(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label className="block text-sm font-medium text-text-2 mb-1.5">
                       Deadline
                     </label>
-                    <input
+                    <Input
                       type="date"
                       value={editProjectDeadline}
                       onChange={(e) => setEditProjectDeadline(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label className="block text-sm font-medium text-text-2 mb-1.5">
                       Status
                     </label>
                     <select
                       value={editProjectStatus}
                       onChange={(e) => setEditProjectStatus(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      className={SELECT_CLASS}
                     >
                       {STATUS_OPTIONS.map((s) => (
                         <option key={s.value} value={s.value}>{s.label}</option>
@@ -557,43 +584,45 @@ export default function ProjectsPage() {
                   </div>
 
                   {editError && (
-                    <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
-                      <p className="text-sm text-red-700">{editError}</p>
+                    <div className="p-3 bg-error-soft border border-error-strong rounded-md">
+                      <p className="text-sm text-error-strong">{editError}</p>
                     </div>
                   )}
 
                   <div className="flex gap-2">
-                    <button
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      loading={editSaving}
                       onClick={handleSaveEditProject}
-                      disabled={editSaving}
-                      className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
                     >
                       {editSaving ? 'Saving...' : 'Save changes'}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      fullWidth
                       onClick={() => setShowEditProject(false)}
-                      className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
                     >
                       Cancel
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ) : (
                 /* Status & Overview */
                 <div>
-                  <div className="flex gap-2 mb-2">
-                    <ActivityBadge status={selectedProject.status} type="project" />
+                  <div className="flex gap-2 mb-4">
+                    <Badge status={selectedProject.status} type="project" />
                   </div>
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="bg-gray-50 rounded-xl p-3">
-                      <p className="text-xs text-gray-500 mb-1">Total value</p>
-                      <p className="text-base font-bold text-gray-900">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-surface-2 border border-border rounded-md p-3">
+                      <p className="text-xs text-text-2 mb-1">Total value</p>
+                      <p className="text-base font-bold text-text-1 tabular-nums">
                         {formatUZS(selectedProject.totalPrice)}
                       </p>
                     </div>
-                    <div className="bg-gray-50 rounded-xl p-3">
-                      <p className="text-xs text-gray-500 mb-1">Deadline</p>
-                      <p className="text-base font-bold text-gray-900">
+                    <div className="bg-surface-2 border border-border rounded-md p-3">
+                      <p className="text-xs text-text-2 mb-1">Deadline</p>
+                      <p className="text-base font-bold text-text-1">
                         {selectedProject.deadline
                           ? formatDate(selectedProject.deadline)
                           : 'Not set'}
@@ -606,58 +635,59 @@ export default function ProjectsPage() {
               {/* Description */}
               {!showEditProject && selectedProject.description && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                  <p className="text-xs font-semibold text-text-2 uppercase tracking-wider mb-2">
                     Scope of work
                   </p>
-                  <p className="text-sm text-gray-700">{selectedProject.description}</p>
+                  <p className="text-sm text-text-1">{selectedProject.description}</p>
                 </div>
               )}
 
               {/* Milestones */}
               {!showEditProject && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                  <p className="text-xs font-semibold text-text-2 uppercase tracking-wider mb-3">
                     Milestones
                   </p>
                   {selectedProject.milestones.length === 0 ? (
-                    <p className="text-sm text-gray-400">No milestones added</p>
+                    <p className="text-sm text-text-3">No milestones added</p>
                   ) : (
                     selectedProject.milestones.map((milestone) => (
                       <div
                         key={milestone.id}
-                        className="border border-gray-100 rounded-xl p-4 mb-3"
+                        className="border border-border rounded-md p-4 mb-3 bg-surface"
                       >
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <p className="text-sm font-semibold text-gray-900">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-text-1 truncate">
                               {milestone.name}
                             </p>
                             {milestone.dueDate && (
-                              <p className="text-xs text-gray-400 mt-0.5">
+                              <p className="text-xs text-text-3 mt-0.5">
                                 Due {formatDate(milestone.dueDate)}
                               </p>
                             )}
                           </div>
-                          <p className="text-sm font-bold text-gray-900">
+                          <p className="text-sm font-bold text-text-1 tabular-nums flex-shrink-0">
                             {formatUZS(milestone.amount)}
                           </p>
                         </div>
-                        <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center justify-between mt-2 gap-2">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getMilestoneStatusColor(milestone.status)}`}
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-pill text-xs font-semibold ${milestoneTone(milestone.status)}`}
                           >
                             {getMilestoneStatusLabel(milestone.status)}
                           </span>
                           {milestone.status === 'APPROVED' && (
-                            <button
+                            <Button
+                              variant="primary"
+                              size="sm"
                               onClick={() => handleMilestonePayment(milestone)}
-                              className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
                             >
                               Mark payment received
-                            </button>
+                            </Button>
                           )}
                           {milestone.status === 'SUBMITTED_FOR_REVIEW' && (
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-text-3">
                               Waiting for client
                             </span>
                           )}
@@ -667,56 +697,60 @@ export default function ProjectsPage() {
                   )}
 
                   {!showAddMilestone && (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      leftIcon="add"
                       onClick={() => setShowAddMilestone(true)}
-                      className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium mt-2"
+                      className="mt-2"
                     >
-                      <Plus className="w-3 h-3" />
                       Add milestone
-                    </button>
+                    </Button>
                   )}
 
                   {showAddMilestone && (
-                    <div className="border border-gray-200 rounded-xl p-4 mt-2 bg-gray-50">
-                      <p className="text-sm font-semibold text-gray-900 mb-3">
+                    <div className="border border-border rounded-md p-4 mt-2 bg-surface-2">
+                      <p className="text-sm font-semibold text-text-1 mb-3">
                         New milestone
                       </p>
                       <div className="space-y-3">
-                        <input
+                        <Input
                           type="text"
                           value={milestoneName}
                           onChange={(e) => setMilestoneName(e.target.value)}
                           placeholder="Milestone name"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
-                        <input
+                        <Input
                           type="number"
                           value={milestoneAmount}
                           onChange={(e) => setMilestoneAmount(e.target.value)}
                           placeholder="Amount (UZS)"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="tabular-nums"
                         />
-                        <input
+                        <Input
                           type="date"
                           value={milestoneDueDate}
                           onChange={(e) => setMilestoneDueDate(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <div className="flex gap-2">
-                          <button
+                          <Button
+                            variant="primary"
+                            fullWidth
+                            size="sm"
+                            disabled={!milestoneName || !milestoneAmount}
+                            loading={addingMilestone}
                             onClick={handleAddMilestone}
-                            disabled={!milestoneName || !milestoneAmount ||
-                              addingMilestone}
-                            className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
                           >
                             {addingMilestone ? 'Adding...' : 'Add'}
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            fullWidth
+                            size="sm"
                             onClick={() => setShowAddMilestone(false)}
-                            className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
                           >
                             Cancel
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -727,41 +761,42 @@ export default function ProjectsPage() {
               {/* Invoices */}
               {!showEditProject && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                  <p className="text-xs font-semibold text-text-2 uppercase tracking-wider mb-3">
                     Invoices
                   </p>
                   {selectedProject.invoices.length === 0 ? (
-                    <p className="text-sm text-gray-400">No invoices generated</p>
+                    <p className="text-sm text-text-3">No invoices generated</p>
                   ) : (
                     selectedProject.invoices.map((invoice) => (
                       <div
                         key={invoice.id}
-                        className="flex items-center justify-between p-4 border border-gray-100 rounded-xl mb-2"
+                        className="flex items-center justify-between p-4 border border-border rounded-md mb-2 bg-surface"
                       >
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900">
+                        <div className="min-w-0 mr-3">
+                          <p className="text-sm font-semibold text-text-1 truncate">
                             {invoice.invoiceNumber}
                           </p>
-                          <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="text-xs text-text-3 mt-0.5">
                             {invoice.dueDate
                               ? `Due ${formatDate(invoice.dueDate)}`
                               : 'No due date'}
                           </p>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <p className="text-sm font-bold text-gray-900">
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <p className="text-sm font-bold text-text-1 tabular-nums">
                             {formatUZS(invoice.total)}
                           </p>
                           {invoice.status === 'UNPAID' && (
-                            <button
+                            <Button
+                              variant="primary"
+                              size="sm"
                               onClick={() => handleMarkInvoicePaid(invoice)}
-                              className="text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
                             >
                               Mark paid
-                            </button>
+                            </Button>
                           )}
                           {invoice.status === 'PAID' && (
-                            <span className="text-xs font-medium text-green-600">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-pill text-xs font-semibold bg-success-soft text-success-strong">
                               Paid
                             </span>
                           )}
@@ -774,14 +809,14 @@ export default function ProjectsPage() {
 
               {/* Proposal link */}
               {!showEditProject && selectedProject.status === 'PROPOSAL_SENT' && (
-                <div className="pt-4 border-t border-gray-100">
-                  <button
+                <div className="pt-4 border-t border-border">
+                  <Button
+                    variant="secondary"
+                    fullWidth
                     onClick={copyProposalLink}
-                    className="w-full flex items-center justify-center gap-2 py-3 border-2 border-blue-200 text-blue-600 rounded-xl text-sm font-semibold hover:bg-blue-50 transition-colors"
                   >
-                    <Link2 className="w-4 h-4" />
                     {copiedProposal ? 'Copied!' : 'Copy proposal link'}
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -789,61 +824,58 @@ export default function ProjectsPage() {
         </div>
       )}
 
-      {/* Create project panel */}
+      {/* ── Create project slide-over ───────────────────────────── */}
       {showCreateForm && (
         <div className="fixed inset-0 z-40 flex justify-end">
           <div
-            className="absolute inset-0 bg-black/20"
+            className="absolute inset-0 bg-text-1/30"
             onClick={() => setShowCreateForm(false)}
           />
-          <div className="relative z-50 w-full max-w-lg bg-white shadow-2xl flex flex-col h-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
-              <p className="text-lg font-bold text-gray-900">New project</p>
-              <button onClick={() => setShowCreateForm(false)}>
-                <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+          <div className="relative z-50 w-full max-w-lg bg-surface border-l border-border shadow-lg flex flex-col h-full">
+            <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
+              <p className="text-lg font-bold text-text-1">New project</p>
+              <button
+                type="button"
+                onClick={() => setShowCreateForm(false)}
+                aria-label="Close"
+                className="text-text-3 hover:text-text-1 transition-colors"
+              >
+                <Icon name="close" size={20} />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
-              {/* Field 1 — Project name */}
+              {/* Project name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   Project name *
                 </label>
-                <input
+                <Input
                   type="text"
                   value={createName}
                   onChange={(e) => setCreateName(e.target.value)}
                   placeholder="e.g. Logo design, Website redesign"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
-              {/* Field 2 — Client */}
+              {/* Client */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   Client *
                 </label>
 
-                {/* Mode toggle */}
                 <div className="flex gap-2 mb-2">
                   <button
+                    type="button"
                     onClick={() => setCreateCustomerMode('select')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      createCustomerMode === 'select'
-                        ? 'bg-gray-900 text-white'
-                        : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
-                    }`}
+                    className={chip(createCustomerMode === 'select', true)}
                   >
                     Select existing
                   </button>
                   <button
+                    type="button"
                     onClick={() => setCreateCustomerMode('manual')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      createCustomerMode === 'manual'
-                        ? 'bg-gray-900 text-white'
-                        : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
-                    }`}
+                    className={chip(createCustomerMode === 'manual', true)}
                   >
                     Enter manually
                   </button>
@@ -853,7 +885,7 @@ export default function ProjectsPage() {
                   <select
                     value={createCustomerId}
                     onChange={(e) => setCreateCustomerId(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className={SELECT_CLASS}
                   >
                     <option value="">Select a client</option>
                     {customers.map(c => (
@@ -861,92 +893,90 @@ export default function ProjectsPage() {
                     ))}
                   </select>
                 ) : (
-                  <input
+                  <Input
                     type="text"
                     value={createManualCustomerName}
                     onChange={(e) => setCreateManualCustomerName(e.target.value)}
                     placeholder="Client name"
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 )}
               </div>
 
-              {/* Field 3 — Total price */}
+              {/* Total price */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   Total price (UZS) *
                 </label>
-                <input
+                <Input
                   type="number"
                   value={createTotalPrice}
                   onChange={(e) => setCreateTotalPrice(e.target.value)}
                   min="0"
                   placeholder="500000"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="tabular-nums"
                 />
               </div>
 
-              {/* Field 4 — Description */}
+              {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   Scope of work
                 </label>
-                <textarea
+                <Textarea
                   rows={4}
                   value={createDescription}
                   onChange={(e) => setCreateDescription(e.target.value)}
                   placeholder="Describe what is included in this project..."
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
-              {/* Field 5 — Deadline */}
+              {/* Deadline */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   Deadline
                 </label>
-                <input
+                <Input
                   type="date"
                   value={createDeadline}
                   onChange={(e) => setCreateDeadline(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
-              {/* Field 6 — Payment terms */}
+              {/* Payment terms */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   Payment terms
                 </label>
-                <input
+                <Input
                   type="text"
                   value={createPaymentTerms}
                   onChange={(e) => setCreatePaymentTerms(e.target.value)}
                   placeholder="e.g. 50% upfront, 50% on delivery"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-200 flex-shrink-0 space-y-3">
+            <div className="p-6 border-t border-border flex-shrink-0 space-y-3">
               {createError && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
-                  <p className="text-sm text-red-700">{createError}</p>
+                <div className="p-3 bg-error-soft border border-error-strong rounded-md">
+                  <p className="text-sm text-error-strong">{createError}</p>
                 </div>
               )}
-              <button
+              <Button
+                variant="primary"
+                fullWidth
+                loading={createSaving}
                 onClick={handleCreateProject}
-                disabled={createSaving}
-                className="w-full py-3 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {createSaving ? 'Saving...' : 'Create project'}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                fullWidth
                 onClick={() => setShowCreateForm(false)}
-                className="w-full py-3 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -954,7 +984,10 @@ export default function ProjectsPage() {
 
       {/* Success toast */}
       {savedMessage && (
-        <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-4 py-3 rounded-xl text-sm font-medium shadow-lg z-50 flex items-center gap-2">
+        <div className="fixed bottom-6 right-6 bg-text-1 text-surface px-4 py-3 rounded-md text-sm font-medium shadow-md z-50 flex items-center gap-2">
+          <span className="text-success-soft">
+            <Icon name="paid" size={16} />
+          </span>
           {savedMessage}
         </div>
       )}

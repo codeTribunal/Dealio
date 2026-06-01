@@ -1,9 +1,12 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Users, Search } from 'lucide-react'
 import AuthLayout from '@/components/AuthLayout'
 import CustomerCard from '@/components/CustomerCard'
-import LoadingSpinner from '@/components/LoadingSpinner'
+import { Card } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
+import { Button } from '@/components/ui/Button'
+import { Spinner } from '@/components/ui/Spinner'
+import { Icon } from '@/components/icons/Icon'
 import { getCustomers } from '@/lib/api'
 import { useI18n } from '@/lib/i18n/i18nContext'
 import type { Customer } from '@/types'
@@ -18,6 +21,7 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
+  const [retryToken, setRetryToken] = useState(0)
 
   useEffect(() => {
     setLoading(true)
@@ -34,57 +38,70 @@ export default function CustomersPage() {
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [search, page])
+  }, [search, page, retryToken])
 
   return (
     <AuthLayout title={t('customers.title')}>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t('customers.title')}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t('customers.totalCustomers', { count: total })}</p>
+          <h1
+            className="text-text-1"
+            style={{ fontSize: 'var(--fs-h2)', fontWeight: 'var(--fw-extra)', lineHeight: 1.1 }}
+          >
+            {t('customers.title')}
+          </h1>
+          <p className="text-sm text-text-2 mt-1">
+            {t('customers.totalCustomers', { count: total })}
+          </p>
         </div>
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
+        <div className="w-full sm:w-80">
+          <Input
+            leftIcon="search"
             placeholder={t('customers.searchHint')}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value)
               setPage(1)
             }}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider">
-          <div className="col-span-4 md:col-span-4">{t('customers.colCustomer')}</div>
-          <div className="col-span-2 hidden md:block">{t('customers.colOrders')}</div>
-          <div className="col-span-3 hidden md:block">{t('customers.colTotalSpent')}</div>
-          <div className="col-span-3 hidden md:block">{t('customers.colLastActive')}</div>
+      {/* Table */}
+      <Card padded={false} className="overflow-hidden">
+        {/* Column header — desktop only */}
+        <div className="hidden md:grid grid-cols-12 gap-4 px-5 py-3 bg-surface-2 border-b border-border text-xs font-semibold uppercase tracking-wide text-text-2">
+          <div className="col-span-5">{t('customers.colCustomer')}</div>
+          <div className="col-span-2">{t('customers.colOrders')}</div>
+          <div className="col-span-3">{t('customers.colTotalSpent')}</div>
+          <div className="col-span-2">{t('customers.colLastActive')}</div>
         </div>
 
+        {/* Body */}
         {loading ? (
-          <LoadingSpinner />
+          <div className="flex items-center justify-center py-16">
+            <Spinner size={32} />
+          </div>
         ) : error ? (
-          <p className="text-sm text-red-600 p-6">
-            {error}
-            <button
-              className="text-sm text-blue-600 ml-2"
+          <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
+            <p className="text-sm text-error-strong">{error}</p>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 setError(null)
                 setLoading(true)
+                setRetryToken((tok) => tok + 1)
               }}
             >
               {t('common.tryAgain')}
-            </button>
-          </p>
+            </Button>
+          </div>
         ) : (customers ?? []).length === 0 ? (
-          <div className="text-center py-16">
-            <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-sm">
+          <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
+            <Icon name="customers" size={40} className="text-text-3" />
+            <p className="text-sm text-text-2">
               {search ? t('customers.emptyFiltered') : t('customers.empty')}
             </p>
           </div>
@@ -93,35 +110,38 @@ export default function CustomersPage() {
             <CustomerCard key={customer.id} customer={customer} />
           ))
         )}
-      </div>
 
-      {total > LIMIT && (
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-          <p className="text-sm text-gray-600">
-            {t('customers.showing', {
-              from: (page - 1) * LIMIT + 1,
-              to: Math.min(page * LIMIT, total),
-              total,
-            })}
-          </p>
-          <div className="flex gap-2">
-            <button
-              disabled={page === 1}
-              onClick={() => setPage((p) => p - 1)}
-              className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {t('common.previous')}
-            </button>
-            <button
-              disabled={page * LIMIT >= total}
-              onClick={() => setPage((p) => p + 1)}
-              className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {t('common.next')}
-            </button>
+        {/* Pagination */}
+        {total > LIMIT && (
+          <div className="flex items-center justify-between px-5 py-4 border-t border-border">
+            <p className="text-sm text-text-2">
+              {t('customers.showing', {
+                from: (page - 1) * LIMIT + 1,
+                to: Math.min(page * LIMIT, total),
+                total,
+              })}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={page === 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                {t('common.previous')}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={page * LIMIT >= total}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                {t('common.next')}
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Card>
     </AuthLayout>
   )
 }

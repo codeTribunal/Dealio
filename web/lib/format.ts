@@ -55,6 +55,40 @@ export function formatRelativeTime(dateString: string, t?: TFn): string {
   return formatDate(dateString)
 }
 
+// ── Tashkent (UTC+5, fixed, no DST) ─────────────────────────────────────────
+// The scheduling backend treats every stored instant as Tashkent wall-clock at a
+// fixed +5 offset. These helpers convert in both directions independent of the
+// browser's own timezone, so blocked slots are correct everywhere.
+const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000
+
+// Build the UTC ISO instant for a Tashkent wall-clock date + "HH:MM".
+export function tashkentWallClockToIso(dateStr: string, hhmm: string): string {
+  const [y, mo, d] = dateStr.split('-').map(Number)
+  const [h, m] = hhmm.split(':').map(Number)
+  const utcMs = Date.UTC(y, mo - 1, d, h, m, 0, 0) - TASHKENT_OFFSET_MS
+  return new Date(utcMs).toISOString()
+}
+
+// Display an instant as a Tashkent calendar date.
+export function formatDateTashkent(dateString: string): string {
+  return new Date(dateString).toLocaleDateString('en-GB', {
+    timeZone: 'Asia/Tashkent',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+// Display an instant as a Tashkent 24h time "HH:MM".
+export function formatTimeTashkent(dateString: string): string {
+  return new Date(dateString).toLocaleTimeString('en-GB', {
+    timeZone: 'Asia/Tashkent',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
 export function getInitials(name: string): string {
   return name
     .split(' ')

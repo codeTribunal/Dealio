@@ -1,22 +1,244 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { isAuthenticated } from '@/lib/auth'
+import Link from 'next/link'
+import AuthLayout from '@/components/AuthLayout'
+import { HeroCard } from '@/components/ui/HeroCard'
+import { StatCard } from '@/components/ui/StatCard'
+import { QuickActions, type QuickActionItem } from '@/components/ui/QuickActions'
+import { Card, CardHeader } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Spinner } from '@/components/ui/Spinner'
+import { Icon, type IconName } from '@/components/icons/Icon'
+import { useBusiness } from '@/lib/businessContext'
+import { useI18n } from '@/lib/i18n/i18nContext'
+import { getHome, getAnalytics } from '@/lib/api'
+import { formatUZS, formatRelativeTime } from '@/lib/format'
+import type { HomeData, AnalyticsData, Business } from '@/types'
 
-export default function RootPage() {
+interface ActivityRow {
+  id: string
+  icon: IconName
+  href: string
+  text: string
+  meta: string
+  amount?: number
+  at: string
+}
+
+function buildQuickActions(
+  business: Business | null,
+  router: ReturnType<typeof useRouter>,
+  t: ReturnType<typeof useI18n>['t'],
+): QuickActionItem[] {
+  // Default to PRODUCTS-style actions if business isn't loaded yet
+  const modes = business?.mode ?? ['PRODUCTS']
+
+  // Each mode contributes a "create" action + 3 navigation tiles.
+  // We pick the first matching mode (a business may have multiple) to
+  // keep the QuickActions block to a clean 4-tile row.
+  if (modes.includes('PRODUCTS')) {
+    return [
+      { icon: 'orders', label: t('home.quickActionNewOrder'), onClick: () => router.push('/orders') },
+      { icon: 'customers', label: t('nav.customers'), onClick: () => router.push('/customers') },
+      { icon: 'catalog', label: t('nav.catalog'), onClick: () => router.push('/catalog') },
+      { icon: 'analytics', label: t('nav.analytics'), onClick: () => router.push('/analytics') },
+    ]
+  }
+  if (modes.includes('SERVICES')) {
+    return [
+      { icon: 'calendar', label: t('home.quickActionNewAppointment'), onClick: () => router.push('/appointments') },
+      { icon: 'customers', label: t('nav.customers'), onClick: () => router.push('/customers') },
+      { icon: 'staff', label: t('nav.staff'), onClick: () => router.push('/staff') },
+      { icon: 'analytics', label: t('nav.analytics'), onClick: () => router.push('/analytics') },
+    ]
+  }
+  // FREELANCE
+  return [
+    { icon: 'projects', label: t('home.quickActionNewProject'), onClick: () => router.push('/projects') },
+    { icon: 'customers', label: t('nav.customers'), onClick: () => router.push('/customers') },
+    { icon: 'analytics', label: t('nav.analytics'), onClick: () => router.push('/analytics') },
+    { icon: 'settings', label: t('nav.settings'), onClick: () => router.push('/settings') },
+  ]
+}
+
+function buildActivity(
+  home: HomeData,
+  t: ReturnType<typeof useI18n>['t'],
+): ActivityRow[] {
+  const rows: ActivityRow[] = []
+
+  for (const o of home.todayOrders) {
+    rows.push({
+      id: `order-${o.id}`,
+      icon: 'orders',
+      href: `/orders/${o.id}`,
+      text: t('home.activityNewOrder', { n: o.orderNumber }),
+      meta: o.customer.name,
+      amount: o.total,
+      at: o.createdAt,
+    })
+  }
+  for (const c of home.newCustomers) {
+    rows.push({
+      id: `customer-${c.id}`,
+      icon: 'customers',
+      href: `/customers/${c.id}`,
+      text: t('home.activityNewCustomer'),
+      meta: c.name,
+      at: c.createdAt,
+    })
+  }
+  for (const m of home.recentMilestones) {
+    rows.push({
+      id: `milestone-${m.id}`,
+      icon: 'projects',
+      href: `/projects`,
+      text: t('home.activityMilestoneApproved'),
+      meta: `${m.milestoneName} — ${m.projectName}`,
+      at: m.updatedAt,
+    })
+  }
+
+  // Newest first, cap at 10
+  rows.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+  return rows.slice(0, 10)
+}
+
+export default function HomePage() {
   const router = useRouter()
+  const { business } = useBusiness()
+  const { t } = useI18n()
+  const [home, setHome] = useState<HomeData | null>(null)
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [retryToken, setRetryToken] = useState(0)
 
   useEffect(() => {
-    if (isAuthenticated()) {
-      router.replace('/customers')
-    } else {
-      router.replace('/login')
-    }
-  }, [router])
+    setLoading(true)
+    setError(null)
+    Promise.all([getHome(), getAnalytics()])
+      .then(([h, a]) => {
+        setHome(h)
+        setAnalytics(a)
+      })
+      .catch(() => setError(t('home.failedLoad')))
+      .finally(() => setLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [retryToken])
+
+  const quickActions = useMemo(
+    () => buildQuickActions(business, router, t),
+    [business, router, t],
+  )
+
+  const activity = useMemo(() => (home ? buildActivity(home, t) : []), [home, t])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-    </div>
+    <AuthLayout title={t('home.title')}>
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Spinner size={32} />
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+          <p className="text-base font-semibold text-error-strong">{error}</p>
+          <Button variant="primary" onClick={() => setRetryToken((tk) => tk + 1)}>
+            {t('common.tryAgain')}
+          </Button>
+        </div>
+      ) : home && analytics ? (
+        <div className="space-y-6">
+          {/* Greeting */}
+          {business && (
+            <h1
+              className="text-text-1"
+              style={{ fontSize: 'var(--fs-h2)', fontWeight: 'var(--fw-extra)', lineHeight: 1.1 }}
+            >
+              {business.name}
+            </h1>
+          )}
+
+          {/* HeroCard */}
+          <HeroCard
+            label={t('home.revenueLabel')}
+            value={formatUZS(analytics.revenueThisMonth)}
+            sub={t('home.revenueSub', { count: analytics.ordersThisMonth })}
+          />
+
+          {/* StatCard bento row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <StatCard
+              label={t('home.statOrdersToday')}
+              value={String(home.todayOrders.length)}
+            />
+            <StatCard
+              label={t('home.statPending')}
+              value={formatUZS(analytics.pendingPaymentsTotal)}
+              money
+            />
+            <StatCard
+              label={t('home.statAppointmentsToday')}
+              value={String(home.todayAppointments.length)}
+            />
+          </div>
+
+          {/* QuickActions — neumorphic tiles */}
+          <QuickActions items={quickActions} />
+
+          {/* Activity feed */}
+          <Card padded={false}>
+            <div className="px-5 pt-5">
+              <CardHeader
+                title={t('home.activityTitle')}
+                right={
+                  activity.length > 0 ? (
+                    <Link
+                      href="/customers"
+                      className="text-sm font-semibold text-accent hover:text-accent-hover"
+                    >
+                      {t('home.activityViewAll')}
+                    </Link>
+                  ) : undefined
+                }
+              />
+            </div>
+
+            {activity.length === 0 ? (
+              <div className="text-center py-12 text-sm text-text-2">
+                {t('home.activityEmpty')}
+              </div>
+            ) : (
+              <div>
+                {activity.map((row) => (
+                  <Link
+                    key={row.id}
+                    href={row.href}
+                    className="flex items-center gap-4 px-5 py-3 border-t border-border hover:bg-surface-2 transition-colors"
+                    style={{ transitionDuration: 'var(--dur-base)' }}
+                  >
+                    <span className="w-9 h-9 rounded-md bg-accent-soft text-accent flex items-center justify-center flex-shrink-0">
+                      <Icon name={row.icon} size={18} />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-text-1 truncate">{row.text}</p>
+                      <p className="text-xs text-text-2 truncate">
+                        {row.meta} · {formatRelativeTime(row.at, t)}
+                      </p>
+                    </div>
+                    {row.amount !== undefined && (
+                      <p className="text-sm font-semibold text-text-1 tabular-nums flex-shrink-0">
+                        {formatUZS(row.amount)}
+                      </p>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+      ) : null}
+    </AuthLayout>
   )
 }

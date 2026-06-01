@@ -2,9 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/icons/app_icon.dart';
 import '../../core/models/analytics.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
+import '../../shared/widgets/app_avatar.dart';
+import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_spinner.dart';
+import '../../shared/widgets/app_stat_card.dart';
+import '../../shared/widgets/hero_card.dart';
 import 'analytics_provider.dart';
 
 class AnalyticsScreen extends ConsumerWidget {
@@ -18,26 +26,27 @@ class AnalyticsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l.analyticsTitle)),
       body: analyticsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: AppSpinner(size: 32)),
         error: (e, _) => _ErrorView(
           message: e.toString(),
           onRetry: () => ref.read(analyticsProvider.notifier).refresh(),
         ),
         data: (data) => RefreshIndicator(
+          color: AppTokens.of(context).accent,
           onRefresh: () => ref.read(analyticsProvider.notifier).refresh(),
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.s4),
             children: [
               _RevenueCard(data: data),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s3),
               _QuickStatsRow(data: data),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s3),
               _PendingPaymentsCard(data: data),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s3),
               _TopCustomersCard(data: data),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.s3),
               _BestSellingCard(data: data),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.s6),
             ],
           ),
         ),
@@ -46,7 +55,7 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 }
 
-// ── Revenue card ─────────────────────────────────────────────────────
+// ── Revenue: HeroCard + this-vs-last token bars ──────────────────────
 
 class _RevenueCard extends StatelessWidget {
   final AnalyticsData data;
@@ -55,66 +64,109 @@ class _RevenueCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final change = data.revenueChangePercent;
     final isUp = change != null && change >= 0;
     final changeText = change == null
         ? l.analyticsNoDataLastMonth
-        : l.analyticsVsLastMonth('${isUp ? '+' : ''}${change.toStringAsFixed(1)}');
+        : l.analyticsVsLastMonth(
+            '${isUp ? '+' : ''}${change.toStringAsFixed(1)}');
 
-    return Card(
-      margin: EdgeInsets.zero,
-      color: Theme.of(context).colorScheme.primary,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    // Bar widths relative to the larger of the two months.
+    final maxRev = data.revenueThisMonth > data.revenueLastMonth
+        ? data.revenueThisMonth
+        : data.revenueLastMonth;
+    double frac(int v) => maxRev <= 0 ? 0 : (v / maxRev).clamp(0.0, 1.0);
+
+    return Column(
+      children: [
+        HeroCard(
+          label: l.analyticsRevenueThisMonth,
+          value: formatUZS(data.revenueThisMonth),
+          sub: changeText,
+        ),
+        const SizedBox(height: AppSpacing.s3),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ComparisonBar(
+                label: l.analyticsRevenueThisMonth,
+                value: formatUZS(data.revenueThisMonth),
+                fraction: frac(data.revenueThisMonth),
+                color: t.accent,
+              ),
+              const SizedBox(height: AppSpacing.s3),
+              _ComparisonBar(
+                label: l.analyticsLastMonth(''),
+                value: formatUZS(data.revenueLastMonth),
+                fraction: frac(data.revenueLastMonth),
+                color: t.text3,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A simple token-styled comparison bar (NOT a charting package).
+class _ComparisonBar extends StatelessWidget {
+  final String label;
+  final String value;
+  final double fraction;
+  final Color color;
+  const _ComparisonBar({
+    required this.label,
+    required this.value,
+    required this.fraction,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              l.analyticsRevenueThisMonth,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8),
-                fontSize: 13,
+            Flexible(
+              child: Text(
+                label.trim().isEmpty ? '—' : label,
+                style: TextStyle(
+                    fontSize: AppTextSizes.caption, color: t.text2),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(height: 6),
             Text(
-              formatUZS(data.revenueThisMonth),
+              value,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onPrimary,
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                if (change != null)
-                  Icon(
-                    isUp ? Icons.trending_up : Icons.trending_down,
-                    size: 16,
-                    color: isUp ? Colors.greenAccent[200] : Colors.red[200],
-                  ),
-                if (change != null) const SizedBox(width: 4),
-                Text(
-                  changeText,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.75),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              l.analyticsLastMonth(formatUZS(data.revenueLastMonth)),
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.6),
-                fontSize: 11,
+                fontSize: AppTextSizes.caption,
+                fontWeight: AppFontWeights.semibold,
+                color: t.text1,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: AppSpacing.s1),
+        ClipRRect(
+          borderRadius: AppRadii.pill,
+          child: Stack(
+            children: [
+              Container(height: 8, color: t.surface2),
+              FractionallySizedBox(
+                widthFactor: fraction,
+                child: Container(height: 8, color: color),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -129,75 +181,23 @@ class _QuickStatsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: _StatCard(
+          child: AppStatCard(
             label: l.analyticsCompletedThisMonth,
             value: data.ordersCompletedThisMonth.toString(),
-            icon: Icons.check_circle_outline,
-            color: Colors.green,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: AppSpacing.s3),
         Expanded(
-          child: _StatCard(
+          child: AppStatCard(
             label: l.analyticsAvgOrderValue,
             value: formatUZS(data.averageOrderValue),
-            icon: Icons.receipt_long_outlined,
-            color: Colors.blue,
+            money: true,
           ),
         ),
       ],
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(height: 8),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                value,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: Colors.grey[600]),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -211,57 +211,53 @@ class _PendingPaymentsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final hasPending = data.pendingPaymentsTotal > 0;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: hasPending
-                    ? Colors.orange.withValues(alpha: 0.12)
-                    : Colors.grey.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.hourglass_top_outlined,
-                size: 20,
-                color: hasPending ? Colors.orange[700] : Colors.grey[400],
-              ),
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.s4),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: hasPending ? t.warningSoft : t.surface2,
+              borderRadius: AppRadii.md,
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l.analyticsPendingPayments,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    hasPending
-                        ? formatUZS(data.pendingPaymentsTotal)
-                        : l.analyticsAllReceived,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: hasPending ? Colors.orange[800] : Colors.grey[500],
-                    ),
-                  ),
-                ],
-              ),
+            child: AppIcon(
+              name: AppIconName.pending,
+              size: 20,
+              color: hasPending ? t.warningStrong : t.text3,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: AppSpacing.s3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l.analyticsPendingPayments,
+                  style: TextStyle(
+                      color: t.text2, fontSize: AppTextSizes.caption),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  hasPending
+                      ? formatUZS(data.pendingPaymentsTotal)
+                      : l.analyticsAllReceived,
+                  style: TextStyle(
+                    fontWeight: AppFontWeights.bold,
+                    fontSize: AppTextSizes.base,
+                    color: hasPending ? t.warningStrong : t.text3,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -276,42 +272,32 @@ class _TopCustomersCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l.analyticsTopCustomers,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Colors.grey[600],
-                    letterSpacing: 0.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            if (data.topCustomers.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    l.analyticsNoConfirmedOrders,
-                    style: TextStyle(color: Colors.grey[400], fontSize: 13),
+    final t = AppTokens.of(context);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppCardHeader(title: l.analyticsTopCustomers),
+          const SizedBox(height: AppSpacing.s3),
+          if (data.topCustomers.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.s3),
+                child: Text(
+                  l.analyticsNoConfirmedOrders,
+                  style: TextStyle(color: t.text3, fontSize: AppTextSizes.sm),
+                ),
+              ),
+            )
+          else
+            ...data.topCustomers.asMap().entries.map(
+                  (entry) => _TopCustomerRow(
+                    rank: entry.key + 1,
+                    customer: entry.value,
+                    onTap: () => context.push('/customers/${entry.value.id}'),
                   ),
                 ),
-              )
-            else
-              ...data.topCustomers.asMap().entries.map(
-                    (entry) => _TopCustomerRow(
-                      rank: entry.key + 1,
-                      customer: entry.value,
-                      onTap: () => context.push('/customers/${entry.value.id}'),
-                    ),
-                  ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -328,59 +314,59 @@ class _TopCustomerRow extends StatelessWidget {
     required this.onTap,
   });
 
-  static const _rankColors = [Color(0xFFFFD700), Color(0xFFC0C0C0), Color(0xFFCD7F32)];
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final rankColor = rank <= 3 ? _rankColors[rank - 1] : Colors.grey;
+    final t = AppTokens.of(context);
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: AppRadii.sm,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s2),
         child: Row(
           children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: rankColor.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  '$rank',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: rankColor == const Color(0xFFFFD700)
-                        ? const Color(0xFFB8860B)
-                        : rankColor,
-                  ),
+            SizedBox(
+              width: 24,
+              child: Text(
+                '$rank',
+                style: TextStyle(
+                  fontSize: AppTextSizes.sm,
+                  fontWeight: AppFontWeights.bold,
+                  color: t.text3,
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppSpacing.s2),
+            AppAvatar(name: customer.name, size: AppAvatarSize.sm),
+            const SizedBox(width: AppSpacing.s3),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     customer.name,
-                    style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                    style: TextStyle(
+                        fontWeight: AppFontWeights.medium,
+                        fontSize: AppTextSizes.sm,
+                        color: t.text1),
                   ),
                   Text(
                     l.homeOrdersCount(customer.orderCount),
-                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    style: TextStyle(
+                        color: t.text3, fontSize: AppTextSizes.caption),
                   ),
                 ],
               ),
             ),
             Text(
               formatUZS(customer.totalSpent),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              style: TextStyle(
+                fontWeight: AppFontWeights.bold,
+                fontSize: AppTextSizes.sm,
+                color: t.text1,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
           ],
         ),
@@ -398,66 +384,57 @@ class _BestSellingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final product = data.bestSellingProduct;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppCardHeader(title: l.analyticsBestSelling),
+          const SizedBox(height: AppSpacing.s3),
+          if (product == null)
             Text(
-              l.analyticsBestSelling,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Colors.grey[600],
-                    letterSpacing: 0.5,
-                    fontWeight: FontWeight.w600,
+              l.ordersEmpty,
+              style: TextStyle(color: t.text3, fontSize: AppTextSizes.sm),
+            )
+          else
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: t.accentSoft,
+                    borderRadius: AppRadii.md,
                   ),
+                  child: AppIcon(
+                      name: AppIconName.catalog, size: 20, color: t.accent),
+                ),
+                const SizedBox(width: AppSpacing.s3),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.name,
+                        style: TextStyle(
+                            fontWeight: AppFontWeights.bold,
+                            fontSize: AppTextSizes.base,
+                            color: t.text1),
+                      ),
+                      Text(
+                        l.analyticsUnitsSold(product.unitsSold),
+                        style: TextStyle(
+                            color: t.text3, fontSize: AppTextSizes.caption),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            if (product == null)
-              Text(
-                l.ordersEmpty,
-                style: TextStyle(color: Colors.grey[400], fontSize: 13),
-              )
-            else
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.star_outline,
-                      size: 20,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.name,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
-                        Text(
-                          l.analyticsUnitsSold(product.unitsSold),
-                          style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -472,17 +449,26 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.s5),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: Text(AppLocalizations.of(context)!.buttonRetry)),
+            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
+            const SizedBox(height: AppSpacing.s3),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: t.text2)),
+            const SizedBox(height: AppSpacing.s4),
+            AppButton(
+              label: l.buttonRetry,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              onPressed: onRetry,
+            ),
           ],
         ),
       ),

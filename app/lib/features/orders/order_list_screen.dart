@@ -2,21 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/icons/app_icon.dart';
 import '../../core/models/order.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import '../../shared/utils/status_labels.dart';
+import '../../shared/widgets/app_badge.dart';
+import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_spinner.dart';
 import 'orders_provider.dart';
 
-const _statusFilters = [null, 'NEW', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED'];
-
-const _statusColor = {
-  'NEW': Color(0xFF1A56DB),
-  'PREPARING': Color(0xFFD97706),
-  'READY': Color(0xFF059669),
-  'DELIVERED': Color(0xFF6B7280),
-  'CANCELLED': Color(0xFFDC2626),
-};
+const _statusFilters = [
+  null,
+  'NEW',
+  'PREPARING',
+  'READY',
+  'DELIVERED',
+  'CANCELLED'
+];
 
 class OrderListScreen extends ConsumerStatefulWidget {
   const OrderListScreen({super.key});
@@ -37,6 +42,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final notifier = ref.read(ordersProvider.notifier);
     final ordersAsync = ref.watch(ordersProvider);
     final filter = ref.watch(ordersProvider.notifier).filter;
@@ -47,58 +53,82 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
         children: [
           // ── Search bar ────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: l.ordersSearchHint,
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          notifier.setSearch('');
-                        },
-                      )
-                    : null,
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.s4, AppSpacing.s3, AppSpacing.s4, 0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: t.surface,
+                borderRadius: AppRadii.md,
+                border: Border.all(color: t.border),
+                boxShadow: t.shadowSm,
               ),
-              onChanged: notifier.setSearch,
+              child: TextField(
+                controller: _searchController,
+                style: TextStyle(fontSize: AppTextSizes.base, color: t.text1),
+                decoration: InputDecoration(
+                  hintText: l.ordersSearchHint,
+                  hintStyle:
+                      TextStyle(fontSize: AppTextSizes.base, color: t.text3),
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(
+                        left: AppSpacing.s4, right: AppSpacing.s2),
+                    child: AppIcon(
+                        name: AppIconName.search, size: 20, color: t.text2),
+                  ),
+                  prefixIconConstraints:
+                      const BoxConstraints(minWidth: 0, minHeight: 0),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: AppIcon(
+                              name: AppIconName.close,
+                              size: 18,
+                              color: t.text2),
+                          onPressed: () {
+                            _searchController.clear();
+                            notifier.setSearch('');
+                            setState(() {});
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s4, vertical: AppSpacing.s3),
+                ),
+                onChanged: (v) {
+                  notifier.setSearch(v);
+                  setState(() {});
+                },
+              ),
             ),
           ),
 
           // ── Status filter chips ───────────────────────────────
           SizedBox(
-            height: 52,
+            height: 56,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s4, vertical: AppSpacing.s2),
               children: _statusFilters.map((value) {
                 final label =
                     value == null ? l.commonAll : orderStatusLabel(l, value);
                 final selected = filter.status == value;
                 return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(label),
+                  padding: const EdgeInsets.only(right: AppSpacing.s2),
+                  child: _FilterChip(
+                    label: label,
                     selected: selected,
-                    onSelected: (_) => notifier.setStatus(value),
-                    selectedColor:
-                        Theme.of(context).colorScheme.primaryContainer,
-                    checkmarkColor: Theme.of(context).colorScheme.primary,
+                    onTap: () => notifier.setStatus(value),
                   ),
                 );
               }).toList(),
             ),
           ),
 
-          const Divider(height: 1),
-
           // ── Order list ────────────────────────────────────────
           Expanded(
             child: ordersAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: AppSpinner(size: 32)),
               error: (e, _) => _ErrorView(
                 message: e.toString(),
                 onRetry: notifier.refresh,
@@ -112,11 +142,13 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                   );
                 }
                 return RefreshIndicator(
+                  color: t.accent,
                   onRefresh: notifier.refresh,
                   child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(AppSpacing.s4),
                     itemCount: orders.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.s2),
                     itemBuilder: (ctx, i) => _OrderCard(order: orders[i]),
                   ),
                 );
@@ -129,96 +161,40 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
   }
 }
 
-class _OrderCard extends StatelessWidget {
-  final Order order;
-  const _OrderCard({required this.order});
+// ── Filter chip (token-styled) ──────────────────────────────────────
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final statusColor =
-        _statusColor[order.orderStatus] ?? const Color(0xFF6B7280);
-    final paymentBadge = order.paymentStatus == 'PAYMENT_RECEIVED';
-
-    return Card(
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => context.push('/orders/${order.id}'),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top row: order number + status badge
-              Row(
-                children: [
-                  Text(
-                    l.orderNumberLabel(order.orderNumber),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const Spacer(),
-                  if (paymentBadge)
-                    _Badge(
-                      label: l.orderPaidBadge,
-                      color: const Color(0xFF059669),
-                    ),
-                  if (paymentBadge) const SizedBox(width: 6),
-                  _Badge(
-                    label: orderStatusLabel(l, order.orderStatus),
-                    color: statusColor,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 8),
-
-              // Customer name + time
-              Row(
-                children: [
-                  const Icon(Icons.person_outline, size: 14,
-                      color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      order.customer.name,
-                      style: TextStyle(
-                          color: Colors.grey[700], fontSize: 13),
-                    ),
-                  ),
-                  Text(
-                    formatDateTime(order.createdAt),
-                    style:
-                        TextStyle(color: Colors.grey[500], fontSize: 12),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 6),
-
-              // Items summary + total
-              Row(
-                children: [
-                  const Icon(Icons.shopping_bag_outlined, size: 14,
-                      color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      order.items.map((i) => '${i.productName} ×${i.quantity}').join(', '),
-                      style: TextStyle(
-                          color: Colors.grey[600], fontSize: 12),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Text(
-                    formatUZS(order.total),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                ],
-              ),
-            ],
+    final t = AppTokens.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: AppMotion.durFast,
+        curve: AppMotion.ease,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s4, vertical: AppSpacing.s2),
+        decoration: BoxDecoration(
+          color: selected ? t.accentSoft : t.surface,
+          borderRadius: AppRadii.pill,
+          border: Border.all(color: selected ? t.accent : t.border),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: AppTextSizes.sm,
+            fontWeight: AppFontWeights.semibold,
+            color: selected ? t.accent : t.text2,
           ),
         ),
       ),
@@ -226,27 +202,101 @@ class _OrderCard extends StatelessWidget {
   }
 }
 
-class _Badge extends StatelessWidget {
-  final String label;
-  final Color color;
-  const _Badge({required this.label, required this.color});
+// ── Order card ──────────────────────────────────────────────────────
+
+class _OrderCard extends StatelessWidget {
+  final Order order;
+  const _OrderCard({required this.order});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-            fontSize: 11, fontWeight: FontWeight.w600, color: color),
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+
+    return AppCard(
+      onTap: () => context.push('/orders/${order.id}'),
+      padding: const EdgeInsets.all(AppSpacing.s4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Order number + dual semantic badges
+          Row(
+            children: [
+              Text(
+                l.orderNumberLabel(order.orderNumber),
+                style: TextStyle(
+                  fontWeight: AppFontWeights.bold,
+                  fontSize: AppTextSizes.sm,
+                  color: t.text1,
+                ),
+              ),
+              const Spacer(),
+              AppBadge(
+                  status: order.paymentStatus, type: AppBadgeType.payment),
+              const SizedBox(width: AppSpacing.s1),
+              AppBadge(status: order.orderStatus, type: AppBadgeType.order),
+            ],
+          ),
+
+          const SizedBox(height: AppSpacing.s2),
+
+          // Customer name (+ handle) and created time
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  order.customer.phone != null
+                      ? '${order.customer.name} · ${order.customer.phone}'
+                      : order.customer.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style:
+                      TextStyle(color: t.text2, fontSize: AppTextSizes.caption),
+                ),
+              ),
+              Text(
+                formatDateTime(order.createdAt),
+                style:
+                    TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppSpacing.s2),
+
+          // Items summary + total
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  order.items
+                      .map((i) => '${i.productName} ×${i.quantity}')
+                      .join(', '),
+                  style:
+                      TextStyle(color: t.text2, fontSize: AppTextSizes.caption),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s2),
+              Text(
+                formatUZS(order.total),
+                style: TextStyle(
+                  fontWeight: AppFontWeights.bold,
+                  fontSize: AppTextSizes.sm,
+                  color: t.text1,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
+
+// ── Empty / error ───────────────────────────────────────────────────
 
 class _EmptyView extends StatelessWidget {
   final bool hasFilter;
@@ -255,15 +305,16 @@ class _EmptyView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.receipt_long_outlined, size: 56, color: Colors.grey[300]),
-          const SizedBox(height: 12),
+          AppIcon(name: AppIconName.orders, size: 56, color: t.text3),
+          const SizedBox(height: AppSpacing.s3),
           Text(
             hasFilter ? l.ordersEmptyFiltered : l.ordersEmpty,
-            style: TextStyle(color: Colors.grey[600]),
+            style: TextStyle(color: t.text2),
           ),
         ],
       ),
@@ -278,17 +329,26 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.s5),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: Text(AppLocalizations.of(context)!.buttonRetry)),
+            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
+            const SizedBox(height: AppSpacing.s3),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: t.text2)),
+            const SizedBox(height: AppSpacing.s4),
+            AppButton(
+              label: l.buttonRetry,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              onPressed: onRetry,
+            ),
           ],
         ),
       ),

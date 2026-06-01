@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api/api_service.dart';
+import '../../core/icons/app_icon.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_text_field.dart';
 import 'projects_provider.dart';
 
@@ -16,7 +19,8 @@ class MilestoneFormScreen extends ConsumerStatefulWidget {
   const MilestoneFormScreen({super.key, required this.projectId});
 
   @override
-  ConsumerState<MilestoneFormScreen> createState() => _MilestoneFormScreenState();
+  ConsumerState<MilestoneFormScreen> createState() =>
+      _MilestoneFormScreenState();
 }
 
 class _MilestoneFormScreenState extends ConsumerState<MilestoneFormScreen> {
@@ -54,57 +58,74 @@ class _MilestoneFormScreenState extends ConsumerState<MilestoneFormScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l.milestoneFormTitle)),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.s4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AppTextField(
-              controller: _nameCtrl,
-              label: l.milestoneNameLabel,
-              hint: l.milestoneNameHint,
+            AppCard(
+              child: Column(
+                children: [
+                  AppTextField(
+                    controller: _nameCtrl,
+                    label: l.milestoneNameLabel,
+                    hint: l.milestoneNameHint,
+                  ),
+                  const SizedBox(height: AppSpacing.s4),
+                  AppTextField(
+                    controller: _amountCtrl,
+                    label: l.milestoneAmountLabel,
+                    hint: '0',
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: AppSpacing.s4),
+                  AppTextField(
+                    controller: _dueDateCtrl,
+                    label: l.milestoneDueDateLabel,
+                    hint: l.commonOptionalLabel,
+                    readOnly: true,
+                    keyboardType: TextInputType.none,
+                    suffixIcon: _dueDate == null
+                        ? Padding(
+                            padding:
+                                const EdgeInsets.only(right: AppSpacing.s2),
+                            child: AppIcon(
+                                name: AppIconName.calendar,
+                                size: 18,
+                                color: t.text2),
+                          )
+                        : IconButton(
+                            icon: AppIcon(
+                                name: AppIconName.close,
+                                size: 18,
+                                color: t.text2),
+                            onPressed: () => setState(() {
+                              _dueDate = null;
+                              _dueDateCtrl.clear();
+                            }),
+                          ),
+                    onTap: _pickDueDate,
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-
-            AppTextField(
-              controller: _amountCtrl,
-              label: l.milestoneAmountLabel,
-              hint: '0',
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
-
-            AppTextField(
-              controller: _dueDateCtrl,
-              label: l.milestoneDueDateLabel,
-              hint: l.commonOptionalLabel,
-              readOnly: true,
-              keyboardType: TextInputType.none,
-              suffixIcon: _dueDate == null
-                  ? const Icon(Icons.calendar_today_outlined, size: 18)
-                  : IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () => setState(() {
-                        _dueDate = null;
-                        _dueDateCtrl.clear();
-                      }),
-                    ),
-              onTap: _pickDueDate,
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.s5),
 
             if (_error != null) ...[
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-              const SizedBox(height: 12),
+              Text(_error!, style: TextStyle(color: t.errorStrong)),
+              const SizedBox(height: AppSpacing.s3),
             ],
 
             AppButton(
               label: l.milestoneAdd,
+              fullWidth: true,
               loading: _saving,
               onPressed: _submit,
             ),
+            const SizedBox(height: AppSpacing.s6),
           ],
         ),
       ),
@@ -118,7 +139,8 @@ class _MilestoneFormScreenState extends ConsumerState<MilestoneFormScreen> {
       setState(() => _error = l.productFormNameRequired);
       return;
     }
-    final amount = int.tryParse(_amountCtrl.text.trim().replaceAll(RegExp(r'\s'), ''));
+    final amount =
+        int.tryParse(_amountCtrl.text.trim().replaceAll(RegExp(r'\s'), ''));
     if (amount == null) {
       setState(() => _error = l.milestoneAmountInvalid);
       return;
@@ -137,7 +159,9 @@ class _MilestoneFormScreenState extends ConsumerState<MilestoneFormScreen> {
       };
 
       await ref.read(apiServiceProvider).createMilestone(widget.projectId, data);
-      await ref.read(projectDetailProvider(widget.projectId).notifier).refresh();
+      await ref
+          .read(projectDetailProvider(widget.projectId).notifier)
+          .refresh();
       if (mounted) context.pop();
     } catch (e) {
       setState(() {

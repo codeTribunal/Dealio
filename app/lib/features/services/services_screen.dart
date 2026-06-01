@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/icons/app_icon.dart';
 import '../../core/models/service.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
+import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_spinner.dart';
 import 'services_provider.dart';
 
 class ServicesScreen extends ConsumerWidget {
@@ -13,41 +18,49 @@ class ServicesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final servicesAsync = ref.watch(servicesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.servicesTitle)),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/services/new'),
-        child: const Icon(Icons.add),
-      ),
-      body: servicesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(e.toString(), textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => ref.read(servicesProvider.notifier).refresh(),
-                  child: Text(l.buttonRetry),
-                ),
-              ],
+      appBar: AppBar(
+        title: Text(l.servicesTitle),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.s3),
+            child: Center(
+              child: AppButton(
+                label: l.serviceFormNewTitle,
+                leftIcon: AppIconName.add,
+                size: AppButtonSize.sm,
+                onPressed: () => context.push('/services/new'),
+              ),
             ),
           ),
+        ],
+      ),
+      body: servicesAsync.when(
+        loading: () => const Center(child: AppSpinner(size: 32)),
+        error: (e, _) => _ErrorView(
+          message: e.toString(),
+          onRetry: () => ref.read(servicesProvider.notifier).refresh(),
         ),
         data: (services) {
           if (services.isEmpty) {
             return Center(
-              child: Text(l.servicesEmpty),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppIcon(name: AppIconName.staff, size: 56, color: t.text3),
+                  const SizedBox(height: AppSpacing.s3),
+                  Text(l.servicesEmpty, style: TextStyle(color: t.text2)),
+                ],
+              ),
             );
           }
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
+          return ListView.separated(
+            padding: const EdgeInsets.all(AppSpacing.s4),
             itemCount: services.length,
+            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.s2),
             itemBuilder: (ctx, i) {
               final service = services[i];
               return _ServiceCard(
@@ -79,45 +92,109 @@ class _ServiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    final t = AppTokens.of(context);
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.s3),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Text(
-                      service.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14),
+                    Expanded(
+                      child: Text(
+                        service.name,
+                        style: TextStyle(
+                          fontWeight: AppFontWeights.semibold,
+                          fontSize: AppTextSizes.sm,
+                          color: t.text1,
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l.durationMinutes(service.durationMinutes),
-                      style:
-                          TextStyle(color: Colors.grey[600], fontSize: 12),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      formatUZS(service.price),
-                      style:
-                          TextStyle(color: Colors.grey[600], fontSize: 12),
-                    ),
+                    const SizedBox(width: AppSpacing.s2),
+                    _ActiveBadge(active: service.active),
                   ],
                 ),
-              ),
-              Switch(
-                value: service.active,
-                onChanged: (_) => onToggle(),
-              ),
-            ],
+                const SizedBox(height: AppSpacing.s1),
+                Text(
+                  '${l.durationMinutes(service.durationMinutes)} · ${formatUZS(service.price)}',
+                  style: TextStyle(
+                    color: t.text2,
+                    fontSize: AppTextSizes.caption,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
           ),
+          Switch(
+            value: service.active,
+            activeThumbColor: t.accent,
+            onChanged: (_) => onToggle(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActiveBadge extends StatelessWidget {
+  final bool active;
+  const _ActiveBadge({required this.active});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    final bg = active ? t.successSoft : t.warningSoft;
+    final fg = active ? t.successStrong : t.warningStrong;
+    final label = active ? l.commonActive : l.commonPaused;
+    return Container(
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.s2, vertical: 2),
+      decoration: BoxDecoration(color: bg, borderRadius: AppRadii.pill),
+      child: Text(
+        label,
+        style: TextStyle(
+            fontSize: AppTextSizes.caption,
+            fontWeight: AppFontWeights.semibold,
+            color: fg),
+      ),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _ErrorView({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.s5),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
+            const SizedBox(height: AppSpacing.s3),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: t.text2)),
+            const SizedBox(height: AppSpacing.s4),
+            AppButton(
+              label: l.buttonRetry,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              onPressed: onRetry,
+            ),
+          ],
         ),
       ),
     );

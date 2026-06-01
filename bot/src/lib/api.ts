@@ -18,6 +18,18 @@ export class SuspendedError extends Error {
   }
 }
 
+/**
+ * Thrown when the backend rejects an appointment create with 409 SLOT_UNAVAILABLE
+ * (the requested time was taken/blocked between availability display and confirm).
+ * The booking scene catches this to send the customer back to slot selection.
+ */
+export class SlotUnavailableError extends Error {
+  constructor() {
+    super('SLOT_UNAVAILABLE');
+    this.name = 'SlotUnavailableError';
+  }
+}
+
 const client = axios.create({
   baseURL: process.env.BACKEND_URL ?? 'http://localhost:3000',
   headers: {
@@ -38,6 +50,13 @@ client.interceptors.response.use(
     ) {
       const reason = (error.response.data as { reason?: string }).reason;
       return Promise.reject(new SuspendedError(reason));
+    }
+    if (
+      axios.isAxiosError(error) &&
+      error.response?.status === 409 &&
+      (error.response.data as { error?: string } | undefined)?.error === 'SLOT_UNAVAILABLE'
+    ) {
+      return Promise.reject(new SlotUnavailableError());
     }
     return Promise.reject(error);
   },

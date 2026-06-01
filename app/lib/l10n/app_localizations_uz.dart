@@ -773,6 +773,30 @@ class AppLocalizationsUz extends AppLocalizations {
   String get homeNoActivity => 'Bugun faoliyat yo\'q';
 
   @override
+  String get homeWelcome => 'Assalomu alaykum';
+
+  @override
+  String get homeHeroTodayOrders => 'Bugungi buyurtmalar';
+
+  @override
+  String get homeStatPending => 'Kutilayotgan to\'lovlar';
+
+  @override
+  String get homeStatNewCustomers => 'Yangi mijozlar';
+
+  @override
+  String homePendingPaymentsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ta to\'lov kutilmoqda',
+      one: '1 ta to\'lov kutilmoqda',
+      zero: 'To\'lov kutilmayapti',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get ordersTitle => 'Buyurtmalar';
 
   @override
@@ -1494,4 +1518,108 @@ class AppLocalizationsUz extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get schedulingWorkingHours => 'Ish vaqti';
+
+  @override
+  String get schedulingWorkingHoursHint =>
+      'Mijozlar qachon yozila oladi. Vaqt Toshkent vaqti bilan, 24 soatlik.';
+
+  @override
+  String get schedulingOpen => 'Ochiq';
+
+  @override
+  String get schedulingClosed => 'Yopiq';
+
+  @override
+  String get schedulingDayMon => 'Dushanba';
+
+  @override
+  String get schedulingDayTue => 'Seshanba';
+
+  @override
+  String get schedulingDayWed => 'Chorshanba';
+
+  @override
+  String get schedulingDayThu => 'Payshanba';
+
+  @override
+  String get schedulingDayFri => 'Juma';
+
+  @override
+  String get schedulingDaySat => 'Shanba';
+
+  @override
+  String get schedulingDaySun => 'Yakshanba';
+
+  @override
+  String get schedulingStart => 'Boshlanishi';
+
+  @override
+  String get schedulingEnd => 'Tugashi';
+
+  @override
+  String get schedulingTimeInvalid =>
+      'Boshlanish vaqti tugash vaqtidan oldin bo‘lishi kerak.';
+
+  @override
+  String get schedulingBuffer => 'Navbatlar orasidagi tanaffus';
+
+  @override
+  String get schedulingBufferHint =>
+      'Har bir navbatdan keyin qo‘shiladigan tanaffus, masalan tozalash uchun.';
+
+  @override
+  String get schedulingBufferUnit => 'daqiqa';
+
+  @override
+  String get schedulingWorkingHoursSaved => 'Ish vaqti saqlandi';
+
+  @override
+  String get schedulingBlockedTime => 'Band qilingan vaqt';
+
+  @override
+  String get schedulingBlockedTimeHint =>
+      'Ta’til, tanaffus yoki bir martalik yopilishlarni band qiling, shunda mijozlar yozila olmaydi.';
+
+  @override
+  String get schedulingAddBlocked => 'Band vaqt qo‘shish';
+
+  @override
+  String get schedulingNoBlocked => 'Band qilingan vaqt yo‘q';
+
+  @override
+  String get schedulingScope => 'Kimga tegishli';
+
+  @override
+  String get schedulingWholeBusiness => 'Butun biznes';
+
+  @override
+  String get schedulingDate => 'Sana';
+
+  @override
+  String get schedulingReason => 'Sabab';
+
+  @override
+  String get schedulingReasonHint => 'Ixtiyoriy, masalan Bayram kuni';
+
+  @override
+  String get schedulingAddBlockedSubmit => 'Qo‘shish';
+
+  @override
+  String get schedulingDeleteBlockedTitle => 'Band vaqt o‘chirilsinmi?';
+
+  @override
+  String get schedulingDeleteBlockedConfirm =>
+      'Bu vaqt yana band qilish uchun ochiq bo‘ladi.';
+
+  @override
+  String get staffFormDaysOffLabel => 'Dam olish kunlari';
+
+  @override
+  String get staffFormDaysOffHint => 'Bu xodim ishlamaydigan aniq sanalar.';
+
+  @override
+  String get staffFormAddDayOff => 'Dam olish kuni qo‘shish';
 }

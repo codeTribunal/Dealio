@@ -5,41 +5,17 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api/api_service.dart';
+import '../../core/icons/app_icon.dart';
 import '../../core/models/project.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import '../../shared/utils/status_labels.dart';
+import '../../shared/widgets/app_badge.dart';
+import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_spinner.dart';
 import 'projects_provider.dart';
-
-const _statusColor = {
-  'PROPOSAL_SENT': Color(0xFF6366F1),
-  'IN_PROGRESS': Color(0xFF2563EB),
-  'REVIEW': Color(0xFFD97706),
-  'COMPLETED': Color(0xFF059669),
-  'CANCELLED': Color(0xFFDC2626),
-};
-
-String _milestoneStatusDetailLabel(AppLocalizations l, String status) {
-  switch (status) {
-    case 'PENDING':
-      return l.milestoneStatusPending;
-    case 'SUBMITTED_FOR_REVIEW':
-      return l.milestoneAwaitingReview;
-    case 'APPROVED':
-      return l.milestoneApprovedByClient;
-    case 'PAYMENT_RECEIVED':
-      return l.milestoneStatusPaymentReceived;
-    default:
-      return status;
-  }
-}
-
-const _milestoneStatusColor = {
-  'PENDING': Color(0xFF6B7280),
-  'SUBMITTED_FOR_REVIEW': Color(0xFFD97706),
-  'APPROVED': Color(0xFF2563EB),
-  'PAYMENT_RECEIVED': Color(0xFF059669),
-};
 
 const _nextStatusCodes = ['IN_PROGRESS', 'REVIEW', 'COMPLETED', 'CANCELLED'];
 
@@ -65,6 +41,7 @@ class ProjectDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final projectAsync = ref.watch(projectDetailProvider(projectId));
 
     return Scaffold(
@@ -79,9 +56,9 @@ class ProjectDetailScreen extends ConsumerWidget {
                   .map((code) => PopupMenuItem(
                       value: code, child: Text(_nextStatusLabel(l, code))))
                   .toList(),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                child: Icon(Icons.more_vert),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
+                child: AppIcon(name: AppIconName.menu, color: t.text1),
               ),
             ),
             loading: () => const SizedBox.shrink(),
@@ -90,32 +67,47 @@ class ProjectDetailScreen extends ConsumerWidget {
         ],
       ),
       body: projectAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: AppSpinner(size: 32)),
         error: (e, _) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(e.toString()),
-              TextButton(
-                onPressed: () => ref.read(projectDetailProvider(projectId).notifier).refresh(),
-                child: Text(l.buttonRetry),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.s5),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppIcon(
+                    name: AppIconName.close, size: 48, color: t.errorStrong),
+                const SizedBox(height: AppSpacing.s3),
+                Text(e.toString(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: t.text2)),
+                const SizedBox(height: AppSpacing.s4),
+                AppButton(
+                  label: l.buttonRetry,
+                  variant: AppButtonVariant.secondary,
+                  size: AppButtonSize.sm,
+                  onPressed: () => ref
+                      .read(projectDetailProvider(projectId).notifier)
+                      .refresh(),
+                ),
+              ],
+            ),
           ),
         ),
         data: (project) => RefreshIndicator(
+          color: t.accent,
           onRefresh: () =>
               ref.read(projectDetailProvider(projectId).notifier).refresh(),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.s4, AppSpacing.s4, AppSpacing.s4, AppSpacing.s6),
             children: [
               _HeaderCard(project: project),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.s3),
               _ShareProposalButton(project: project),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.s5),
               _MilestonesSection(project: project),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.s5),
               _InvoicesSection(project: project),
             ],
           ),
@@ -124,13 +116,17 @@ class ProjectDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _onStatusSelected(
-      BuildContext context, WidgetRef ref, Project project, String status) async {
-    await ref.read(projectDetailProvider(projectId).notifier).updateStatus(status);
+  void _onStatusSelected(BuildContext context, WidgetRef ref, Project project,
+      String status) async {
+    await ref
+        .read(projectDetailProvider(projectId).notifier)
+        .updateStatus(status);
     if (context.mounted) {
       final l = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.projectStatusUpdated(projectStatusLabel(l, status)))),
+        SnackBar(
+            content: Text(
+                l.projectStatusUpdated(projectStatusLabel(l, status)))),
       );
     }
   }
@@ -143,104 +139,100 @@ class _HeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final color = _statusColor[project.status] ?? Colors.grey;
-    final label = projectStatusLabel(l, project.status);
+    final t = AppTokens.of(context);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    project.name,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.bold),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  project.name,
+                  style: TextStyle(
+                    fontSize: AppTextSizes.lg,
+                    fontWeight: AppFontWeights.bold,
+                    color: t.text1,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w600, color: color),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _InfoRow(
-              icon: Icons.person_outline,
-              label: l.projectClient,
-              value: project.customer.name,
-            ),
-            if (project.customer.phone != null)
-              _InfoRow(
-                icon: Icons.phone_outlined,
-                label: l.projectPhone,
-                value: project.customer.phone!,
               ),
-            _InfoRow(
-              icon: Icons.payments_outlined,
-              label: l.commonTotal,
-              value: formatUZS(project.totalPrice),
-              bold: true,
-            ),
-            if (project.startDate != null)
-              _InfoRow(
-                icon: Icons.play_arrow_outlined,
-                label: l.projectStart,
-                value: DateFormat('d MMM yyyy').format(project.startDate!),
-              ),
-            if (project.deadline != null)
-              _InfoRow(
-                icon: Icons.flag_outlined,
-                label: l.projectDeadline,
-                value: DateFormat('d MMM yyyy').format(project.deadline!),
-              ),
-            if (project.description != null && project.description!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(
-                l.projectScope,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelSmall
-                    ?.copyWith(color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 4),
-              Text(project.description!, style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: AppSpacing.s2),
+              AppBadge(status: project.status, type: AppBadgeType.project),
             ],
-            if (project.paymentTerms != null &&
-                project.paymentTerms!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(
-                l.projectPaymentTerms,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelSmall
-                    ?.copyWith(color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 4),
-              Text(project.paymentTerms!, style: const TextStyle(fontSize: 14)),
-            ],
+          ),
+          const SizedBox(height: AppSpacing.s3),
+          _InfoRow(
+            icon: AppIconName.customers,
+            label: l.projectClient,
+            value: project.customer.name,
+          ),
+          if (project.customer.phone != null)
+            _InfoRow(
+              icon: AppIconName.customers,
+              label: l.projectPhone,
+              value: project.customer.phone!,
+            ),
+          _InfoRow(
+            icon: AppIconName.revenue,
+            label: l.commonTotal,
+            value: formatUZS(project.totalPrice),
+            bold: true,
+          ),
+          if (project.startDate != null)
+            _InfoRow(
+              icon: AppIconName.calendar,
+              label: l.projectStart,
+              value: DateFormat('d MMM yyyy').format(project.startDate!),
+            ),
+          if (project.deadline != null)
+            _InfoRow(
+              icon: AppIconName.calendar,
+              label: l.projectDeadline,
+              value: DateFormat('d MMM yyyy').format(project.deadline!),
+            ),
+          if (project.description != null &&
+              project.description!.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.s3),
+            _FieldLabel(l.projectScope),
+            const SizedBox(height: AppSpacing.s1),
+            Text(project.description!,
+                style: TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
           ],
-        ),
+          if (project.paymentTerms != null &&
+              project.paymentTerms!.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.s3),
+            _FieldLabel(l.projectPaymentTerms),
+            const SizedBox(height: AppSpacing.s1),
+            Text(project.paymentTerms!,
+                style: TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FieldLabel extends StatelessWidget {
+  final String text;
+  const _FieldLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: AppTextSizes.caption,
+        fontWeight: AppFontWeights.semibold,
+        color: t.text2,
       ),
     );
   }
 }
 
 class _InfoRow extends StatelessWidget {
-  final IconData icon;
+  final AppIconName icon;
   final String label;
   final String value;
   final bool bold;
@@ -254,22 +246,26 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s1),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: Colors.grey[500]),
-          const SizedBox(width: 8),
+          AppIcon(name: icon, size: 16, color: t.text2),
+          const SizedBox(width: AppSpacing.s2),
           Text(
             '$label: ',
-            style: TextStyle(color: Colors.grey[600], fontSize: 13),
+            style: TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
           ),
           Expanded(
             child: Text(
               value,
               style: TextStyle(
-                fontSize: 13,
-                fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+                fontSize: AppTextSizes.sm,
+                color: t.text1,
+                fontWeight: bold ? AppFontWeights.bold : AppFontWeights.regular,
+                fontFeatures:
+                    bold ? const [FontFeature.tabularFigures()] : null,
               ),
             ),
           ),
@@ -286,7 +282,11 @@ class _ShareProposalButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return OutlinedButton.icon(
+    return AppButton(
+      label: l.projectShareProposal,
+      variant: AppButtonVariant.secondary,
+      leftIcon: AppIconName.inbox,
+      fullWidth: true,
       onPressed: () {
         // In production this would be the deployed backend URL
         const baseUrl = 'http://localhost:3000/api/v1/proposals';
@@ -296,8 +296,6 @@ class _ShareProposalButton extends StatelessWidget {
           SnackBar(content: Text(l.projectProposalCopied)),
         );
       },
-      icon: const Icon(Icons.share_outlined, size: 18),
-      label: Text(l.projectShareProposal),
     );
   }
 }
@@ -311,114 +309,106 @@ class _MilestonesSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              l.projectMilestones,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
+    final t = AppTokens.of(context);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppCardHeader(
+            title: l.projectMilestones,
+            trailing: AppButton(
+              label: l.buttonAdd,
+              variant: AppButtonVariant.ghost,
+              size: AppButtonSize.sm,
+              leftIcon: AppIconName.add,
+              onPressed: () =>
+                  context.push('/projects/${project.id}/milestone/new'),
             ),
-            const Spacer(),
-            TextButton.icon(
-              onPressed: () => context.push('/projects/${project.id}/milestone/new'),
-              icon: const Icon(Icons.add, size: 16),
-              label: Text(l.buttonAdd),
-              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (project.milestones.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              l.projectNoMilestones,
-              style: TextStyle(color: Colors.grey[500], fontSize: 13),
-            ),
-          )
-        else
-          ...project.milestones.map(
-            (m) => _MilestoneCard(projectId: project.id, milestone: m),
           ),
-      ],
+          const SizedBox(height: AppSpacing.s2),
+          if (project.milestones.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.s2),
+              child: Text(
+                l.projectNoMilestones,
+                style: TextStyle(color: t.text3, fontSize: AppTextSizes.sm),
+              ),
+            )
+          else
+            ...project.milestones.map(
+              (m) => _MilestoneRow(projectId: project.id, milestone: m),
+            ),
+        ],
+      ),
     );
   }
 }
 
-class _MilestoneCard extends ConsumerWidget {
+class _MilestoneRow extends ConsumerWidget {
   final String projectId;
   final Milestone milestone;
-  const _MilestoneCard({required this.projectId, required this.milestone});
+  const _MilestoneRow({required this.projectId, required this.milestone});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
-    final color = _milestoneStatusColor[milestone.status] ?? Colors.grey;
-    final label = _milestoneStatusDetailLabel(l, milestone.status);
+    final t = AppTokens.of(context);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {},
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.s2),
+      padding: const EdgeInsets.all(AppSpacing.s3),
+      decoration: BoxDecoration(
+        color: t.surface2,
+        borderRadius: AppRadii.md,
+        border: Border.all(color: t.border),
+      ),
+      child: GestureDetector(
         onLongPress: milestone.status != 'PENDING'
             ? () => _showResetDialog(context, ref)
             : null,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      milestone.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14),
-                    ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    milestone.name,
+                    style: TextStyle(
+                        fontWeight: AppFontWeights.semibold,
+                        fontSize: AppTextSizes.sm,
+                        color: t.text1),
                   ),
+                ),
+                Text(
+                  formatUZS(milestone.amount),
+                  style: TextStyle(
+                    fontWeight: AppFontWeights.bold,
+                    fontSize: AppTextSizes.sm,
+                    color: t.text1,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.s1),
+            Row(
+              children: [
+                _MilestoneChip(status: milestone.status),
+                if (milestone.dueDate != null) ...[
+                  const SizedBox(width: AppSpacing.s2),
                   Text(
-                    formatUZS(milestone.amount),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14),
+                    l.projectDuePrefix(
+                        DateFormat('d MMM').format(milestone.dueDate!)),
+                    style: TextStyle(
+                        fontSize: AppTextSizes.caption, color: t.text3),
                   ),
                 ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                          fontSize: 11, fontWeight: FontWeight.w600, color: color),
-                    ),
-                  ),
-                  if (milestone.dueDate != null) ...[
-                    const SizedBox(width: 8),
-                    Text(
-                      l.projectDuePrefix(DateFormat('d MMM').format(milestone.dueDate!)),
-                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 10),
-              _MilestoneActions(projectId: projectId, milestone: milestone),
-            ],
-          ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.s3),
+            _MilestoneActions(projectId: projectId, milestone: milestone),
+          ],
         ),
       ),
     );
@@ -426,26 +416,73 @@ class _MilestoneCard extends ConsumerWidget {
 
   void _showResetDialog(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l.projectResetMilestone),
-        content: Text(l.projectResetMilestoneBody(milestone.name)),
+        backgroundColor: t.surface,
+        title: Text(l.projectResetMilestone, style: TextStyle(color: t.text1)),
+        content: Text(l.projectResetMilestoneBody(milestone.name),
+            style: TextStyle(color: t.text2)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(l.buttonCancel),
+            child: Text(l.buttonCancel, style: TextStyle(color: t.text2)),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               ref
                   .read(projectDetailProvider(projectId).notifier)
                   .resetMilestoneToPending(milestone.id);
             },
-            child: Text(l.projectResetToPending),
+            child: Text(l.projectResetToPending,
+                style: TextStyle(color: t.accent)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Milestone status chip preserving the original 4-state colour design,
+/// mapped to tokens: pending → neutral, submitted → warning, approved →
+/// accent, payment received → success. (The shared [AppBadge] only has 3
+/// semantic tones, which would flatten approved/received into amber.)
+class _MilestoneChip extends StatelessWidget {
+  final String status;
+  const _MilestoneChip({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    final (Color bg, Color fg, String label) = switch (status) {
+      'PENDING' => (t.surface2, t.text2, l.milestoneStatusPending),
+      'SUBMITTED_FOR_REVIEW' => (
+          t.warningSoft,
+          t.warningStrong,
+          l.milestoneAwaitingReview
+        ),
+      'APPROVED' => (t.accentSoft, t.accent, l.milestoneApprovedByClient),
+      'PAYMENT_RECEIVED' => (
+          t.successSoft,
+          t.successStrong,
+          l.milestoneStatusPaymentReceived
+        ),
+      _ => (t.surface2, t.text2, status),
+    };
+    return Container(
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.s2, vertical: 2),
+      decoration: BoxDecoration(color: bg, borderRadius: AppRadii.pill),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: AppTextSizes.caption,
+          fontWeight: AppFontWeights.semibold,
+          color: fg,
+        ),
       ),
     );
   }
@@ -459,43 +496,41 @@ class _MilestoneActions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final notifier = ref.read(projectDetailProvider(projectId).notifier);
 
     switch (milestone.status) {
       case 'PENDING':
-        return SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: () async {
-              await notifier.submitMilestone(milestone.id);
-            },
-            child: Text(l.projectSubmitForReview),
-          ),
+        return AppButton(
+          label: l.projectSubmitForReview,
+          variant: AppButtonVariant.secondary,
+          size: AppButtonSize.sm,
+          fullWidth: true,
+          onPressed: () => notifier.submitMilestone(milestone.id),
         );
       case 'SUBMITTED_FOR_REVIEW':
         return Align(
           alignment: Alignment.centerLeft,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s3, vertical: AppSpacing.s1),
             decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: t.warningSoft,
+              borderRadius: AppRadii.sm,
             ),
             child: Text(
               l.projectWaitingApproval,
-              style: const TextStyle(fontSize: 12, color: Colors.orange),
+              style: TextStyle(
+                  fontSize: AppTextSizes.caption, color: t.warningStrong),
             ),
           ),
         );
       case 'APPROVED':
-        return SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: () async {
-              await notifier.markMilestonePaymentReceived(milestone.id);
-            },
-            child: Text(l.projectMarkPaymentReceived),
-          ),
+        return AppButton(
+          label: l.projectMarkPaymentReceived,
+          size: AppButtonSize.sm,
+          fullWidth: true,
+          onPressed: () => notifier.markMilestonePaymentReceived(milestone.id),
         );
       case 'PAYMENT_RECEIVED':
         return const SizedBox.shrink();
@@ -514,41 +549,36 @@ class _InvoicesSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              l.projectInvoices,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const Spacer(),
-            TextButton.icon(
+    final t = AppTokens.of(context);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppCardHeader(
+            title: l.projectInvoices,
+            trailing: AppButton(
+              label: l.projectGenerate,
+              variant: AppButtonVariant.ghost,
+              size: AppButtonSize.sm,
+              leftIcon: AppIconName.add,
               onPressed: () => _showGenerateInvoiceDialog(context, ref),
-              icon: const Icon(Icons.add, size: 16),
-              label: Text(l.projectGenerate),
-              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (project.invoices.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              l.projectNoInvoices,
-              style: TextStyle(color: Colors.grey[500], fontSize: 13),
-            ),
-          )
-        else
-          ...project.invoices.map(
-            (inv) => _InvoiceCard(projectId: project.id, invoice: inv),
           ),
-      ],
+          const SizedBox(height: AppSpacing.s2),
+          if (project.invoices.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.s2),
+              child: Text(
+                l.projectNoInvoices,
+                style: TextStyle(color: t.text3, fontSize: AppTextSizes.sm),
+              ),
+            )
+          else
+            ...project.invoices.map(
+              (inv) => _InvoiceRow(projectId: project.id, invoice: inv),
+            ),
+        ],
+      ),
     );
   }
 
@@ -560,95 +590,89 @@ class _InvoicesSection extends ConsumerWidget {
   }
 }
 
-class _InvoiceCard extends ConsumerWidget {
+class _InvoiceRow extends ConsumerWidget {
   final String projectId;
   final Invoice invoice;
-  const _InvoiceCard({required this.projectId, required this.invoice});
+  const _InvoiceRow({required this.projectId, required this.invoice});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final isPaid = invoice.status == 'PAID';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    invoice.invoiceNumber,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.s2),
+      padding: const EdgeInsets.all(AppSpacing.s3),
+      decoration: BoxDecoration(
+        color: t.surface2,
+        borderRadius: AppRadii.md,
+        border: Border.all(color: t.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  invoice.invoiceNumber,
+                  style: TextStyle(
+                      fontWeight: AppFontWeights.bold,
+                      fontSize: AppTextSizes.sm,
+                      color: t.text1),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: isPaid
-                        ? Colors.green.withValues(alpha: 0.12)
-                        : Colors.orange.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    isPaid ? l.invoiceStatusPaid : l.invoiceStatusUnpaid,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: isPaid ? Colors.green[700] : Colors.orange[700],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              formatUZS(invoice.total),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-            if (invoice.dueDate != null)
-              Text(
-                l.projectDuePrefix(DateFormat('d MMM yyyy').format(invoice.dueDate!)),
-                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
               ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () {
-                    const baseUrl = 'http://localhost:3000/api/v1/invoices';
-                    final link = '$baseUrl/${invoice.id}';
-                    Clipboard.setData(ClipboardData(text: link));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l.projectInvoiceCopied)),
-                    );
-                  },
-                  icon: const Icon(Icons.share_outlined, size: 16),
-                  label: Text(l.buttonShare),
-                  style: OutlinedButton.styleFrom(
-                      visualDensity: VisualDensity.compact),
-                ),
-                if (!isPaid) ...[
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: () async {
-                      await ref
-                          .read(projectDetailProvider(projectId).notifier)
-                          .markInvoicePaid(invoice.id);
-                    },
-                    style: FilledButton.styleFrom(
-                        visualDensity: VisualDensity.compact),
-                    child: Text(l.projectMarkPaid),
-                  ),
-                ],
-              ],
+              AppBadge(status: invoice.status, type: AppBadgeType.invoice),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s1),
+          Text(
+            formatUZS(invoice.total),
+            style: TextStyle(
+              fontWeight: AppFontWeights.bold,
+              fontSize: AppTextSizes.base,
+              color: t.text1,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
-          ],
-        ),
+          ),
+          if (invoice.dueDate != null)
+            Text(
+              l.projectDuePrefix(
+                  DateFormat('d MMM yyyy').format(invoice.dueDate!)),
+              style:
+                  TextStyle(fontSize: AppTextSizes.caption, color: t.text3),
+            ),
+          const SizedBox(height: AppSpacing.s3),
+          Row(
+            children: [
+              AppButton(
+                label: l.buttonShare,
+                variant: AppButtonVariant.secondary,
+                size: AppButtonSize.sm,
+                leftIcon: AppIconName.inbox,
+                onPressed: () {
+                  const baseUrl = 'http://localhost:3000/api/v1/invoices';
+                  final link = '$baseUrl/${invoice.id}';
+                  Clipboard.setData(ClipboardData(text: link));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l.projectInvoiceCopied)),
+                  );
+                },
+              ),
+              if (!isPaid) ...[
+                const SizedBox(width: AppSpacing.s2),
+                AppButton(
+                  label: l.projectMarkPaid,
+                  size: AppButtonSize.sm,
+                  onPressed: () => ref
+                      .read(projectDetailProvider(projectId).notifier)
+                      .markInvoicePaid(invoice.id),
+                ),
+              ],
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -682,43 +706,48 @@ class _GenerateInvoiceDialogState extends ConsumerState<_GenerateInvoiceDialog> 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return AlertDialog(
-      title: Text(l.projectGenerateInvoice),
+      backgroundColor: t.surface,
+      title: Text(l.projectGenerateInvoice, style: TextStyle(color: t.text1)),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: _descCtrl,
-              decoration: InputDecoration(labelText: l.productFormDescLabel),
+              style: TextStyle(color: t.text1),
+              decoration: _dialogDecoration(context, l.productFormDescLabel),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.s2),
             Row(
               children: [
                 SizedBox(
                   width: 70,
                   child: TextField(
                     controller: _qtyCtrl,
-                    decoration: InputDecoration(labelText: l.projectQty),
+                    style: TextStyle(color: t.text1),
+                    decoration: _dialogDecoration(context, l.projectQty),
                     keyboardType: TextInputType.number,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.s3),
                 Expanded(
                   child: TextField(
                     controller: _priceCtrl,
-                    decoration: InputDecoration(labelText: l.projectUnitPrice),
+                    style: TextStyle(color: t.text1),
+                    decoration: _dialogDecoration(context, l.projectUnitPrice),
                     keyboardType: TextInputType.number,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.s2),
             TextField(
               controller: _dueDateCtrl,
-              decoration: InputDecoration(
-                  labelText: l.projectDueDateLabel,
-                  hintText: l.commonOptionalLabel),
+              style: TextStyle(color: t.text1),
+              decoration: _dialogDecoration(context, l.projectDueDateLabel,
+                  hint: l.commonOptionalLabel),
             ),
           ],
         ),
@@ -726,11 +755,13 @@ class _GenerateInvoiceDialogState extends ConsumerState<_GenerateInvoiceDialog> 
       actions: [
         TextButton(
           onPressed: _saving ? null : () => Navigator.pop(context),
-          child: Text(l.buttonCancel),
+          child: Text(l.buttonCancel, style: TextStyle(color: t.text2)),
         ),
-        FilledButton(
+        AppButton(
+          label: l.projectGenerate,
+          size: AppButtonSize.sm,
+          loading: _saving,
           onPressed: _saving ? null : _submit,
-          child: Text(l.projectGenerate),
         ),
       ],
     );
@@ -767,4 +798,24 @@ class _GenerateInvoiceDialogState extends ConsumerState<_GenerateInvoiceDialog> 
       }
     }
   }
+}
+
+InputDecoration _dialogDecoration(BuildContext context, String label,
+    {String? hint}) {
+  final t = AppTokens.of(context);
+  OutlineInputBorder border(Color color, [double width = 1]) =>
+      OutlineInputBorder(
+        borderRadius: AppRadii.md,
+        borderSide: BorderSide(color: color, width: width),
+      );
+  return InputDecoration(
+    labelText: label,
+    labelStyle: TextStyle(color: t.text2),
+    hintText: hint,
+    hintStyle: TextStyle(color: t.text3),
+    isDense: true,
+    border: border(t.border),
+    enabledBorder: border(t.border),
+    focusedBorder: border(t.accent, 2),
+  );
 }

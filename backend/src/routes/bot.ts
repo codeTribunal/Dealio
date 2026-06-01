@@ -8,6 +8,7 @@ import { sendTelegramMessage } from '../lib/telegram.js';
 import { sendPushToAll } from '../lib/push.js';
 import { getBotToken, hasBotToken } from '../lib/getBotToken.js';
 import { PLAN_LIMITS, planLimitError } from '../lib/planLimits.js';
+import { isSlotBookable } from '../services/availability.js';
 
 function verifyBotSecret(request: FastifyRequest, reply: FastifyReply): boolean {
   const secret = request.headers['x-bot-secret'];
@@ -525,8 +526,28 @@ export default async function botRoutes(app: FastifyInstance) {
     if (!customer) return sendError(reply, 404, 'Customer not found');
     if (!service) return sendError(reply, 404, 'Service not found');
 
+    let staff: { id: string; daysOff: Date[] } | null = null;
+    if (staffId) {
+      staff = await prisma.staff.findFirst({
+        where: { id: staffId, businessId: business.id, deletedAt: null },
+      });
+      if (!staff) return sendError(reply, 404, 'Staff member not found');
+    }
+
     const start = new Date(startTime);
     const end = new Date(start.getTime() + service.durationMinutes * 60_000);
+
+    // Write-time conflict guard — re-validate the requested slot is still free
+    // (working hours, day off, blocked time, buffer, overlap). Closes the
+    // double-booking TOCTOU gap between availability display and creation.
+    const bookable = await isSlotBookable({ business, service, staff, startTime: start });
+    if (!bookable) {
+      console.log('[bot/appointments] rejected: slot unavailable', startTime);
+      return reply.status(409).send({
+        error: 'SLOT_UNAVAILABLE',
+        message: 'The requested time is no longer available.',
+      });
+    }
 
     const appointment = await prisma.appointment.create({
       data: {

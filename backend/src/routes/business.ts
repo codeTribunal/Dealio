@@ -21,6 +21,7 @@ const SAFE_BUSINESS_SELECT = {
   botUsername: true,
   calendarToken: true,
   workingHours: true,
+  bufferMinutes: true,
   ownerTelegramChatId: true,
   ownerId: true,
   plan: true,
@@ -42,13 +43,32 @@ const createBusinessBody = z.object({
   botUsername: z.string().optional(),
 });
 
+// Working hours: keys "0".."6" (0=Sunday … 6=Saturday, Asia/Tashkent local),
+// each value either { start: "HH:MM", end: "HH:MM" } or null = closed.
+const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must be in HH:MM format');
+const dayWindowSchema = z
+  .object({ start: hhmm, end: hhmm })
+  .refine(
+    (d) => {
+      const [sh, sm] = d.start.split(':').map(Number);
+      const [eh, em] = d.end.split(':').map(Number);
+      return sh * 60 + sm < eh * 60 + em;
+    },
+    { message: 'Working day start must be before end' },
+  );
+const workingHoursSchema = z.record(
+  z.enum(['0', '1', '2', '3', '4', '5', '6']),
+  z.union([dayWindowSchema, z.null()]),
+);
+
 const updateBusinessBody = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional(),
   photoUrl: z.string().url().optional(),
   mode: z.array(z.enum(['PRODUCTS', 'SERVICES', 'FREELANCE'])).min(1).optional(),
   language: z.enum(['UZBEK', 'RUSSIAN', 'ENGLISH']).optional(),
-  workingHours: z.record(z.any()).optional(),
+  workingHours: workingHoursSchema.optional(),
+  bufferMinutes: z.number().int().min(0).max(120).optional(),
   botToken: z.string().optional(),
   botUsername: z.string().optional(),
   ownerTelegramChatId: z.string().optional(),

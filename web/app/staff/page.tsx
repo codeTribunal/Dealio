@@ -4,7 +4,7 @@ import { Users, Plus, X, Send, Pencil, CheckCircle, AlertCircle } from 'lucide-r
 import AuthLayout from '@/components/AuthLayout'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import { getStaff, createStaff, updateStaff, deleteStaff, getServices } from '@/lib/api'
-import { getInitials, formatUZS } from '@/lib/format'
+import { getInitials, formatUZS, formatDate } from '@/lib/format'
 import type { StaffMember, Service } from '@/types'
 
 export default function StaffPage() {
@@ -21,6 +21,9 @@ export default function StaffPage() {
   const [formName, setFormName] = useState('')
   const [formTelegramHandle, setFormTelegramHandle] = useState('')
   const [formServiceIds, setFormServiceIds] = useState<string[]>([])
+  // Days off: list of 'YYYY-MM-DD' strings (whole-day offs for this staff member).
+  const [formDaysOff, setFormDaysOff] = useState<string[]>([])
+  const [dayOffInput, setDayOffInput] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
 
   function fetchData() {
@@ -44,6 +47,8 @@ export default function StaffPage() {
     setFormName('')
     setFormTelegramHandle('')
     setFormServiceIds([])
+    setFormDaysOff([])
+    setDayOffInput('')
     setFormError(null)
     setShowForm(true)
   }
@@ -53,9 +58,24 @@ export default function StaffPage() {
     setFormName(member.name)
     setFormTelegramHandle(member.telegramHandle || '')
     setFormServiceIds(member.staffServices.map((ss) => ss.service.id))
+    // Stored as DateTime[] (UTC midnight); normalize to 'YYYY-MM-DD' for editing.
+    setFormDaysOff((member.daysOff || []).map((d) => d.slice(0, 10)).sort())
+    setDayOffInput('')
     setFormError(null)
     setShowDeleteConfirm(false)
     setShowForm(true)
+  }
+
+  const addDayOff = () => {
+    if (!dayOffInput) return
+    setFormDaysOff((prev) =>
+      prev.includes(dayOffInput) ? prev : [...prev, dayOffInput].sort()
+    )
+    setDayOffInput('')
+  }
+
+  const removeDayOff = (date: string) => {
+    setFormDaysOff((prev) => prev.filter((d) => d !== date))
   }
 
   const handleClose = () => {
@@ -81,6 +101,7 @@ export default function StaffPage() {
         name: formName.trim(),
         telegramHandle: formTelegramHandle.trim() || undefined,
         serviceIds: formServiceIds,
+        daysOff: formDaysOff,
       }
       if (editingStaff) {
         const updated = await updateStaff(editingStaff.id, payload)
@@ -308,6 +329,54 @@ export default function StaffPage() {
                         </button>
                       )
                     })}
+                  </div>
+                )}
+              </div>
+
+              {/* Days off */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Days off
+                </label>
+                <p className="text-xs text-gray-400 mb-3">
+                  Specific dates this staff member is unavailable
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={dayOffInput}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setDayOffInput(e.target.value)}
+                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={addDayOff}
+                    disabled={!dayOffInput}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Plus size={16} />
+                    Add
+                  </button>
+                </div>
+                {formDaysOff.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {formDaysOff.map((date) => (
+                      <span
+                        key={date}
+                        className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium"
+                      >
+                        {formatDate(date + 'T00:00:00')}
+                        <button
+                          type="button"
+                          onClick={() => removeDayOff(date)}
+                          aria-label={`Remove ${date}`}
+                          className="text-gray-400 hover:text-red-600 transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </span>
+                    ))}
                   </div>
                 )}
               </div>

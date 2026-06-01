@@ -86,6 +86,20 @@ class SettingsNotifier extends AsyncNotifier<SettingsState> {
     ref.invalidate(businessProvider);
   }
 
+  Future<void> saveWorkingHours(
+    Map<String, dynamic> workingHours,
+    int bufferMinutes,
+  ) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final updated = await ref.read(apiServiceProvider).updateBusiness({
+      'workingHours': workingHours,
+      'bufferMinutes': bufferMinutes,
+    });
+    state = AsyncData(current.copyWith(business: updated));
+    ref.invalidate(businessProvider);
+  }
+
   Future<void> saveMode(List<String> mode) async {
     final current = state.valueOrNull;
     if (current == null) return;

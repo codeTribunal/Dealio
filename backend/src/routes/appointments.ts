@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { getBusinessOrFail } from '../lib/businessFromUser.js';
 import { sendError } from '../lib/errors.js';
-import { computeAvailableSlots } from '../services/availability.js';
+import { computeAvailableSlots, isSlotBookable } from '../services/availability.js';
 import { checkAppointmentLimit } from '../middleware/checkLimits.js';
 
 const createAppointmentBody = z.object({
@@ -76,13 +76,24 @@ export default async function appointmentRoutes(app: FastifyInstance) {
     if (!customer) return sendError(reply, 404, 'Customer not found');
     if (!service) return sendError(reply, 404, 'Service not found');
 
+    let staff: { id: string; daysOff: Date[] } | null = null;
     if (staffId) {
-      const staff = await prisma.staff.findFirst({ where: { id: staffId, businessId: business.id, deletedAt: null } });
+      staff = await prisma.staff.findFirst({ where: { id: staffId, businessId: business.id, deletedAt: null } });
       if (!staff) return sendError(reply, 404, 'Staff member not found');
     }
 
     const start = new Date(startTime);
     const end = new Date(start.getTime() + service.durationMinutes * 60_000);
+
+    // Write-time conflict guard — re-validate against working hours, day off,
+    // blocked time, buffer, and existing appointments (closes the TOCTOU gap).
+    const bookable = await isSlotBookable({ business, service, staff, startTime: start });
+    if (!bookable) {
+      return reply.status(409).send({
+        error: 'SLOT_UNAVAILABLE',
+        message: 'The requested time is no longer available.',
+      });
+    }
 
     const appointment = await prisma.appointment.create({
       data: {

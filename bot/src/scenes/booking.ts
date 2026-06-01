@@ -1,7 +1,14 @@
 import { InlineKeyboard } from 'grammy';
 import { type Conversation } from '@grammyjs/conversations';
 import { MyContext, ApiService, ApiSlot } from '../lib/types.js';
-import { upsertCustomer, getServices, getAvailability, createAppointment, SuspendedError } from '../lib/api.js';
+import {
+  upsertCustomer,
+  getServices,
+  getAvailability,
+  createAppointment,
+  SuspendedError,
+  SlotUnavailableError,
+} from '../lib/api.js';
 import { formatDateWeekdayTZ, toTashkentDateStr } from '../lib/format.js';
 import { t, formatMoney, type Lang } from '../lib/i18n.js';
 
@@ -12,11 +19,13 @@ function formatDateLabel(dateStr: string): string {
   return formatDateWeekdayTZ(d);
 }
 
+// The engine returns startLabel/endLabel as correct Tashkent wall-clock "HH:MM".
+// Display them directly — no local/UTC re-conversion that would re-introduce a shift.
 function formatSlotTime(slot: ApiSlot): string {
   return `${slot.startLabel} – ${slot.endLabel}`;
 }
 
-// Returns next 14 days as YYYY-MM-DD strings in Tashkent local time
+// Returns next 14 days as YYYY-MM-DD strings (Tashkent local) that have ≥1 slot.
 async function getDatesWithSlots(
   botUsername: string,
   serviceId: string,
@@ -32,6 +41,130 @@ async function getDatesWithSlots(
     if (slots.length > 0) results.push(dateStr);
   }
   return results;
+}
+
+// ── Reusable selection steps ───────────────────────────────────────────────
+// These are called both on the initial pass and during the 409 retry path, so
+// the slot/date UI lives in one place. Each replies its own localized error and
+// returns a sentinel kind so the caller can abort cleanly without crashing.
+
+type SlotResult =
+  | { kind: 'slot'; slot: ApiSlot }
+  | { kind: 'cancel' }
+  | { kind: 'empty' }
+  | { kind: 'error' };
+
+type DateSlotResult =
+  | { kind: 'picked'; date: string; slot: ApiSlot }
+  | { kind: 'cancel' }
+  | { kind: 'noAvailability' }
+  | { kind: 'error' };
+
+// Step: show the time slots for a given date and wait for a choice.
+async function selectTimeSlot(
+  conversation: MyConversation,
+  ctx: MyContext,
+  lang: Lang,
+  botUsername: string,
+  serviceId: string,
+  selectedDate: string,
+  staffId: string | undefined,
+): Promise<SlotResult> {
+  let slots: ApiSlot[];
+  try {
+    slots = await conversation.external(() =>
+      getAvailability(botUsername, serviceId, selectedDate, staffId),
+    );
+  } catch (err) {
+    if (err instanceof SuspendedError) await ctx.reply(t(lang, 'suspended'));
+    else await ctx.reply(t(lang, 'slotsLoadError'));
+    return { kind: 'error' };
+  }
+
+  if (slots.length === 0) return { kind: 'empty' };
+
+  const slotKeyboard = new InlineKeyboard();
+  for (const slot of slots) {
+    slotKeyboard.text(formatSlotTime(slot), `slot:${slot.startTime}`).row();
+  }
+  slotKeyboard.text(t(lang, 'cancel'), 'booking_cancel');
+
+  await ctx.reply(t(lang, 'chooseTime'), { reply_markup: slotKeyboard });
+
+  const slotData = slots.map((s) => `slot:${s.startTime}`);
+  const slotCtx = await conversation.waitForCallbackQuery(['booking_cancel', ...slotData], {
+    otherwise: (c) => c.answerCallbackQuery(),
+  });
+  await slotCtx.answerCallbackQuery();
+
+  if (slotCtx.callbackQuery.data === 'booking_cancel') return { kind: 'cancel' };
+
+  const startTime = slotCtx.callbackQuery.data.replace('slot:', '');
+  const slot = slots.find((s) => s.startTime === startTime)!;
+  await ctx.reply(t(lang, 'selected', { label: t(lang, 'labelTime'), value: formatSlotTime(slot) }), {
+    parse_mode: 'HTML',
+  });
+  return { kind: 'slot', slot };
+}
+
+// Step: scan the next 14 days, let the customer pick a date, then a slot.
+// Loops back to date selection if a picked date turns out to have no slots.
+async function pickDateAndSlot(
+  conversation: MyConversation,
+  ctx: MyContext,
+  lang: Lang,
+  botUsername: string,
+  serviceId: string,
+  staffId: string | undefined,
+): Promise<DateSlotResult> {
+  while (true) {
+    await ctx.reply(t(lang, 'checkingDates'));
+
+    let availableDates: string[];
+    try {
+      availableDates = await conversation.external(() =>
+        getDatesWithSlots(botUsername, serviceId, staffId),
+      );
+    } catch (err) {
+      if (err instanceof SuspendedError) await ctx.reply(t(lang, 'suspended'));
+      else await ctx.reply(t(lang, 'availabilityLoadError'));
+      return { kind: 'error' };
+    }
+
+    if (availableDates.length === 0) return { kind: 'noAvailability' };
+
+    const dateKeyboard = new InlineKeyboard();
+    for (const d of availableDates) {
+      dateKeyboard.text(formatDateLabel(d), `date:${d}`).row();
+    }
+    dateKeyboard.text(t(lang, 'cancel'), 'booking_cancel');
+
+    await ctx.reply(t(lang, 'chooseDate'), { reply_markup: dateKeyboard });
+
+    const dateCtx = await conversation.waitForCallbackQuery(
+      ['booking_cancel', ...availableDates.map((d) => `date:${d}`)],
+      { otherwise: (c) => c.answerCallbackQuery() },
+    );
+    await dateCtx.answerCallbackQuery();
+
+    if (dateCtx.callbackQuery.data === 'booking_cancel') return { kind: 'cancel' };
+
+    const selectedDate = dateCtx.callbackQuery.data.replace('date:', '');
+    await ctx.reply(
+      t(lang, 'selected', { label: t(lang, 'labelDate'), value: formatDateLabel(selectedDate) }),
+      { parse_mode: 'HTML' },
+    );
+
+    const slotRes = await selectTimeSlot(conversation, ctx, lang, botUsername, serviceId, selectedDate, staffId);
+    if (slotRes.kind === 'error') return { kind: 'error' };
+    if (slotRes.kind === 'cancel') return { kind: 'cancel' };
+    if (slotRes.kind === 'empty') {
+      // Filled up between listing and selection — pick another date.
+      await ctx.reply(t(lang, 'noSlots'));
+      continue;
+    }
+    return { kind: 'picked', date: selectedDate, slot: slotRes.slot };
+  }
 }
 
 export async function bookingConversation(conversation: MyConversation, ctx: MyContext) {
@@ -120,93 +253,19 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
     staffName = staffList[0].name;
   }
 
-  // ── Step 4: Select date ───────────────────────────────────────
-  await ctx.reply(t(lang, 'checkingDates'));
-
-  let availableDates: string[];
-  try {
-    availableDates = await conversation.external(() =>
-      getDatesWithSlots(botUsername, serviceId, staffId),
-    );
-  } catch (err) {
-    if (err instanceof SuspendedError) {
-      await ctx.reply(t(lang, 'suspended'));
-      return;
-    }
-    await ctx.reply(t(lang, 'availabilityLoadError'));
+  // ── Step 4 + 5: Select date and time slot ─────────────────────
+  const picked = await pickDateAndSlot(conversation, ctx, lang, botUsername, serviceId, staffId);
+  if (picked.kind === 'error') return; // localized message already sent
+  if (picked.kind === 'cancel') {
+    await ctx.reply(t(lang, 'bookingCancelled'));
     return;
   }
-
-  if (availableDates.length === 0) {
+  if (picked.kind === 'noAvailability') {
     await ctx.reply(t(lang, 'noSlots14'));
     return;
   }
-
-  const dateKeyboard = new InlineKeyboard();
-  for (const d of availableDates) {
-    dateKeyboard.text(formatDateLabel(d), `date:${d}`).row();
-  }
-  dateKeyboard.text(t(lang, 'cancel'), 'booking_cancel');
-
-  await ctx.reply(t(lang, 'chooseDate'), { reply_markup: dateKeyboard });
-
-  const dateCtx = await conversation.waitForCallbackQuery(
-    ['booking_cancel', ...availableDates.map((d) => `date:${d}`)],
-    { otherwise: (c) => c.answerCallbackQuery() },
-  );
-  await dateCtx.answerCallbackQuery();
-
-  if (dateCtx.callbackQuery.data === 'booking_cancel') {
-    await ctx.reply(t(lang, 'bookingCancelled'));
-    return;
-  }
-
-  const selectedDate = dateCtx.callbackQuery.data.replace('date:', '');
-  await ctx.reply(t(lang, 'selected', { label: t(lang, 'labelDate'), value: formatDateLabel(selectedDate) }), { parse_mode: 'HTML' });
-
-  // ── Step 5: Select time slot ──────────────────────────────────
-  let slots: ApiSlot[];
-  try {
-    slots = await conversation.external(() =>
-      getAvailability(botUsername, serviceId, selectedDate, staffId),
-    );
-  } catch (err) {
-    if (err instanceof SuspendedError) {
-      await ctx.reply(t(lang, 'suspended'));
-      return;
-    }
-    await ctx.reply(t(lang, 'slotsLoadError'));
-    return;
-  }
-
-  if (slots.length === 0) {
-    await ctx.reply(t(lang, 'noSlots'));
-    return;
-  }
-
-  const slotKeyboard = new InlineKeyboard();
-  for (const slot of slots) {
-    slotKeyboard.text(formatSlotTime(slot), `slot:${slot.startTime}`).row();
-  }
-  slotKeyboard.text(t(lang, 'cancel'), 'booking_cancel');
-
-  await ctx.reply(t(lang, 'chooseTime'), { reply_markup: slotKeyboard });
-
-  const slotData = slots.map((s) => `slot:${s.startTime}`);
-  const slotCtx = await conversation.waitForCallbackQuery(
-    ['booking_cancel', ...slotData],
-    { otherwise: (c) => c.answerCallbackQuery() },
-  );
-  await slotCtx.answerCallbackQuery();
-
-  if (slotCtx.callbackQuery.data === 'booking_cancel') {
-    await ctx.reply(t(lang, 'bookingCancelled'));
-    return;
-  }
-
-  const startTime = slotCtx.callbackQuery.data.replace('slot:', '');
-  const selectedSlot = slots.find((s) => s.startTime === startTime)!;
-  await ctx.reply(t(lang, 'selected', { label: t(lang, 'labelTime'), value: formatSlotTime(selectedSlot) }), { parse_mode: 'HTML' });
+  let selectedDate = picked.date;
+  let selectedSlot = picked.slot;
 
   // ── Step 6: Collect name ──────────────────────────────────────
   const tgName = ctx.from?.first_name
@@ -289,12 +348,8 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
     return;
   }
 
-  // ── Step 9: Create booking via API ────────────────────────────
-  await ctx.reply(t(lang, 'creatingBooking'));
-
-  let result: Awaited<ReturnType<typeof createAppointment>>;
+  // ── Step 9a: Upsert customer (once) ───────────────────────────
   let customerId: string;
-
   try {
     const customer = await conversation.external(() =>
       upsertCustomer({
@@ -306,29 +361,83 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
       }),
     );
     customerId = customer.id;
-
-    result = await conversation.external(() =>
-      createAppointment({
-        botUsername,
-        customerId,
-        serviceId,
-        staffId,
-        startTime,
-        paymentType: 'AT_APPOINTMENT',
-      }),
-    );
   } catch (e: unknown) {
     if (e instanceof SuspendedError) {
       await ctx.reply(t(lang, 'suspended'));
       return;
     }
     const msg = e instanceof Error ? e.message : String(e);
-    console.error('[booking] appointment creation failed:', e);
+    console.error('[booking] customer upsert failed:', e);
     await ctx.reply(t(lang, 'bookingCreateError', { msg }));
     return;
   }
-
   ctx.session.customerId = customerId;
+
+  // ── Step 9b: Create booking, retrying on a 409 SLOT_UNAVAILABLE ──
+  // If the chosen slot was taken between selection and confirm, send the
+  // customer back to slot selection (same date, re-fetched). If that date is
+  // now empty, fall back to date selection; if the whole window is empty, stop.
+  let result: Awaited<ReturnType<typeof createAppointment>>;
+  while (true) {
+    await ctx.reply(t(lang, 'creatingBooking'));
+
+    try {
+      result = await conversation.external(() =>
+        createAppointment({
+          botUsername,
+          customerId,
+          serviceId,
+          staffId,
+          startTime: selectedSlot.startTime,
+          paymentType: 'AT_APPOINTMENT',
+        }),
+      );
+      break; // success
+    } catch (e: unknown) {
+      if (e instanceof SuspendedError) {
+        await ctx.reply(t(lang, 'suspended'));
+        return;
+      }
+
+      if (e instanceof SlotUnavailableError) {
+        await ctx.reply(t(lang, 'slotJustTaken'));
+
+        // Back to slot selection for the SAME date (re-fetch live availability).
+        const slotRes = await selectTimeSlot(
+          conversation, ctx, lang, botUsername, serviceId, selectedDate, staffId,
+        );
+        if (slotRes.kind === 'error') return; // message already sent
+        if (slotRes.kind === 'cancel') {
+          await ctx.reply(t(lang, 'bookingCancelled'));
+          return;
+        }
+        if (slotRes.kind === 'empty') {
+          // That day filled up entirely — go back to date selection.
+          await ctx.reply(t(lang, 'noSlots'));
+          const again = await pickDateAndSlot(conversation, ctx, lang, botUsername, serviceId, staffId);
+          if (again.kind === 'error') return;
+          if (again.kind === 'cancel') {
+            await ctx.reply(t(lang, 'bookingCancelled'));
+            return;
+          }
+          if (again.kind === 'noAvailability') {
+            await ctx.reply(t(lang, 'noSlots14'));
+            return;
+          }
+          selectedDate = again.date;
+          selectedSlot = again.slot;
+        } else {
+          selectedSlot = slotRes.slot;
+        }
+        continue; // retry create with the newly chosen slot
+      }
+
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error('[booking] appointment creation failed:', e);
+      await ctx.reply(t(lang, 'bookingCreateError', { msg }));
+      return;
+    }
+  }
 
   const { appointment, paymentInstructions, ownerTelegramChatId } = result;
 

@@ -1,8 +1,6 @@
 {
   "@@locale": "ru",
-
   "appTitle": "Uzbek CRM",
-
   "buttonSave": "Сохранить",
   "buttonSaveChanges": "Сохранить изменения",
   "buttonCancel": "Отмена",
@@ -19,7 +17,6 @@
   "buttonNext": "Далее",
   "buttonShare": "Поделиться",
   "buttonCopy": "Копировать",
-
   "commonSearch": "Поиск",
   "commonLoading": "Загрузка",
   "commonToday": "Сегодня",
@@ -33,16 +30,16 @@
   "commonNo": "Нет",
   "commonAll": "Все",
   "commonNone": "Нет",
-
   "errorGeneric": "Что-то пошло не так",
   "errorLoadFailed": "Не удалось загрузить",
   "errorWithMessage": "Ошибка: {message}",
   "@errorWithMessage": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
-
   "navHome": "Главная",
   "navCustomers": "Клиенты",
   "navOrders": "Заказы",
@@ -54,40 +51,32 @@
   "navAnalytics": "Аналитика",
   "navSettings": "Настройки",
   "navMessages": "Сообщения",
-
   "orderStatusNew": "Новый",
   "orderStatusPreparing": "Готовится",
   "orderStatusReady": "Готов",
   "orderStatusDelivered": "Доставлен",
   "orderStatusCancelled": "Отменён",
-
   "paymentStatusPending": "Ожидает",
   "paymentStatusPaymentReceived": "Оплата получена",
   "paymentStatusConfirmed": "Подтверждён",
-
   "appointmentStatusRequested": "Запрошена",
   "appointmentStatusConfirmed": "Подтверждена",
   "appointmentStatusCompleted": "Завершена",
   "appointmentStatusCancelled": "Отменена",
   "appointmentStatusNoShow": "Не пришёл",
-
   "projectStatusProposalSent": "Предложение отправлено",
   "projectStatusInProgress": "В процессе",
   "projectStatusReview": "На проверке",
   "projectStatusCompleted": "Завершён",
   "projectStatusCancelled": "Отменён",
-
   "milestoneStatusPending": "Ожидает",
   "milestoneStatusSubmittedForReview": "Отправлено на проверку",
   "milestoneStatusApproved": "Одобрено",
   "milestoneStatusPaymentReceived": "Оплата получена",
-
   "invoiceStatusUnpaid": "Не оплачен",
   "invoiceStatusPaid": "Оплачен",
-
   "deliveryMethodPickup": "Самовывоз",
   "deliveryMethodDelivery": "Доставка",
-
   "loginWelcomeTitle": "Добро пожаловать",
   "loginWelcomeSubtitle": "Войдите, чтобы управлять своим бизнесом",
   "loginPhoneLabel": "Номер телефона",
@@ -95,12 +84,13 @@
   "loginContinueButton": "Продолжить",
   "loginOtpHint": "На ваш номер будет отправлен 4-значный код",
   "loginErrorInvalidPhone": "Введите корректный номер телефона",
-
   "otpTitle": "Введите код",
   "otpSubtitle": "Мы отправили код на номер {phone}",
   "@otpSubtitle": {
     "placeholders": {
-      "phone": { "type": "String" }
+      "phone": {
+        "type": "String"
+      }
     }
   },
   "otpCodeLabel": "Код подтверждения",
@@ -112,7 +102,6 @@
   "consentGeneral": "Я ознакомился с Политикой конфиденциальности и соглашаюсь на обработку моих персональных данных в соответствии с Законом Республики Узбекистан «О персональных данных».",
   "consentGeneralLink": "Политикой конфиденциальности",
   "consentCrossBorder": "Я соглашаюсь на хранение и передачу моих персональных данных на серверах, расположенных за пределами Узбекистана (Railway, Cloudflare).",
-
   "onboardingBusinessStepTitle": "Расскажите о своём бизнесе",
   "onboardingBusinessNameLabel": "Название бизнеса",
   "onboardingBusinessNameHint": "например, Laylo Cakes",
@@ -155,7 +144,9 @@
   "onboardingBotReady": "@{username} готов!",
   "@onboardingBotReady": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "onboardingPaymentHeader": "Способ оплаты",
@@ -163,7 +154,9 @@
   "onboardingCardNumberLabel": "Номер карты ({optional})",
   "@onboardingCardNumberLabel": {
     "placeholders": {
-      "optional": { "type": "String" }
+      "optional": {
+        "type": "String"
+      }
     }
   },
   "onboardingSkipForNow": "Пропустить пока",
@@ -173,14 +166,15 @@
   "onboardingSummaryPayment": "Оплата",
   "onboardingNotSet": "Не указано",
   "onboardingLaunchCrm": "Запустить CRM",
-
   "settingsTitle": "Настройки",
   "settingsBusinessProfile": "ПРОФИЛЬ БИЗНЕСА",
   "settingsEditProfileTooltip": "Редактировать профиль",
   "settingsDescriptionLabel": "Описание ({optional})",
   "@settingsDescriptionLabel": {
     "placeholders": {
-      "optional": { "type": "String" }
+      "optional": {
+        "type": "String"
+      }
     }
   },
   "settingsBusinessMode": "ТИП БИЗНЕСА",
@@ -219,13 +213,17 @@
   "settingsReminderHoursBefore": "{count, plural, one{за 1 час} other{за {count} часов}}",
   "@settingsReminderHoursBefore": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "settingsReminderDaysBefore": "{count, plural, one{за 1 день} other{за {count} дней}}",
   "@settingsReminderDaysBefore": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "settingsRemindersFootnote": "Напоминания отправляются в это приложение и в ваш Telegram.",
@@ -265,14 +263,15 @@
   "settingsManageServices": "Управление услугами",
   "settingsStaff": "СОТРУДНИКИ",
   "settingsManageStaff": "Управление сотрудниками",
-
   "homeSearchHint": "Поиск клиентов...",
   "homeNoCustomersFound": "Клиенты не найдены",
   "homeNoContactInfo": "Нет контактных данных",
   "homeOrdersCount": "{count, plural, one{1 заказ} few{{count} заказа} other{{count} заказов}}",
   "@homeOrdersCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "homeNeedsAttention": "Требует внимания",
@@ -281,7 +280,9 @@
   "homeDaysSilent": "{days} дн. без активности",
   "@homeDaysSilent": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "homeBadgeAppointment": "Запись",
@@ -290,35 +291,46 @@
   "homeActivityCancelled": "{service} — отменена",
   "@homeActivityCancelled": {
     "placeholders": {
-      "service": { "type": "String" }
+      "service": {
+        "type": "String"
+      }
     }
   },
   "homeActivityNewProject": "Новый проект • {customer}",
   "@homeActivityNewProject": {
     "placeholders": {
-      "customer": { "type": "String" }
+      "customer": {
+        "type": "String"
+      }
     }
   },
   "homeActivityMilestoneApproved": "Одобрено • {project}",
   "@homeActivityMilestoneApproved": {
     "placeholders": {
-      "project": { "type": "String" }
+      "project": {
+        "type": "String"
+      }
     }
   },
   "homeNoActivity": "Сегодня активности нет",
-
+  "homeWelcome": "Здравствуйте",
+  "homeHeroTodayOrders": "Заказы сегодня",
+  "homeStatPending": "Ожидают оплаты",
+  "homeStatNewCustomers": "Новые клиенты",
+  "homePendingPaymentsCount": "{count, plural, =0{Нет ожидающих оплат} =1{1 ожидает оплаты} other{{count} ожидают оплаты}}",
   "ordersTitle": "Заказы",
   "ordersSearchHint": "Поиск по имени или № заказа",
   "orderNumberLabel": "Заказ №{number}",
   "@orderNumberLabel": {
     "placeholders": {
-      "number": { "type": "int" }
+      "number": {
+        "type": "int"
+      }
     }
   },
   "orderPaidBadge": "💰 Оплачено",
   "ordersEmpty": "Заказов пока нет",
   "ordersEmptyFiltered": "Нет заказов по вашему фильтру",
-
   "commonTotal": "Итого",
   "orderDetailTitle": "Заказ",
   "orderPaymentPaid": "Оплачено",
@@ -341,13 +353,11 @@
   "orderCancelTitle": "Отменить заказ?",
   "orderCancelConfirm": "Это действие нельзя отменить.",
   "orderKeep": "Оставить",
-
   "customersTitle": "Клиенты",
   "customersSearchHint": "Поиск по имени, @handle или телефону",
   "customersEmpty": "Клиентов пока нет",
   "customersEmptyFiltered": "Нет клиентов по вашему запросу",
   "customersEmptyHint": "Клиенты добавляются, когда оформляют заказ через бот",
-
   "customerDetailTitle": "Клиент",
   "customerAddTag": "Добавить тег",
   "customerTagHint": "Название тега (например, VIP, Любитель тортов)",
@@ -357,7 +367,9 @@
   "customerSince": "С {date}",
   "@customerSince": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "customerStatOrders": "Заказы",
@@ -366,7 +378,9 @@
   "customerDaysAgo": "{days} дн. назад",
   "@customerDaysAgo": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "customerAddReminder": "Добавить напоминание",
@@ -382,12 +396,13 @@
   "customerOrderHistory": "ИСТОРИЯ ЗАКАЗОВ",
   "customerLoadError": "Не удалось загрузить клиента",
   "customerLoadErrorHint": "Проверьте подключение и попробуйте снова",
-
   "catalogTitle": "Каталог",
   "catalogPrepTime": "Подготовка: {time}",
   "@catalogPrepTime": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "catalogEmpty": "Товаров пока нет",
@@ -398,10 +413,11 @@
   "stockIn": "В наличии: {count}",
   "@stockIn": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "productFormNewTitle": "Новый товар",
   "productFormEditTitle": "Редактировать товар",
   "productFormNameLabel": "Название товара *",
@@ -424,13 +440,14 @@
   "productFormActiveOn": "Товар виден в каталоге бота",
   "productFormActiveOff": "Товар скрыт от клиентов",
   "productFormCreate": "Создать товар",
-
   "formRequired": "Обязательно",
   "formPositiveInteger": "Введите положительное целое число",
   "durationMinutes": "{min} мин",
   "@durationMinutes": {
     "placeholders": {
-      "min": { "type": "int" }
+      "min": {
+        "type": "int"
+      }
     }
   },
   "servicesTitle": "Услуги",
@@ -441,7 +458,6 @@
   "serviceFormDurationLabel": "Длительность (минуты)",
   "serviceFormPriceLabel": "Цена (сум)",
   "serviceFormActiveSubtitle": "Видна клиентам в боте",
-
   "staffTitle": "Сотрудники",
   "staffEmpty": "Сотрудников пока нет. Нажмите +, чтобы добавить.",
   "staffNoServices": "Услуги не назначены",
@@ -450,7 +466,9 @@
   "staffDeleteTitle": "Удалить {name}?",
   "@staffDeleteTitle": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "staffThisMember": "этого сотрудника",
@@ -460,7 +478,6 @@
   "staffFormServicesLabel": "Выполняемые услуги",
   "staffNoServicesAvailable": "Нет доступных услуг. Сначала добавьте услуги.",
   "staffSelectService": "Выберите хотя бы одну услугу",
-
   "appointmentsTitle": "Записи",
   "apptTomorrow": "Завтра",
   "apptEmpty": "На этот день записей нет",
@@ -502,7 +519,6 @@
   "apptErrSelectService": "Выберите услугу",
   "apptErrEnterService": "Введите название услуги",
   "apptErrSelectDateTime": "Выберите дату и время",
-
   "projectsTitle": "Проекты",
   "projectsFilterProposal": "Предложение",
   "projectsFilterReview": "Проверка",
@@ -510,8 +526,12 @@
   "projectsMilestoneCount": "{done}/{total} этапов",
   "@projectsMilestoneCount": {
     "placeholders": {
-      "done": { "type": "int" },
-      "total": { "type": "int" }
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "projectDetailTitle": "Проект",
@@ -522,7 +542,9 @@
   "projectStatusUpdated": "Статус изменён на: {status}",
   "@projectStatusUpdated": {
     "placeholders": {
-      "status": { "type": "String" }
+      "status": {
+        "type": "String"
+      }
     }
   },
   "projectClient": "Клиент",
@@ -540,14 +562,18 @@
   "projectDuePrefix": "Срок: {date}",
   "@projectDuePrefix": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "projectResetMilestone": "Сбросить этап",
   "projectResetMilestoneBody": "Вернуть этап «{name}» в статус «Ожидает»?\n\nЭто для тестирования — клиент не будет уведомлён.",
   "@projectResetMilestoneBody": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "projectResetToPending": "Вернуть в ожидание",
@@ -589,14 +615,18 @@
   "analyticsVsLastMonth": "{change}% к прошлому месяцу",
   "@analyticsVsLastMonth": {
     "placeholders": {
-      "change": { "type": "String" }
+      "change": {
+        "type": "String"
+      }
     }
   },
   "analyticsRevenueThisMonth": "Выручка за этот месяц",
   "analyticsLastMonth": "Прошлый месяц: {amount}",
   "@analyticsLastMonth": {
     "placeholders": {
-      "amount": { "type": "String" }
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "analyticsCompletedThisMonth": "Завершено\nза месяц",
@@ -609,7 +639,42 @@
   "analyticsUnitsSold": "{count, plural, one{продана 1 шт.} few{продано {count} шт.} other{продано {count} шт.}}",
   "@analyticsUnitsSold": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
-  }
+  },
+  "schedulingWorkingHours": "Часы работы",
+  "schedulingWorkingHoursHint": "Когда клиенты могут записаться. Время по Ташкенту, 24-часовой формат.",
+  "schedulingOpen": "Открыто",
+  "schedulingClosed": "Закрыто",
+  "schedulingDayMon": "Понедельник",
+  "schedulingDayTue": "Вторник",
+  "schedulingDayWed": "Среда",
+  "schedulingDayThu": "Четверг",
+  "schedulingDayFri": "Пятница",
+  "schedulingDaySat": "Суббота",
+  "schedulingDaySun": "Воскресенье",
+  "schedulingStart": "Начало",
+  "schedulingEnd": "Конец",
+  "schedulingTimeInvalid": "Время начала должно быть раньше времени окончания.",
+  "schedulingBuffer": "Перерыв между записями",
+  "schedulingBufferHint": "Промежуток после каждой записи, например для уборки.",
+  "schedulingBufferUnit": "минут",
+  "schedulingWorkingHoursSaved": "Часы работы сохранены",
+  "schedulingBlockedTime": "Заблокированное время",
+  "schedulingBlockedTimeHint": "Заблокируйте отпуска, перерывы или разовые закрытия, чтобы клиенты не могли записаться.",
+  "schedulingAddBlocked": "Добавить блокировку",
+  "schedulingNoBlocked": "Нет заблокированного времени",
+  "schedulingScope": "Относится к",
+  "schedulingWholeBusiness": "Весь бизнес",
+  "schedulingDate": "Дата",
+  "schedulingReason": "Причина",
+  "schedulingReasonHint": "Необязательно, например Праздник",
+  "schedulingAddBlockedSubmit": "Добавить",
+  "schedulingDeleteBlockedTitle": "Удалить блокировку?",
+  "schedulingDeleteBlockedConfirm": "Это время снова станет доступным для записи.",
+  "staffFormDaysOffLabel": "Выходные",
+  "staffFormDaysOffHint": "Конкретные даты, когда этот сотрудник недоступен.",
+  "staffFormAddDayOff": "Добавить выходной"
 }

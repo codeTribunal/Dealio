@@ -19,6 +19,7 @@ import checkoutQuestionRoutes from './routes/checkout-questions.js';
 import serviceRoutes from './routes/services.js';
 import staffRoutes from './routes/staff.js';
 import appointmentRoutes from './routes/appointments.js';
+import blockedSlotRoutes from './routes/blocked-slots.js';
 import projectRoutes from './routes/projects.js';
 import proposalRoutes from './routes/proposals.js';
 import deviceTokenRoutes from './routes/device-token.js';
@@ -70,6 +71,7 @@ async function bootstrap() {
   await app.register(serviceRoutes, { prefix: '/api/v1' });
   await app.register(staffRoutes, { prefix: '/api/v1' });
   await app.register(appointmentRoutes, { prefix: '/api/v1' });
+  await app.register(blockedSlotRoutes, { prefix: '/api/v1' });
   await app.register(projectRoutes, { prefix: '/api/v1' });
   await app.register(proposalRoutes, { prefix: '/api/v1' });
   await app.register(deviceTokenRoutes, { prefix: '/api/v1' });

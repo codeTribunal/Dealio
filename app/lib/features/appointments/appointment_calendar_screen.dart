@@ -3,19 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/icons/app_icon.dart';
 import '../../core/models/appointment.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
-import '../../shared/utils/status_labels.dart';
+import '../../shared/widgets/app_badge.dart';
+import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_spinner.dart';
 import 'appointments_provider.dart';
-
-const _statusColor = {
-  'REQUESTED': Color(0xFFD97706),
-  'CONFIRMED': Color(0xFF059669),
-  'COMPLETED': Color(0xFF1A56DB),
-  'CANCELLED': Color(0xFF6B7280),
-  'NO_SHOW': Color(0xFFDC2626),
-};
 
 class AppointmentCalendarScreen extends ConsumerWidget {
   const AppointmentCalendarScreen({super.key});
@@ -23,6 +20,7 @@ class AppointmentCalendarScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final notifier = ref.read(appointmentsProvider.notifier);
     final apptAsync = ref.watch(appointmentsProvider);
     final selectedDay = notifier.filter.selectedDate;
@@ -44,18 +42,20 @@ class AppointmentCalendarScreen extends ConsumerWidget {
         children: [
           // ── Day navigation header ─────────────────────────────────
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s2, vertical: AppSpacing.s1),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+              color: t.surface,
+              border: Border(bottom: BorderSide(color: t.border)),
             ),
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.chevron_left),
+                  icon: AppIcon(name: AppIconName.menu, color: t.text2, size: 20),
                   onPressed: () => notifier.selectDate(
                     selectedDay.subtract(const Duration(days: 1)),
                   ),
+                  tooltip: l.commonYesterday,
                 ),
                 Expanded(
                   child: GestureDetector(
@@ -63,8 +63,10 @@ class AppointmentCalendarScreen extends ConsumerWidget {
                       final picked = await showDatePicker(
                         context: context,
                         initialDate: selectedDay,
-                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                        firstDate:
+                            DateTime.now().subtract(const Duration(days: 365)),
+                        lastDate:
+                            DateTime.now().add(const Duration(days: 365)),
                       );
                       if (picked != null) notifier.selectDate(picked);
                     },
@@ -72,17 +74,17 @@ class AppointmentCalendarScreen extends ConsumerWidget {
                       children: [
                         Text(
                           _dayLabel(l, selectedDay, today),
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style: TextStyle(
+                            fontSize: AppTextSizes.base,
+                            fontWeight: AppFontWeights.bold,
+                            color: t.text1,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                         Text(
                           DateFormat('EEEE, d MMMM yyyy').format(selectedDay),
                           style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[500],
-                          ),
+                              fontSize: AppTextSizes.caption, color: t.text3),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -90,10 +92,12 @@ class AppointmentCalendarScreen extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.chevron_right),
+                  icon:
+                      AppIcon(name: AppIconName.menu, color: t.text2, size: 20),
                   onPressed: () => notifier.selectDate(
                     selectedDay.add(const Duration(days: 1)),
                   ),
+                  tooltip: l.apptTomorrow,
                 ),
               ],
             ),
@@ -102,7 +106,7 @@ class AppointmentCalendarScreen extends ConsumerWidget {
           // ── Appointment list ──────────────────────────────────────
           Expanded(
             child: apptAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: AppSpinner(size: 32)),
               error: (e, _) => _ErrorView(
                 message: e.toString(),
                 onRetry: notifier.refresh,
@@ -113,30 +117,32 @@ class AppointmentCalendarScreen extends ConsumerWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.calendar_today_outlined,
-                            size: 56, color: Colors.grey[300]),
-                        const SizedBox(height: 16),
-                        Text(
-                          l.apptEmpty,
-                          style: TextStyle(
-                              color: Colors.grey[500], fontSize: 15),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          l.apptEmptyHint,
-                          style: TextStyle(
-                              color: Colors.grey[400], fontSize: 12),
-                        ),
+                        AppIcon(
+                            name: AppIconName.calendar,
+                            size: 56,
+                            color: t.text3),
+                        const SizedBox(height: AppSpacing.s4),
+                        Text(l.apptEmpty,
+                            style: TextStyle(
+                                color: t.text2, fontSize: AppTextSizes.base)),
+                        const SizedBox(height: AppSpacing.s2),
+                        Text(l.apptEmptyHint,
+                            style: TextStyle(
+                                color: t.text3,
+                                fontSize: AppTextSizes.caption)),
                       ],
                     ),
                   );
                 }
                 return RefreshIndicator(
+                  color: t.accent,
                   onRefresh: notifier.refresh,
                   child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.s4,
+                        AppSpacing.s3, AppSpacing.s4, AppSpacing.s8),
                     itemCount: appointments.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.s2),
                     itemBuilder: (ctx, i) => _AppointmentTile(
                       appointment: appointments[i],
                       onTap: () =>
@@ -150,16 +156,22 @@ class AppointmentCalendarScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: t.accent,
+        foregroundColor: t.accentOn,
         onPressed: () => context.push('/appointments/new'),
-        child: const Icon(Icons.add),
+        child: AppIcon(name: AppIconName.add, color: t.accentOn),
       ),
     );
   }
 
   String _dayLabel(AppLocalizations l, DateTime d, DateTime today) {
     if (_isSameDay(d, today)) return l.commonToday;
-    if (_isSameDay(d, today.add(const Duration(days: 1)))) return l.apptTomorrow;
-    if (_isSameDay(d, today.subtract(const Duration(days: 1)))) return l.commonYesterday;
+    if (_isSameDay(d, today.add(const Duration(days: 1)))) {
+      return l.apptTomorrow;
+    }
+    if (_isSameDay(d, today.subtract(const Duration(days: 1)))) {
+      return l.commonYesterday;
+    }
     return DateFormat('EEEE').format(d);
   }
 
@@ -176,107 +188,97 @@ class _AppointmentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final color = _statusColor[appointment.status] ?? const Color(0xFF6B7280);
+    final t = AppTokens.of(context);
     final start = appointment.startTime.toLocal();
     final timeLabel = formatTime(start);
-    final durationLabel = l.durationMinutes(appointment.service.durationMinutes);
+    final durationLabel =
+        l.durationMinutes(appointment.service.durationMinutes);
     final staffLabel =
         appointment.staff != null ? ' · ${appointment.staff!.name}' : '';
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              // Time column
-              SizedBox(
-                width: 44,
-                child: Text(
-                  timeLabel,
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s3, vertical: AppSpacing.s3),
+      child: Row(
+        children: [
+          // Time column (24h)
+          SizedBox(
+            width: 46,
+            child: Text(
+              timeLabel,
+              style: TextStyle(
+                fontSize: AppTextSizes.sm,
+                fontWeight: AppFontWeights.bold,
+                color: t.text1,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s2),
+          // Accent stripe
+          Container(
+            width: 4,
+            height: 52,
+            decoration: BoxDecoration(
+              color: t.accent,
+              borderRadius: AppRadii.sm,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s3),
+          // Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  appointment.service.name,
                   style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[700],
+                    fontWeight: AppFontWeights.bold,
+                    fontSize: AppTextSizes.sm,
+                    color: t.text1,
                   ),
-                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${appointment.customer.name}$staffLabel',
+                  style: TextStyle(
+                      color: t.text2, fontSize: AppTextSizes.caption),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  durationLabel,
+                  style:
+                      TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s2),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                formatUZS(appointment.price),
+                style: TextStyle(
+                  fontWeight: AppFontWeights.bold,
+                  fontSize: AppTextSizes.sm,
+                  color: t.text1,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
-              const SizedBox(width: 10),
-              // Color stripe
-              Container(
-                width: 4,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      appointment.customer.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${appointment.service.name}$staffLabel',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      durationLabel,
-                      style: TextStyle(color: Colors.grey[400], fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    formatUZS(appointment.price),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                  const SizedBox(height: 4),
-                  _StatusBadge(status: appointment.status, color: color),
-                ],
-              ),
+              const SizedBox(height: AppSpacing.s1),
+              AppBadge(
+                  status: appointment.status,
+                  type: AppBadgeType.appointment),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final String status;
-  final Color color;
-  const _StatusBadge({required this.status, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        appointmentStatusLabel(AppLocalizations.of(context)!, status),
-        style:
-            TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
+        ],
       ),
     );
   }
@@ -289,16 +291,28 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline, size: 48, color: Colors.red),
-          const SizedBox(height: 12),
-          Text(message, textAlign: TextAlign.center),
-          const SizedBox(height: 16),
-          TextButton(onPressed: onRetry, child: Text(AppLocalizations.of(context)!.buttonRetry)),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.s5),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
+            const SizedBox(height: AppSpacing.s3),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: t.text2)),
+            const SizedBox(height: AppSpacing.s4),
+            AppButton(
+              label: l.buttonRetry,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              onPressed: onRetry,
+            ),
+          ],
+        ),
       ),
     );
   }

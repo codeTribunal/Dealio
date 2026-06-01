@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/icons/app_icon.dart';
 import '../../core/models/order.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
-import '../../shared/utils/status_labels.dart';
+import '../../shared/widgets/app_avatar.dart';
+import '../../shared/widgets/app_badge.dart';
+import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_spinner.dart';
 import '../settings/customization_provider.dart';
 import 'order_detail_provider.dart';
 
@@ -26,8 +32,9 @@ class OrderDetailScreen extends ConsumerWidget {
         ),
       ),
       body: orderAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _ErrorView(message: e.toString(), onRetry: notifier.refresh),
+        loading: () => const Center(child: AppSpinner(size: 32)),
+        error: (e, _) =>
+            _ErrorView(message: e.toString(), onRetry: notifier.refresh),
         data: (order) => _OrderBody(order: order, notifier: notifier),
       ),
     );
@@ -41,99 +48,75 @@ class _OrderBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
     return RefreshIndicator(
+      color: t.accent,
       onRefresh: notifier.refresh,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.s4),
         children: [
-          _StatusRow(order: order),
-          const SizedBox(height: 16),
+          _HeaderBlock(order: order),
+          const SizedBox(height: AppSpacing.s4),
           _CustomerCard(customer: order.customer),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s3),
           _ItemsCard(order: order),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s3),
           _DeliveryCard(order: order),
           if (order.notes != null && order.notes!.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s3),
             _NotesCard(notes: order.notes!),
           ],
           if (order.customAnswers.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s3),
             _CustomAnswersCard(answers: order.customAnswers),
           ],
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s3),
           _TimelineCard(timeline: order.timeline),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.s5),
           _ActionButtons(order: order, notifier: notifier),
-          const SizedBox(height: 32),
+          const SizedBox(height: AppSpacing.s6),
         ],
       ),
     );
   }
 }
 
-// ── Status row ──────────────────────────────────────────────────────
+// ── Header block ────────────────────────────────────────────────────
 
-class _StatusRow extends StatelessWidget {
+class _HeaderBlock extends StatelessWidget {
   final Order order;
-  const _StatusRow({required this.order});
-
-  static const _statusColor = {
-    'NEW': Color(0xFF1A56DB),
-    'PREPARING': Color(0xFFD97706),
-    'READY': Color(0xFF059669),
-    'DELIVERED': Color(0xFF6B7280),
-    'CANCELLED': Color(0xFFDC2626),
-  };
+  const _HeaderBlock({required this.order});
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final color = _statusColor[order.orderStatus] ?? const Color(0xFF6B7280);
-    final label = orderStatusLabel(l, order.orderStatus);
-
-    final (payLabel, payColor) = switch (order.paymentStatus) {
-      'CONFIRMED' => (l.orderPaymentPaid, const Color(0xFF059669)),
-      'PAYMENT_RECEIVED' => (l.paymentStatusPaymentReceived, const Color(0xFF1A56DB)),
-      _ => (l.orderPaymentPending, const Color(0xFFD97706)),
-    };
-
-    return Row(
+    final t = AppTokens.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _Badge(label: label, color: color),
-        const SizedBox(width: 8),
-        _Badge(label: payLabel, color: payColor),
-        const Spacer(),
         Text(
-          formatDateTime(order.createdAt),
-          style: TextStyle(color: Colors.grey[500], fontSize: 12),
+          l.orderNumberLabel(order.orderNumber),
+          style: TextStyle(
+            fontSize: AppTextSizes.h3,
+            fontWeight: AppFontWeights.extra,
+            color: t.text1,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.s2),
+        Row(
+          children: [
+            AppBadge(status: order.paymentStatus, type: AppBadgeType.payment),
+            const SizedBox(width: AppSpacing.s2),
+            AppBadge(status: order.orderStatus, type: AppBadgeType.order),
+            const Spacer(),
+            Text(
+              formatDateTime(order.createdAt),
+              style:
+                  TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
+            ),
+          ],
         ),
       ],
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  final String label;
-  final Color color;
-  const _Badge({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
     );
   }
 }
@@ -146,24 +129,27 @@ class _CustomerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _Section(
-      title: AppLocalizations.of(context)!.orderSectionCustomer,
+    final t = AppTokens.of(context);
+    return AppCard(
+      header: AppCardHeader(
+          title: AppLocalizations.of(context)!.orderSectionCustomer),
       child: Row(
         children: [
-          const CircleAvatar(
-            radius: 20,
-            child: Icon(Icons.person_outline, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(customer.name,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
-              if (customer.phone != null)
-                Text(customer.phone!,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-            ],
+          AppAvatar(name: customer.name, size: AppAvatarSize.md),
+          const SizedBox(width: AppSpacing.s3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(customer.name,
+                    style: TextStyle(
+                        fontWeight: AppFontWeights.semibold, color: t.text1)),
+                if (customer.phone != null)
+                  Text(customer.phone!,
+                      style: TextStyle(
+                          color: t.text2, fontSize: AppTextSizes.caption)),
+              ],
+            ),
           ),
         ],
       ),
@@ -180,39 +166,48 @@ class _ItemsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return _Section(
-      title: l.orderSectionItems,
+    final t = AppTokens.of(context);
+    return AppCard(
+      header: AppCardHeader(title: l.orderSectionItems),
       child: Column(
         children: [
           ...order.items.map((item) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.s1),
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(item.productName),
+                      child: Text(item.productName,
+                          style: TextStyle(color: t.text1)),
                     ),
-                    Text(
-                      '×${item.quantity}',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                    const SizedBox(width: 16),
+                    Text('×${item.quantity}',
+                        style: TextStyle(color: t.text2)),
+                    const SizedBox(width: AppSpacing.s4),
                     Text(
                       formatUZS(item.subtotal),
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                        fontWeight: AppFontWeights.medium,
+                        color: t.text1,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ],
                 ),
               )),
-          const Divider(height: 20),
+          Divider(height: AppSpacing.s5, color: t.border),
           Row(
             children: [
               Text(l.commonTotal,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      fontWeight: AppFontWeights.bold, color: t.text1)),
               const Spacer(),
               Text(
                 formatUZS(order.total),
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 15),
+                style: TextStyle(
+                  fontWeight: AppFontWeights.bold,
+                  fontSize: AppTextSizes.lg,
+                  color: t.text1,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
               ),
             ],
           ),
@@ -231,23 +226,24 @@ class _DeliveryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final isDelivery = order.deliveryMethod == 'DELIVERY';
-    return _Section(
-      title: l.orderSectionDelivery,
+    return AppCard(
+      header: AppCardHeader(title: l.orderSectionDelivery),
       child: Row(
         children: [
-          Icon(
-            isDelivery ? Icons.local_shipping_outlined : Icons.store_outlined,
+          AppIcon(
+            name: isDelivery ? AppIconName.delivery : AppIconName.orders,
             size: 18,
-            color: Colors.grey[600],
+            color: t.text2,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.s2),
           Expanded(
             child: Text(
               isDelivery
                   ? (order.deliveryAddress ?? l.deliveryMethodDelivery)
                   : l.deliveryMethodPickup,
-              style: TextStyle(color: Colors.grey[700]),
+              style: TextStyle(color: t.text1),
             ),
           ),
         ],
@@ -264,9 +260,11 @@ class _NotesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _Section(
-      title: AppLocalizations.of(context)!.orderSectionNotes,
-      child: Text(notes, style: TextStyle(color: Colors.grey[700])),
+    final t = AppTokens.of(context);
+    return AppCard(
+      header: AppCardHeader(
+          title: AppLocalizations.of(context)!.orderSectionNotes),
+      child: Text(notes, style: TextStyle(color: t.text1)),
     );
   }
 }
@@ -279,34 +277,37 @@ class _CustomAnswersCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppTokens.of(context);
     final questionsAsync = ref.watch(checkoutQuestionsProvider);
     final questionMap = questionsAsync.valueOrNull != null
         ? {for (final q in questionsAsync.valueOrNull!) q.id: q.question}
         : <String, String>{};
 
-    return _Section(
-      title: AppLocalizations.of(context)!.orderSectionResponses,
+    return AppCard(
+      header: AppCardHeader(
+          title: AppLocalizations.of(context)!.orderSectionResponses),
       child: Column(
         children: answers.entries.map((e) {
           final label = questionMap[e.key] ?? e.key;
           return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: AppSpacing.s2),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   flex: 2,
-                  child: Text(
-                    label,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                  ),
+                  child: Text(label,
+                      style: TextStyle(
+                          color: t.text2, fontSize: AppTextSizes.caption)),
                 ),
                 Expanded(
                   flex: 3,
                   child: Text(
                     e.value.isEmpty ? '—' : e.value,
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                        fontSize: AppTextSizes.sm,
+                        fontWeight: AppFontWeights.medium,
+                        color: t.text1),
                   ),
                 ),
               ],
@@ -329,11 +330,13 @@ class _TimelineCard extends StatelessWidget {
     if (timeline.isEmpty) {
       return const SizedBox.shrink();
     }
-    return _Section(
-      title: AppLocalizations.of(context)!.orderSectionTimeline,
+    return AppCard(
+      header: AppCardHeader(
+          title: AppLocalizations.of(context)!.orderSectionTimeline),
       child: Column(
         children: timeline.reversed
-            .map((entry) => _TimelineEntry(entry: entry as Map<String, dynamic>))
+            .map((entry) =>
+                _TimelineEntry(entry: entry as Map<String, dynamic>))
             .toList(),
       ),
     );
@@ -347,6 +350,7 @@ class _TimelineEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final status = entry['status'] as String? ?? '';
     final ts = entry['at'] as String? ?? entry['timestamp'] as String? ?? '';
     DateTime? time;
@@ -355,17 +359,17 @@ class _TimelineEntry extends StatelessWidget {
     } catch (_) {}
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 8,
             height: 8,
-            margin: const EdgeInsets.only(top: 5, right: 10),
-            decoration: const BoxDecoration(
+            margin: const EdgeInsets.only(top: 5, right: AppSpacing.s3),
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFF1A56DB),
+              color: t.accent,
             ),
           ),
           Expanded(
@@ -374,12 +378,14 @@ class _TimelineEntry extends StatelessWidget {
               children: [
                 Text(
                   _label(l, status),
-                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                      fontWeight: AppFontWeights.medium, color: t.text1),
                 ),
                 if (time != null)
                   Text(
                     formatDateTime(time),
-                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    style: TextStyle(
+                        color: t.text3, fontSize: AppTextSizes.caption),
                   ),
               ],
             ),
@@ -419,55 +425,45 @@ class _ActionButtons extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (showConfirmPayment)
-          FilledButton.icon(
-            icon: const Icon(Icons.check_circle_outline),
-            label: Text(l.orderConfirmPayment),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF059669),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
+          AppButton(
+            label: l.orderConfirmPayment,
+            leftIcon: AppIconName.paid,
+            fullWidth: true,
             onPressed: () => _confirmPayment(context),
           ),
         if (status == 'NEW') ...[
-          if (showConfirmPayment) const SizedBox(height: 10),
-          FilledButton.icon(
-            icon: const Icon(Icons.restaurant_outlined),
-            label: Text(l.orderStartPreparing),
-            style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14)),
+          if (showConfirmPayment) const SizedBox(height: AppSpacing.s2),
+          AppButton(
+            label: l.orderStartPreparing,
+            variant: AppButtonVariant.secondary,
+            fullWidth: true,
             onPressed: () => _updateStatus(context, 'PREPARING'),
           ),
         ],
         if (status == 'PREPARING') ...[
-          if (showConfirmPayment) const SizedBox(height: 10),
-          FilledButton.icon(
-            icon: const Icon(Icons.done_all),
-            label: Text(l.orderMarkReady),
-            style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14)),
+          if (showConfirmPayment) const SizedBox(height: AppSpacing.s2),
+          AppButton(
+            label: l.orderMarkReady,
+            variant: AppButtonVariant.secondary,
+            fullWidth: true,
             onPressed: () => _updateStatus(context, 'READY'),
           ),
         ],
         if (status == 'READY') ...[
-          if (showConfirmPayment) const SizedBox(height: 10),
-          FilledButton.icon(
-            icon: const Icon(Icons.local_shipping_outlined),
-            label: Text(l.orderMarkDelivered),
-            style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14)),
+          if (showConfirmPayment) const SizedBox(height: AppSpacing.s2),
+          AppButton(
+            label: l.orderMarkDelivered,
+            variant: AppButtonVariant.secondary,
+            fullWidth: true,
             onPressed: () => _updateStatus(context, 'DELIVERED'),
           ),
         ],
         if (status != 'DELIVERED' && status != 'CANCELLED') ...[
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.cancel_outlined),
-            label: Text(l.orderCancel),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red,
-              side: const BorderSide(color: Colors.red),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
+          const SizedBox(height: AppSpacing.s2),
+          AppButton(
+            label: l.orderCancel,
+            variant: AppButtonVariant.danger,
+            fullWidth: true,
             onPressed: () => _cancelOrder(context),
           ),
         ],
@@ -477,6 +473,7 @@ class _ActionButtons extends StatelessWidget {
 
   Future<void> _confirmPayment(BuildContext context) async {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     try {
       await notifier.confirmPayment();
     } catch (e) {
@@ -488,7 +485,7 @@ class _ActionButtons extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
-          backgroundColor: alreadyConfirmed ? Colors.orange : Colors.red,
+          backgroundColor: alreadyConfirmed ? t.warning : t.error,
         ),
       );
     }
@@ -501,8 +498,9 @@ class _ActionButtons extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
-            backgroundColor: Colors.red,
+            content: Text(
+                AppLocalizations.of(context)!.errorWithMessage(e.toString())),
+            backgroundColor: AppTokens.of(context).error,
           ),
         );
       }
@@ -511,60 +509,27 @@ class _ActionButtons extends StatelessWidget {
 
   Future<void> _cancelOrder(BuildContext context) async {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l.orderCancelTitle),
-        content: Text(l.orderCancelConfirm),
+        backgroundColor: t.surface,
+        title: Text(l.orderCancelTitle, style: TextStyle(color: t.text1)),
+        content: Text(l.orderCancelConfirm, style: TextStyle(color: t.text2)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l.orderKeep)),
+              child: Text(l.orderKeep, style: TextStyle(color: t.text2))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(l.orderCancel,
-                  style: const TextStyle(color: Colors.red))),
+                  style: TextStyle(color: t.errorStrong))),
         ],
       ),
     );
     if (confirmed == true && context.mounted) {
       await _updateStatus(context, 'CANCELLED');
     }
-  }
-}
-
-// ── Shared section wrapper ──────────────────────────────────────────
-
-class _Section extends StatelessWidget {
-  final String title;
-  final Widget child;
-  const _Section({required this.title, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelMedium
-                  ?.copyWith(
-                      color: Colors.grey[600],
-                      letterSpacing: 0.5,
-                      fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 10),
-            child,
-          ],
-        ),
-      ),
-    );
   }
 }
 
@@ -577,17 +542,26 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.s5),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: Text(AppLocalizations.of(context)!.buttonRetry)),
+            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
+            const SizedBox(height: AppSpacing.s3),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: t.text2)),
+            const SizedBox(height: AppSpacing.s4),
+            AppButton(
+              label: l.buttonRetry,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              onPressed: onRetry,
+            ),
           ],
         ),
       ),

@@ -24,6 +24,8 @@ class Staff {
   final String name;
   final String? telegramHandle;
   final List<StaffServiceRef> services;
+  // Whole-day offs, as ISO date strings (e.g. "2026-06-15T00:00:00.000Z").
+  final List<String> daysOff;
   final DateTime createdAt;
 
   const Staff({
@@ -31,6 +33,7 @@ class Staff {
     required this.name,
     this.telegramHandle,
     required this.services,
+    this.daysOff = const [],
     required this.createdAt,
   });
 
@@ -45,6 +48,9 @@ class Staff {
       name: json['name'] as String,
       telegramHandle: json['telegramHandle'] as String?,
       services: servicesList,
+      daysOff: (json['daysOff'] as List? ?? [])
+          .map((e) => e.toString())
+          .toList(),
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }

@@ -15,10 +15,15 @@ const workingHoursSchema = z
   )
   .optional();
 
+// Accepts ISO date strings (date-only "YYYY-MM-DD" or full datetime) and
+// coerces them to Date for storage in the DateTime[] column.
+const daysOffSchema = z.array(z.coerce.date()).max(366).optional();
+
 const createStaffBody = z.object({
   name: z.string().min(1).max(200),
   telegramHandle: z.string().max(100).optional(),
   workingHours: workingHoursSchema,
+  daysOff: daysOffSchema,
   serviceIds: z.array(z.string()).optional(),
 });
 
@@ -26,6 +31,7 @@ const updateStaffBody = z.object({
   name: z.string().min(1).max(200).optional(),
   telegramHandle: z.string().max(100).nullable().optional(),
   workingHours: workingHoursSchema,
+  daysOff: daysOffSchema,
   serviceIds: z.array(z.string()).optional(),
 });
 
@@ -57,7 +63,7 @@ export default async function staffRoutes(app: FastifyInstance) {
     const parsed = createStaffBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const { serviceIds, workingHours, ...staffData } = parsed.data;
+    const { serviceIds, workingHours, daysOff, ...staffData } = parsed.data;
 
     if (serviceIds && serviceIds.length > 0) {
       const serviceCount = await prisma.service.count({
@@ -72,6 +78,7 @@ export default async function staffRoutes(app: FastifyInstance) {
       data: {
         ...staffData,
         workingHours: workingHours ?? undefined,
+        ...(daysOff !== undefined ? { daysOff } : {}),
         businessId: business.id,
         ...(serviceIds && serviceIds.length > 0
           ? {
@@ -99,7 +106,7 @@ export default async function staffRoutes(app: FastifyInstance) {
     const parsed = updateStaffBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const { serviceIds, workingHours, ...staffData } = parsed.data;
+    const { serviceIds, workingHours, daysOff, ...staffData } = parsed.data;
 
     if (serviceIds !== undefined) {
       if (serviceIds.length > 0) {
@@ -123,6 +130,7 @@ export default async function staffRoutes(app: FastifyInstance) {
       data: {
         ...staffData,
         ...(workingHours !== undefined ? { workingHours } : {}),
+        ...(daysOff !== undefined ? { daysOff } : {}),
       },
       include: staffInclude,
     });

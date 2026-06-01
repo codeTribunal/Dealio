@@ -1,8 +1,12 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Plus, X, Search, AlertCircle, CheckCircle, Package } from 'lucide-react'
 import AuthLayout from '@/components/AuthLayout'
 import LoadingSpinner from '@/components/LoadingSpinner'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Input, Textarea } from '@/components/ui/Input'
+import { Icon } from '@/components/icons/Icon'
+import { useI18n } from '@/lib/i18n/i18nContext'
 import { formatUZS } from '@/lib/format'
 import {
   getProducts,
@@ -14,6 +18,7 @@ import {
 } from '@/lib/api'
 
 export default function CatalogPage() {
+  const { t } = useI18n()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -167,102 +172,120 @@ export default function CatalogPage() {
     p.name.toLowerCase().includes(search.toLowerCase())
   )
 
+  const title = t('nav.catalog')
+
   return (
-    <AuthLayout title="Catalog">
+    <AuthLayout title={title}>
+      {/* ── Header ───────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Catalog</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-extrabold text-text-1">{title}</h1>
+          <p className="text-sm text-text-2 mt-1">
             {products.length} product{products.length === 1 ? '' : 's'}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="relative flex-1 md:flex-none md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
+          <div className="flex-1 md:flex-none md:w-64">
+            <Input
+              leftIcon="search"
               type="text"
               placeholder="Search products..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <button
+          <Button
+            variant="primary"
+            leftIcon="add"
             onClick={handleNew}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors flex-shrink-0 whitespace-nowrap"
+            className="whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" />
-            Add product
-          </button>
+            New product
+          </Button>
         </div>
       </div>
 
+      {/* ── List / states ────────────────────────────────────────── */}
       {loading ? (
         <LoadingSpinner />
       ) : error ? (
-        <div className="p-6">
-          <p className="text-sm text-red-600">
+        <Card>
+          <p className="text-sm text-error-strong">
             {error}
             <button
-              className="text-sm text-blue-600 ml-2"
+              className="ml-2 text-sm font-semibold text-accent hover:text-accent-hover"
               onClick={() => loadProducts()}
             >
               Try again
             </button>
           </p>
-        </div>
+        </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.length === 0 ? (
-            <div className="text-center py-16 col-span-full">
-              <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-sm mb-2">No products yet</p>
-              <button
-                onClick={handleNew}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Add your first product
-              </button>
-            </div>
+            <Card className="col-span-full">
+              <div className="text-center py-12">
+                <div className="mx-auto mb-4 w-16 h-16 rounded-lg bg-accent-soft flex items-center justify-center text-accent">
+                  <Icon name="catalog" size={28} />
+                </div>
+                <p className="text-sm text-text-2 mb-3">No products yet</p>
+                <Button variant="ghost" leftIcon="add" onClick={handleNew}>
+                  Add your first product
+                </Button>
+              </div>
+            </Card>
           ) : (
             filtered.map((product) => (
-              <div
+              <Card
                 key={product.id}
+                padded={false}
                 onClick={() => handleEdit(product)}
-                className="bg-white rounded-2xl border border-gray-200 p-5 cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all"
+                className="p-5 cursor-pointer hover:border-border-strong hover:shadow-md transition-shadow"
               >
+                {/* Placeholder image tile — no image upload exists yet */}
+                <div
+                  aria-hidden="true"
+                  className="w-full aspect-square max-h-32 mb-3 rounded-md bg-accent-soft flex items-center justify-center text-accent"
+                >
+                  <Icon name="catalog" size={36} />
+                </div>
+
                 {/* Header row */}
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between mb-2">
                   <div className="flex-1 min-w-0 mr-3">
-                    <p className="text-sm font-bold text-gray-900 truncate">
+                    <p className="text-sm font-bold text-text-1 truncate">
                       {product.name}
                     </p>
                     {product.description && (
-                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                      <p className="text-xs text-text-2 mt-0.5 line-clamp-2">
                         {product.description}
                       </p>
                     )}
                   </div>
-                  {/* Active toggle */}
-                  <div
+                  {/* Active toggle — token-styled switch */}
+                  <button
+                    type="button"
+                    aria-pressed={product.active}
                     onClick={(e) => handleToggleActive(product, e)}
-                    className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors flex-shrink-0 ${
-                      product.active ? 'bg-blue-600' : 'bg-gray-200'
+                    className={`w-10 h-5 rounded-pill relative cursor-pointer transition-colors flex-shrink-0 ${
+                      product.active ? 'bg-accent' : 'bg-border-strong'
                     }`}
                   >
-                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                      product.active ? 'right-0.5' : 'left-0.5'
-                    }`} />
-                  </div>
+                    <span
+                      className={`absolute top-0.5 w-4 h-4 bg-surface rounded-pill shadow-sm transition-transform ${
+                        product.active ? 'right-0.5' : 'left-0.5'
+                      }`}
+                    />
+                  </button>
                 </div>
 
                 {/* Price */}
-                <p className="text-base font-bold text-gray-900 mb-2">
+                <p className="text-base font-bold text-text-1 tabular-nums mb-2">
                   {formatUZS(product.price)}
                 </p>
 
-                {/* Stock info */}
-                <div className="flex items-center gap-2 text-xs text-gray-500">
+                {/* Stock + prep info */}
+                <div className="flex items-center gap-2 text-xs text-text-2">
                   {product.unlimited ? (
                     <span>Made to order</span>
                   ) : (
@@ -276,103 +299,112 @@ export default function CatalogPage() {
                   )}
                 </div>
 
-                {/* Inactive badge */}
-                {!product.active && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 mt-2">
-                    Paused
-                  </span>
-                )}
-              </div>
+                {/* State badge */}
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-pill text-xs font-semibold mt-3 ${
+                    product.active
+                      ? 'bg-success-soft text-success-strong'
+                      : 'bg-warning-soft text-warning-strong'
+                  }`}
+                >
+                  {product.active ? 'Active' : 'Paused'}
+                </span>
+              </Card>
             ))
           )}
         </div>
       )}
 
-      {/* Product form panel */}
+      {/* ── Product form slide-over ──────────────────────────────── */}
       {showForm && (
         <div className="fixed inset-0 z-40 flex justify-end">
           <div
-            className="absolute inset-0 bg-black/20"
+            className="absolute inset-0 bg-text-1/30"
             onClick={handleClose}
           />
-          <div className="relative z-50 w-full max-w-lg bg-white shadow-2xl flex flex-col h-full">
-            {/* header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
-              <p className="text-lg font-bold text-gray-900">
+          <div className="relative z-50 w-full max-w-lg bg-surface border-l border-border shadow-lg flex flex-col h-full">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
+              <p className="text-lg font-bold text-text-1">
                 {editingProduct ? 'Edit product' : 'New product'}
               </p>
-              <button onClick={handleClose}>
-                <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+              <button
+                type="button"
+                onClick={handleClose}
+                aria-label="Close"
+                className="text-text-3 hover:text-text-1 transition-colors"
+              >
+                <Icon name="close" size={20} />
               </button>
             </div>
 
-            {/* body */}
+            {/* Body */}
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
-              {/* Field 1 — Product name */}
+              {/* Product name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-1 mb-1.5">
                   Product name *
                 </label>
-                <input
+                <Input
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="Product name"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
-              {/* Field 2 — Description */}
+              {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-1 mb-1.5">
                   Description
                 </label>
-                <textarea
+                <Textarea
                   rows={3}
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
                   placeholder="What is this product?"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
-              {/* Field 3 — Price */}
+              {/* Price */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-1 mb-1.5">
                   Price (UZS) *
                 </label>
-                <input
+                <Input
                   type="number"
                   value={formPrice}
                   onChange={(e) => setFormPrice(e.target.value)}
                   min="0"
                   placeholder="150000"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="tabular-nums"
                 />
               </div>
 
-              {/* Field 4 — Stock */}
+              {/* Stock mode */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-1 mb-1.5">
                   Stock
                 </label>
                 <div className="flex gap-2">
                   <button
+                    type="button"
                     onClick={() => setFormUnlimited(true)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-4 py-2 rounded-md text-sm font-semibold transition-colors ${
                       formUnlimited
-                        ? 'bg-gray-900 text-white'
-                        : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                        ? 'bg-accent text-accent-on'
+                        : 'border border-border bg-surface text-text-1 hover:bg-surface-2'
                     }`}
                   >
                     Made to order
                   </button>
                   <button
+                    type="button"
                     onClick={() => setFormUnlimited(false)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-4 py-2 rounded-md text-sm font-semibold transition-colors ${
                       !formUnlimited
-                        ? 'bg-gray-900 text-white'
-                        : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                        ? 'bg-accent text-accent-on'
+                        : 'border border-border bg-surface text-text-1 hover:bg-surface-2'
                     }`}
                   >
                     Limited stock
@@ -382,37 +414,39 @@ export default function CatalogPage() {
 
               {!formUnlimited && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-sm font-medium text-text-1 mb-1.5">
                     Stock quantity
                   </label>
-                  <input
+                  <Input
                     type="number"
                     value={formStockQty}
                     onChange={(e) => setFormStockQty(e.target.value)}
                     min="0"
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="tabular-nums"
                   />
                 </div>
               )}
 
-              {/* Field 5 — Preparation time */}
+              {/* Preparation time — number + unit dropdown (logic preserved) */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-1 mb-1.5">
                   Preparation time
                 </label>
                 <div className="flex gap-2">
-                  <input
-                    type="number"
-                    value={formPrepTimeValue}
-                    onChange={(e) => setFormPrepTimeValue(e.target.value)}
-                    placeholder="2"
-                    min="1"
-                    className="w-24 px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                  <div className="w-24">
+                    <Input
+                      type="number"
+                      value={formPrepTimeValue}
+                      onChange={(e) => setFormPrepTimeValue(e.target.value)}
+                      placeholder="2"
+                      min="1"
+                      className="tabular-nums"
+                    />
+                  </div>
                   <select
                     value={formPrepTimeUnit}
                     onChange={(e) => setFormPrepTimeUnit(e.target.value)}
-                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className="flex-1 bg-surface border border-border rounded-md py-2.5 px-3.5 text-sm text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors"
                   >
                     <option value="minutes">Minutes</option>
                     <option value="hours">Hours</option>
@@ -422,72 +456,85 @@ export default function CatalogPage() {
                 </div>
               </div>
 
-              {/* Field 6 — Active status */}
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+              {/* Active status */}
+              <div className="flex items-center justify-between p-4 bg-surface-2 rounded-md border border-border">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Active</p>
-                  <p className="text-xs text-gray-500">Visible to customers in the bot</p>
+                  <p className="text-sm font-semibold text-text-1">Active</p>
+                  <p className="text-xs text-text-2">
+                    Visible to customers in the bot
+                  </p>
                 </div>
-                <div
+                <button
+                  type="button"
+                  aria-pressed={formActive}
                   onClick={() => setFormActive(!formActive)}
-                  className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors flex-shrink-0 ${
-                    formActive ? 'bg-blue-600' : 'bg-gray-200'
+                  className={`w-10 h-5 rounded-pill relative cursor-pointer transition-colors flex-shrink-0 ${
+                    formActive ? 'bg-accent' : 'bg-border-strong'
                   }`}
                 >
-                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                    formActive ? 'right-0.5' : 'left-0.5'
-                  }`} />
-                </div>
+                  <span
+                    className={`absolute top-0.5 w-4 h-4 bg-surface rounded-pill shadow-sm transition-transform ${
+                      formActive ? 'right-0.5' : 'left-0.5'
+                    }`}
+                  />
+                </button>
               </div>
             </div>
 
-            {/* footer */}
-            <div className="p-6 border-t border-gray-200 flex-shrink-0 space-y-3">
+            {/* Footer */}
+            <div className="p-6 border-t border-border flex-shrink-0 space-y-3">
               {formError && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
-                  <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                  <p className="text-sm text-red-700">{formError}</p>
+                <div className="p-3 bg-error-soft border border-error-strong rounded-md">
+                  <p className="text-sm text-error-strong">{formError}</p>
                 </div>
               )}
 
-              <button
+              <Button
+                variant="primary"
+                fullWidth
+                loading={saving}
                 onClick={handleSave}
-                disabled={saving}
-                className="w-full py-3 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {saving ? 'Saving...' : editingProduct ? 'Save changes' : 'Create product'}
-              </button>
+                {saving
+                  ? 'Saving...'
+                  : editingProduct
+                  ? 'Save changes'
+                  : 'Create product'}
+              </Button>
 
               {editingProduct && !showDeleteConfirm && (
-                <button
+                <Button
+                  variant="danger"
+                  fullWidth
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="w-full py-3 border border-red-200 text-red-600 rounded-xl text-sm font-semibold hover:bg-red-50 transition-colors"
                 >
                   Delete
-                </button>
+                </Button>
               )}
               {editingProduct && showDeleteConfirm && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                  <p className="text-sm font-semibold text-red-800 mb-1">
+                <div className="p-4 bg-error-soft border border-error-strong rounded-md">
+                  <p className="text-sm font-semibold text-error-strong mb-1">
                     Delete this item?
                   </p>
-                  <p className="text-xs text-red-600 mb-3">
+                  <p className="text-xs text-error-strong mb-3">
                     This cannot be undone.
                   </p>
                   <div className="flex gap-2">
-                    <button
+                    <Button
+                      variant="danger"
+                      fullWidth
+                      loading={deleting}
                       onClick={handleDelete}
-                      disabled={deleting}
-                      className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition-colors"
                     >
                       {deleting ? 'Deleting...' : 'Yes, delete'}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      fullWidth
                       onClick={() => setShowDeleteConfirm(false)}
-                      className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
                     >
                       Cancel
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -498,8 +545,10 @@ export default function CatalogPage() {
 
       {/* Success toast */}
       {savedMessage && (
-        <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-4 py-3 rounded-xl text-sm font-medium shadow-lg z-50 flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 text-green-400" />
+        <div className="fixed bottom-6 right-6 bg-text-1 text-surface px-4 py-3 rounded-md text-sm font-medium shadow-md z-50 flex items-center gap-2">
+          <span className="text-success-soft">
+            <Icon name="paid" size={16} />
+          </span>
           {savedMessage}
         </div>
       )}

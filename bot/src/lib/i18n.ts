@@ -579,6 +579,11 @@ const messages: Record<string, Entry> = {
     RUSSIAN: 'На этот день нет свободного времени. Выберите другую дату.',
     ENGLISH: 'No available times on this day. Pick another date.',
   },
+  slotJustTaken: {
+    UZBEK: 'Afsuski, bu vaqt hozirgina band qilindi. Iltimos, boshqa vaqtni tanlang.',
+    RUSSIAN: 'К сожалению, это время только что заняли. Пожалуйста, выберите другое.',
+    ENGLISH: 'Unfortunately that time was just taken. Please choose another.',
+  },
   bookingSummaryTitle: {
     UZBEK: '<b>Navbat xulosasi</b>',
     RUSSIAN: '<b>Сводка записи</b>',

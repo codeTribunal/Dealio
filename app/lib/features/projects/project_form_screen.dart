@@ -4,9 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api/api_service.dart';
+import '../../core/icons/app_icon.dart';
 import '../../core/models/customer.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_text_field.dart';
 import 'projects_provider.dart';
 
@@ -66,221 +69,233 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l.projectFormTitle)),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.s4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Client selection
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                l.projectClient,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _customerManualMode = false),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: !_customerManualMode
-                            ? const Color(0xFF1F2937)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: !_customerManualMode
-                              ? const Color(0xFF1F2937)
-                              : Colors.grey.shade300,
-                        ),
+            // ── Client card ───────────────────────────────────────
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _FieldLabel(l.projectClient),
+                  Row(
+                    children: [
+                      _toggleButton(
+                        label: l.apptFormSelectExisting,
+                        selected: !_customerManualMode,
+                        onTap: () =>
+                            setState(() => _customerManualMode = false),
                       ),
-                      child: Text(
-                        l.apptFormSelectExisting,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: !_customerManualMode
-                              ? Colors.white
-                              : Colors.grey.shade700,
-                        ),
+                      const SizedBox(width: AppSpacing.s2),
+                      _toggleButton(
+                        label: l.apptFormEnterManually,
+                        selected: _customerManualMode,
+                        onTap: () =>
+                            setState(() => _customerManualMode = true),
                       ),
-                    ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _customerManualMode = true),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: _customerManualMode
-                            ? const Color(0xFF1F2937)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: _customerManualMode
-                              ? const Color(0xFF1F2937)
-                              : Colors.grey.shade300,
-                        ),
-                      ),
-                      child: Text(
-                        l.apptFormEnterManually,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: _customerManualMode
-                              ? Colors.white
-                              : Colors.grey.shade700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (!_customerManualMode)
-              DropdownButtonFormField<Customer>(
-                decoration: InputDecoration(
-                  labelText: l.projectClient,
-                  border: const OutlineInputBorder(),
-                ),
-                // ignore: deprecated_member_use
-                value: _selectedCustomer,
-                hint: _customers == null
-                    ? Text(l.commonLoading)
-                    : Text(l.projectSelectClient),
-                items: _customers
-                    ?.map(
-                      (c) => DropdownMenuItem<Customer>(
-                        value: c,
-                        child: Text(c.name),
-                      ),
+                  const SizedBox(height: AppSpacing.s3),
+                  if (!_customerManualMode)
+                    DropdownButtonFormField<Customer>(
+                      decoration: _decoration(context),
+                      dropdownColor: t.surface,
+                      style: TextStyle(color: t.text1),
+                      // ignore: deprecated_member_use
+                      value: _selectedCustomer,
+                      hint: _customers == null
+                          ? Text(l.commonLoading)
+                          : Text(l.projectSelectClient),
+                      items: _customers
+                          ?.map(
+                            (c) => DropdownMenuItem<Customer>(
+                              value: c,
+                              child: Text(c.name),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (c) => setState(() => _selectedCustomer = c),
                     )
-                    .toList(),
-                onChanged: (c) => setState(() => _selectedCustomer = c),
-              )
-            else
-              TextFormField(
-                decoration: InputDecoration(
-                  labelText: l.projectClientNameLabel,
-                  hintText: l.projectClientNameHint,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onChanged: (v) => setState(() => _manualCustomerName = v),
+                  else
+                    TextFormField(
+                      style: TextStyle(color: t.text1),
+                      decoration: _decoration(context,
+                          hint: l.projectClientNameHint),
+                      onChanged: (v) => setState(() => _manualCustomerName = v),
+                    ),
+                ],
               ),
-            const SizedBox(height: 16),
-
-            AppTextField(
-              controller: _nameCtrl,
-              label: l.projectNameLabel,
-              hint: l.projectNameHint,
             ),
-            const SizedBox(height: 16),
 
-            AppTextField(
-              controller: _descCtrl,
-              label: l.projectScope,
-              hint: l.projectScopeHint,
-              maxLines: 4,
+            const SizedBox(height: AppSpacing.s3),
+
+            // ── Details card ──────────────────────────────────────
+            AppCard(
+              child: Column(
+                children: [
+                  AppTextField(
+                    controller: _nameCtrl,
+                    label: l.projectNameLabel,
+                    hint: l.projectNameHint,
+                  ),
+                  const SizedBox(height: AppSpacing.s4),
+                  AppTextField(
+                    controller: _descCtrl,
+                    label: l.projectScope,
+                    hint: l.projectScopeHint,
+                    maxLines: 4,
+                  ),
+                  const SizedBox(height: AppSpacing.s4),
+                  AppTextField(
+                    controller: _priceCtrl,
+                    label: l.projectPriceLabel,
+                    hint: '0',
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: AppSpacing.s4),
+                  AppTextField(
+                    controller: _termsCtrl,
+                    label: l.projectPaymentTerms,
+                    hint: l.projectTermsHint,
+                    maxLines: 2,
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
 
-            AppTextField(
-              controller: _priceCtrl,
-              label: l.projectPriceLabel,
-              hint: '0',
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.s3),
 
-            AppTextField(
-              controller: _termsCtrl,
-              label: l.projectPaymentTerms,
-              hint: l.projectTermsHint,
-              maxLines: 2,
-            ),
-            const SizedBox(height: 16),
-
-            Row(
-              children: [
-                Expanded(
-                  child: AppTextField(
-                    controller: _startCtrl,
-                    label: l.projectStartDate,
-                    hint: l.commonOptionalLabel,
-                    readOnly: true,
-                    keyboardType: TextInputType.none,
-                    suffixIcon: _startDate == null
-                        ? const Icon(Icons.calendar_today_outlined, size: 18)
-                        : IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () => setState(() {
-                              _startDate = null;
-                              _startCtrl.clear();
-                            }),
-                          ),
-                    onTap: () => _pickDate(
-                      initial: _startDate,
-                      onPicked: (d) => setState(() {
-                        _startDate = d;
-                        _startCtrl.text = _displayFmt.format(d);
-                      }),
+            // ── Dates card ────────────────────────────────────────
+            AppCard(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: AppTextField(
+                      controller: _startCtrl,
+                      label: l.projectStartDate,
+                      hint: l.commonOptionalLabel,
+                      readOnly: true,
+                      keyboardType: TextInputType.none,
+                      suffixIcon: _startDate == null
+                          ? Padding(
+                              padding:
+                                  const EdgeInsets.only(right: AppSpacing.s2),
+                              child: AppIcon(
+                                  name: AppIconName.calendar,
+                                  size: 18,
+                                  color: t.text2),
+                            )
+                          : IconButton(
+                              icon: AppIcon(
+                                  name: AppIconName.close,
+                                  size: 18,
+                                  color: t.text2),
+                              onPressed: () => setState(() {
+                                _startDate = null;
+                                _startCtrl.clear();
+                              }),
+                            ),
+                      onTap: () => _pickDate(
+                        initial: _startDate,
+                        onPicked: (d) => setState(() {
+                          _startDate = d;
+                          _startCtrl.text = _displayFmt.format(d);
+                        }),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: AppTextField(
-                    controller: _deadlineCtrl,
-                    label: l.projectDeadline,
-                    hint: l.commonOptionalLabel,
-                    readOnly: true,
-                    keyboardType: TextInputType.none,
-                    suffixIcon: _deadline == null
-                        ? const Icon(Icons.calendar_today_outlined, size: 18)
-                        : IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () => setState(() {
-                              _deadline = null;
-                              _deadlineCtrl.clear();
-                            }),
-                          ),
-                    onTap: () => _pickDate(
-                      initial: _deadline,
-                      onPicked: (d) => setState(() {
-                        _deadline = d;
-                        _deadlineCtrl.text = _displayFmt.format(d);
-                      }),
+                  const SizedBox(width: AppSpacing.s3),
+                  Expanded(
+                    child: AppTextField(
+                      controller: _deadlineCtrl,
+                      label: l.projectDeadline,
+                      hint: l.commonOptionalLabel,
+                      readOnly: true,
+                      keyboardType: TextInputType.none,
+                      suffixIcon: _deadline == null
+                          ? Padding(
+                              padding:
+                                  const EdgeInsets.only(right: AppSpacing.s2),
+                              child: AppIcon(
+                                  name: AppIconName.calendar,
+                                  size: 18,
+                                  color: t.text2),
+                            )
+                          : IconButton(
+                              icon: AppIcon(
+                                  name: AppIconName.close,
+                                  size: 18,
+                                  color: t.text2),
+                              onPressed: () => setState(() {
+                                _deadline = null;
+                                _deadlineCtrl.clear();
+                              }),
+                            ),
+                      onTap: () => _pickDate(
+                        initial: _deadline,
+                        onPicked: (d) => setState(() {
+                          _deadline = d;
+                          _deadlineCtrl.text = _displayFmt.format(d);
+                        }),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            const SizedBox(height: 24),
+
+            const SizedBox(height: AppSpacing.s5),
 
             if (_error != null) ...[
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-              const SizedBox(height: 12),
+              Text(_error!, style: TextStyle(color: t.errorStrong)),
+              const SizedBox(height: AppSpacing.s3),
             ],
 
             AppButton(
               label: l.projectFormCreate,
+              fullWidth: true,
               loading: _saving,
               onPressed: _submit,
             ),
+            const SizedBox(height: AppSpacing.s6),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _toggleButton({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final t = AppTokens.of(context);
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: AppMotion.durFast,
+          curve: AppMotion.ease,
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.s2),
+          decoration: BoxDecoration(
+            color: selected ? t.accentSoft : t.surface,
+            borderRadius: AppRadii.sm,
+            border: Border.all(color: selected ? t.accent : t.border),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: AppTextSizes.caption,
+              fontWeight: AppFontWeights.semibold,
+              color: selected ? t.accent : t.text2,
+            ),
+          ),
         ),
       ),
     );
@@ -314,7 +329,8 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
       setState(() => _error = l.projectErrNameRequired);
       return;
     }
-    final price = int.tryParse(_priceCtrl.text.trim().replaceAll(RegExp(r'\s'), ''));
+    final price =
+        int.tryParse(_priceCtrl.text.trim().replaceAll(RegExp(r'\s'), ''));
     if (price == null) {
       setState(() => _error = l.productFormPriceInvalid);
       return;
@@ -339,10 +355,13 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
       final data = <String, dynamic>{
         'customerId': customerId,
         'name': name,
-        if (_descCtrl.text.trim().isNotEmpty) 'description': _descCtrl.text.trim(),
+        if (_descCtrl.text.trim().isNotEmpty)
+          'description': _descCtrl.text.trim(),
         'totalPrice': price,
-        if (_termsCtrl.text.trim().isNotEmpty) 'paymentTerms': _termsCtrl.text.trim(),
-        if (_startDate != null) 'startDate': _startDate!.toUtc().toIso8601String(),
+        if (_termsCtrl.text.trim().isNotEmpty)
+          'paymentTerms': _termsCtrl.text.trim(),
+        if (_startDate != null)
+          'startDate': _startDate!.toUtc().toIso8601String(),
         if (_deadline != null) 'deadline': _deadline!.toUtc().toIso8601String(),
       };
 
@@ -356,4 +375,46 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
       });
     }
   }
+}
+
+class _FieldLabel extends StatelessWidget {
+  final String text;
+  const _FieldLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.s2),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: AppTextSizes.caption,
+          fontWeight: AppFontWeights.semibold,
+          color: t.text2,
+        ),
+      ),
+    );
+  }
+}
+
+InputDecoration _decoration(BuildContext context, {String? hint}) {
+  final t = AppTokens.of(context);
+  OutlineInputBorder border(Color color, [double width = 1]) =>
+      OutlineInputBorder(
+        borderRadius: AppRadii.md,
+        borderSide: BorderSide(color: color, width: width),
+      );
+  return InputDecoration(
+    hintText: hint,
+    hintStyle: TextStyle(color: t.text3),
+    filled: true,
+    fillColor: t.surface,
+    isDense: true,
+    contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s4, vertical: AppSpacing.s3),
+    border: border(t.border),
+    enabledBorder: border(t.border),
+    focusedBorder: border(t.accent, 2),
+  );
 }

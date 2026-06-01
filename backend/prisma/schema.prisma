@@ -18,7 +18,12 @@ model Business {
   cardBank     CardBank?
   botUsername           String?   @unique
   calendarToken         String?   @unique
+  // Working hours: JSON object keyed "0".."6" (0=Sunday … 6=Saturday, in
+  // Asia/Tashkent local time), each value either { start: "HH:MM", end: "HH:MM" }
+  // or null = closed that day. Absent object entirely = never configured.
   workingHours          Json?
+  // Gap (minutes) enforced after each appointment before the next can start.
+  bufferMinutes         Int       @default(0)
   reminderSettings      Json?
   ownerTelegramChatId   String?
   fcmToken              String?
@@ -51,6 +56,7 @@ model Business {
   checkoutQuestions CheckoutQuestion[]
   deviceTokens      DeviceToken[]
   sentReminders     SentReminder[]
+  blockedSlots      BlockedSlot[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -218,12 +224,18 @@ model Staff {
   business       Business  @relation(fields: [businessId], references: [id])
   name           String
   telegramHandle String?
+  // Same shape as Business.workingHours: JSON keyed "0".."6" (0=Sunday …
+  // 6=Saturday, Asia/Tashkent local), value { start: "HH:MM", end: "HH:MM" }
+  // or null = closed. NOTE: the availability engine drives the slot window
+  // from Business.workingHours (business-wide); this column is retained but
+  // does not currently drive per-staff windows.
   workingHours   Json?
   daysOff        DateTime[]
   deletedAt      DateTime?
 
   staffServices StaffService[]
   appointments  Appointment[]
+  blockedSlots  BlockedSlot[]
 
   createdAt DateTime @default(now())
 }
@@ -235,6 +247,20 @@ model StaffService {
   service   Service @relation(fields: [serviceId], references: [id])
 
   @@id([staffId, serviceId])
+}
+
+model BlockedSlot {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  staffId    String? // null = whole-business block
+  staff      Staff?   @relation(fields: [staffId], references: [id])
+  startTime  DateTime
+  endTime    DateTime
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([businessId, startTime])
 }
 
 model Appointment {

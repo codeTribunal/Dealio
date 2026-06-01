@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -29,6 +30,9 @@ import '../../features/projects/projects_screen.dart';
 import '../../features/projects/project_detail_screen.dart';
 import '../../features/projects/project_form_screen.dart';
 import '../../features/projects/milestone_form_screen.dart';
+import '../../features/_design/design_tokens_screen.dart';
+import '../../features/_design/design_icons_screen.dart';
+import '../../features/_design/design_components_screen.dart';
 
 /// Exposed so FCM tap handlers can navigate without a BuildContext.
 final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -43,6 +47,15 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/splash',
     refreshListenable: authNotifier,
     redirect: (BuildContext context, GoRouterState state) {
+      // Dev-only design reference screens are always reachable (not gated by
+      // auth). Debug builds only — these routes don't exist in release.
+      if (kDebugMode &&
+          (state.matchedLocation == '/design-tokens' ||
+              state.matchedLocation == '/design-icons' ||
+              state.matchedLocation == '/design-components')) {
+        return null;
+      }
+
       // Wait until startup check (token + business fetch) is complete
       if (!authNotifier.isStartupComplete) return null;
 
@@ -210,6 +223,22 @@ final routerProvider = Provider<GoRouter>((ref) {
           return MilestoneFormScreen(projectId: id);
         },
       ),
+      // Dev-only: design reference screens. Debug builds only — these routes
+      // do not exist in release (gated on kDebugMode).
+      if (kDebugMode) ...[
+        GoRoute(
+          path: '/design-tokens',
+          builder: (ctx, state) => const DesignTokensScreen(),
+        ),
+        GoRoute(
+          path: '/design-icons',
+          builder: (ctx, state) => const DesignIconsScreen(),
+        ),
+        GoRoute(
+          path: '/design-components',
+          builder: (ctx, state) => const DesignComponentsScreen(),
+        ),
+      ],
     ],
   );
 });

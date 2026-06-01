@@ -2,17 +2,21 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { WifiOff } from 'lucide-react'
 import AuthLayout from '@/components/AuthLayout'
-import LoadingSpinner from '@/components/LoadingSpinner'
-import ActivityBadge from '@/components/ActivityBadge'
+import { Card, CardHeader } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Avatar } from '@/components/ui/Avatar'
+import { Badge } from '@/components/ui/Badge'
+import { Spinner } from '@/components/ui/Spinner'
 import { getOrderDetail, updateOrderStatus, confirmOrderPayment } from '@/lib/api'
-import { formatUZS, formatDate, formatDateTime, getInitials } from '@/lib/format'
+import { formatUZS, formatDate, formatDateTime } from '@/lib/format'
+import { useI18n } from '@/lib/i18n/i18nContext'
 import type { Order } from '@/types'
 
 export default function OrderDetailPage() {
   const params = useParams()
   const id = params.id as string
+  const { t } = useI18n()
 
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
@@ -53,210 +57,228 @@ export default function OrderDetailPage() {
     <AuthLayout title={order ? `Order #${order.orderNumber}` : 'Order'}>
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <LoadingSpinner />
+          <Spinner size={32} />
         </div>
       ) : error ? (
-        <div className="text-center py-16">
-          <WifiOff className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-lg font-semibold text-gray-900 mb-2">Could not load order</p>
-          <p className="text-sm text-gray-500 mb-6">Check your connection and try again</p>
-          <button
-            onClick={load}
-            className="px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700"
-          >
+        <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+          <p className="text-base font-semibold text-error-strong">{error}</p>
+          <Button variant="primary" onClick={load}>
             Try again
-          </button>
+          </Button>
         </div>
       ) : order ? (
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
-          {/* LEFT COLUMN */}
-          <div className="w-full lg:w-80 lg:flex-shrink-0">
-            {/* Card 1 — Order summary */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-4">
-              <div className="flex items-center justify-between mb-4">
-                <h1 className="text-xl font-bold text-gray-900">Order #{order.orderNumber}</h1>
-                <p className="text-xs text-gray-400">{formatDateTime(order.createdAt)}</p>
-              </div>
-              <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                <p className="text-sm text-gray-600">Order status</p>
-                <ActivityBadge status={order.orderStatus} type="order" />
-              </div>
-              <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                <p className="text-sm text-gray-600">Payment</p>
-                <ActivityBadge status={order.paymentStatus} type="payment" />
-              </div>
-              <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                <p className="text-sm text-gray-600">Delivery</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {order.deliveryMethod === 'PICKUP' ? 'Pickup' : 'Delivery'}
-                </p>
-              </div>
-              {order.deliveryMethod === 'DELIVERY' && order.deliveryAddress !== null && (
-                <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                  <p className="text-sm text-gray-600">Address</p>
-                  <p className="text-sm font-medium text-gray-900">{order.deliveryAddress}</p>
-                </div>
-              )}
-              {order.deliveryDate !== null && (
-                <div className="flex justify-between items-center py-3 border-b border-gray-100 last:border-b-0">
-                  <p className="text-sm text-gray-600">Requested date</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {formatDate(order.deliveryDate)}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Card 2 — Customer */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-4">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Customer</h3>
-              <Link
-                href={`/customers/${order.customer.id}`}
-                className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+        <div className="space-y-6">
+          {/* Page header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1
+                className="text-text-1"
+                style={{ fontSize: 'var(--fs-h2)', fontWeight: 'var(--fw-extra)', lineHeight: 1.1 }}
               >
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-sm font-semibold text-blue-700">
-                  {getInitials(order.customer.name)}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">{order.customer.name}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {order.customer.telegramUsername
-                      ? `@${order.customer.telegramUsername}`
-                      : order.customer.phone || '—'}
-                  </p>
-                </div>
-              </Link>
+                Order #{order.orderNumber}
+              </h1>
+              <p className="text-xs text-text-3 mt-1">{formatDateTime(order.createdAt)}</p>
             </div>
-
-            {/* Card 3 — Actions */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-4">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Actions</h3>
-
-              {order.paymentStatus === 'PAYMENT_RECEIVED' && (
-                <button
-                  onClick={handleConfirmPayment}
-                  disabled={confirmingPayment}
-                  className="w-full bg-green-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 disabled:opacity-50 mb-3"
-                >
-                  {confirmingPayment ? 'Confirming...' : 'Confirm payment'}
-                </button>
-              )}
-
-              {order.orderStatus !== 'DELIVERED' && order.orderStatus !== 'CANCELLED' && (
-                <div>
-                  <p className="text-xs text-gray-500 mb-2">Update status</p>
-                  <div className="flex flex-col gap-2">
-                    {order.orderStatus === 'NEW' && (
-                      <button
-                        onClick={() => handleStatusChange('PREPARING')}
-                        disabled={updatingStatus}
-                        className="w-full bg-gray-900 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50"
-                      >
-                        Mark as Preparing
-                      </button>
-                    )}
-                    {order.orderStatus === 'PREPARING' && (
-                      <button
-                        onClick={() => handleStatusChange('READY')}
-                        disabled={updatingStatus}
-                        className="w-full bg-gray-900 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50"
-                      >
-                        Mark as Ready
-                      </button>
-                    )}
-                    {order.orderStatus === 'READY' && (
-                      <button
-                        onClick={() => handleStatusChange('DELIVERED')}
-                        disabled={updatingStatus}
-                        className="w-full bg-gray-900 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50"
-                      >
-                        Mark as Delivered
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleStatusChange('CANCELLED')}
-                      disabled={updatingStatus}
-                      className="w-full border border-red-200 text-red-600 py-2.5 rounded-xl text-sm font-medium hover:bg-red-50 disabled:opacity-50"
-                    >
-                      Cancel order
-                    </button>
-                  </div>
-                </div>
-              )}
+            <div className="flex gap-2 flex-wrap">
+              <Badge status={order.paymentStatus} type="payment" />
+              <Badge status={order.orderStatus} type="order" />
             </div>
-
-            {/* Card 4 — Internal notes */}
-            {order.internalNotes && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Internal notes</h3>
-                <p className="text-sm text-gray-700 leading-relaxed">{order.internalNotes}</p>
-              </div>
-            )}
-
-            {/* Card 5 — Customer notes */}
-            {order.notes && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Customer notes</h3>
-                <p className="text-sm text-gray-700 leading-relaxed">{order.notes}</p>
-              </div>
-            )}
           </div>
 
-          {/* RIGHT COLUMN */}
-          <div className="flex-1">
-            {/* Line items card */}
-            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-4">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-900">Items</h3>
-              </div>
-              {order.items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between px-6 py-4 border-b border-gray-100 last:border-b-0"
+          <div className="flex flex-col lg:flex-row gap-6 items-start">
+            {/* LEFT COLUMN */}
+            <div className="w-full lg:w-80 lg:flex-shrink-0 space-y-4">
+              {/* Customer */}
+              <Card>
+                <CardHeader title="Customer" />
+                <Link
+                  href={`/customers/${order.customer.id}`}
+                  className="flex items-center gap-3 hover:opacity-80 transition-opacity"
                 >
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{item.product.name}</p>
-                    {item.variant !== null && Object.keys(item.variant).length > 0 && (
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {Object.entries(item.variant)
-                          .map(([k, v]) => `${k}: ${v}`)
-                          .join(', ')}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-0.5">Qty: {item.quantity}</p>
+                  <Avatar name={order.customer.name} size="md" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-text-1 truncate">{order.customer.name}</p>
+                    <p className="text-xs text-text-2 truncate">
+                      {order.customer.telegramUsername
+                        ? `@${order.customer.telegramUsername}`
+                        : order.customer.phone || '—'}
+                    </p>
                   </div>
-                  <p className="text-sm font-semibold text-gray-900">
-                    {formatUZS(item.price * item.quantity)}
-                  </p>
+                </Link>
+              </Card>
+
+              {/* Details (delivery + dates) */}
+              <Card>
+                <CardHeader title="Details" />
+                <div>
+                  <div className="flex justify-between items-center py-2.5 border-b border-border">
+                    <p className="text-sm text-text-2">Delivery</p>
+                    <p className="text-sm font-medium text-text-1">
+                      {order.deliveryMethod === 'PICKUP' ? 'Pickup' : 'Delivery'}
+                    </p>
+                  </div>
+                  {order.deliveryMethod === 'DELIVERY' && order.deliveryAddress !== null && (
+                    <div className="flex justify-between items-start gap-3 py-2.5 border-b border-border">
+                      <p className="text-sm text-text-2 flex-shrink-0">Address</p>
+                      <p className="text-sm font-medium text-text-1 text-right">{order.deliveryAddress}</p>
+                    </div>
+                  )}
+                  {order.deliveryDate !== null && (
+                    <div className="flex justify-between items-center py-2.5 border-b border-border last:border-b-0">
+                      <p className="text-sm text-text-2">Requested date</p>
+                      <p className="text-sm font-medium text-text-1">
+                        {formatDate(order.deliveryDate)}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              ))}
-              <div className="flex justify-between items-center px-6 py-4 bg-gray-50">
-                <p className="text-sm font-semibold text-gray-900">Total</p>
-                <p className="text-lg font-bold text-gray-900">{formatUZS(order.total)}</p>
-              </div>
+              </Card>
+
+              {/* Actions */}
+              {(order.paymentStatus === 'PAYMENT_RECEIVED' ||
+                (order.orderStatus !== 'DELIVERED' && order.orderStatus !== 'CANCELLED')) && (
+                <Card>
+                  <CardHeader title="Actions" />
+
+                  {order.paymentStatus === 'PAYMENT_RECEIVED' && (
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      loading={confirmingPayment}
+                      onClick={handleConfirmPayment}
+                      className="mb-3"
+                    >
+                      {confirmingPayment ? 'Confirming...' : 'Confirm payment'}
+                    </Button>
+                  )}
+
+                  {order.orderStatus !== 'DELIVERED' && order.orderStatus !== 'CANCELLED' && (
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-text-2 mb-2">Update status</p>
+                      <div className="flex flex-col gap-2">
+                        {order.orderStatus === 'NEW' && (
+                          <Button
+                            variant="primary"
+                            fullWidth
+                            disabled={updatingStatus}
+                            onClick={() => handleStatusChange('PREPARING')}
+                          >
+                            Mark as Preparing
+                          </Button>
+                        )}
+                        {order.orderStatus === 'PREPARING' && (
+                          <Button
+                            variant="primary"
+                            fullWidth
+                            disabled={updatingStatus}
+                            onClick={() => handleStatusChange('READY')}
+                          >
+                            Mark as Ready
+                          </Button>
+                        )}
+                        {order.orderStatus === 'READY' && (
+                          <Button
+                            variant="primary"
+                            fullWidth
+                            disabled={updatingStatus}
+                            onClick={() => handleStatusChange('DELIVERED')}
+                          >
+                            Mark as Delivered
+                          </Button>
+                        )}
+                        <Button
+                          variant="danger"
+                          fullWidth
+                          disabled={updatingStatus}
+                          onClick={() => handleStatusChange('CANCELLED')}
+                        >
+                          Cancel order
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              )}
+
+              {/* Internal notes */}
+              {order.internalNotes && (
+                <Card>
+                  <CardHeader title="Internal notes" />
+                  <p className="text-sm text-text-1 leading-relaxed whitespace-pre-line">
+                    {order.internalNotes}
+                  </p>
+                </Card>
+              )}
+
+              {/* Customer notes */}
+              {order.notes && (
+                <Card>
+                  <CardHeader title="Customer notes" />
+                  <p className="text-sm text-text-1 leading-relaxed whitespace-pre-line">
+                    {order.notes}
+                  </p>
+                </Card>
+              )}
             </div>
 
-            {/* Timeline card */}
-            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-900">Timeline</h3>
-              </div>
-              {order.timeline.length === 0 ? (
-                <p className="text-sm text-gray-500 px-6 py-4">No timeline events yet</p>
-              ) : (
-                [...order.timeline].reverse().map((entry, index) => (
+            {/* RIGHT COLUMN */}
+            <div className="flex-1 w-full min-w-0 space-y-4">
+              {/* Line items */}
+              <Card padded={false} className="overflow-hidden">
+                <div className="px-5 py-4 border-b border-border">
+                  <p className="text-sm font-semibold text-text-1">Items</p>
+                </div>
+                {order.items.map((item) => (
                   <div
-                    key={index}
-                    className="flex items-start gap-4 px-6 py-4 border-b border-gray-100 last:border-b-0"
+                    key={item.id}
+                    className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-border last:border-b-0"
                   >
-                    <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-gray-900">{entry.status}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{formatDateTime(entry.at)}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-text-1 truncate">{item.product.name}</p>
+                      {item.variant !== null && Object.keys(item.variant).length > 0 && (
+                        <p className="text-xs text-text-2 mt-0.5">
+                          {Object.entries(item.variant)
+                            .map(([k, v]) => `${k}: ${v}`)
+                            .join(', ')}
+                        </p>
+                      )}
+                      <p className="text-xs text-text-3 mt-0.5">Qty: {item.quantity}</p>
                     </div>
+                    <p className="text-sm font-semibold text-text-1 tabular-nums flex-shrink-0">
+                      {formatUZS(item.price * item.quantity)}
+                    </p>
                   </div>
-                ))
-              )}
+                ))}
+                <div className="flex justify-between items-center px-5 py-4 bg-surface-2">
+                  <p className="text-sm font-bold text-text-1">Total</p>
+                  <p className="text-lg font-bold text-text-1 tabular-nums">{formatUZS(order.total)}</p>
+                </div>
+              </Card>
+
+              {/* Timeline */}
+              <Card padded={false} className="overflow-hidden">
+                <div className="px-5 py-4 border-b border-border">
+                  <p className="text-sm font-semibold text-text-1">Timeline</p>
+                </div>
+                {order.timeline.length === 0 ? (
+                  <p className="text-sm text-text-2 px-5 py-4">No timeline events yet</p>
+                ) : (
+                  [...order.timeline].reverse().map((entry, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start gap-3 px-5 py-3.5 border-b border-border last:border-b-0"
+                    >
+                      <span className="w-2 h-2 rounded-pill bg-accent mt-2 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm text-text-1">
+                          {t(`status.${entry.status}`) || entry.status}
+                        </p>
+                        <p className="text-xs text-text-3 mt-0.5">{formatDateTime(entry.at)}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </Card>
             </div>
           </div>
         </div>

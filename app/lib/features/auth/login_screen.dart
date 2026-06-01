@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_service.dart';
+import '../../core/icons/app_icon.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_text_field.dart';
@@ -31,13 +33,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      await ref.read(apiServiceProvider).requestOtp(_phoneController.text.trim());
+      await ref
+          .read(apiServiceProvider)
+          .requestOtp(_phoneController.text.trim());
       if (!mounted) return;
       context.push('/otp', extra: _phoneController.text.trim());
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppTokens.of(context).error),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -47,10 +53,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.s5),
           child: Form(
             key: _formKey,
             child: Column(
@@ -65,27 +72,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Container(
                     width: 72,
                     height: 72,
+                    alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(20),
+                      color: t.accent,
+                      borderRadius: AppRadii.xl,
+                      boxShadow: t.shadowAccent,
                     ),
-                    child: const Icon(Icons.storefront, color: Colors.white, size: 36),
+                    child: AppIcon(
+                        name: AppIconName.orders, size: 36, color: t.accentOn),
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: AppSpacing.s6),
                 Text(
                   l.loginWelcomeTitle,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: TextStyle(
+                    fontSize: AppTextSizes.h2,
+                    fontWeight: AppFontWeights.extra,
+                    color: t.text1,
+                  ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.s2),
                 Text(
                   l.loginWelcomeSubtitle,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                  style: TextStyle(
+                      fontSize: AppTextSizes.base, color: t.text2),
                   textAlign: TextAlign.center,
                 ),
                 const Spacer(),
@@ -93,8 +104,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   label: l.loginPhoneLabel,
                   hint: '+998 90 123 45 67',
                   controller: _phoneController,
+                  leftIcon: AppIconName.customers,
                   keyboardType: TextInputType.phone,
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[+\d]'))],
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[+\d]'))
+                  ],
                   validator: (v) {
                     if (v == null || v.trim().length < 9) {
                       return l.loginErrorInvalidPhone;
@@ -102,20 +116,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.s5),
                 AppButton(
                   label: l.loginContinueButton,
+                  fullWidth: true,
                   onPressed: _submit,
                   loading: _loading,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.s4),
                 Center(
                   child: Text(
                     l.loginOtpHint,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: Colors.grey),
+                    style: TextStyle(
+                        fontSize: AppTextSizes.caption, color: t.text3),
                     textAlign: TextAlign.center,
                   ),
                 ),

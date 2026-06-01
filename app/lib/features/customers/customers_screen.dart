@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/icons/app_icon.dart';
 import '../../core/models/customer.dart' show Customer, CustomerStage;
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
+import '../../shared/widgets/app_avatar.dart';
+import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_spinner.dart';
 import 'customers_provider.dart';
 
 class CustomersScreen extends ConsumerStatefulWidget {
@@ -26,6 +32,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final notifier = ref.read(customersProvider.notifier);
     final customersAsync = ref.watch(customersProvider);
 
@@ -35,33 +42,57 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
         children: [
           // ── Search bar ────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: l.customersSearchHint,
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          notifier.setSearch('');
-                        },
-                      )
-                    : null,
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.s4, AppSpacing.s3, AppSpacing.s4, AppSpacing.s3),
+            child: Container(
+              decoration: BoxDecoration(
+                color: t.surface,
+                borderRadius: AppRadii.md,
+                border: Border.all(color: t.border),
+                boxShadow: t.shadowSm,
               ),
-              onChanged: notifier.setSearch,
+              child: TextField(
+                controller: _searchController,
+                style: TextStyle(fontSize: AppTextSizes.base, color: t.text1),
+                decoration: InputDecoration(
+                  hintText: l.customersSearchHint,
+                  hintStyle:
+                      TextStyle(fontSize: AppTextSizes.base, color: t.text3),
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(
+                        left: AppSpacing.s4, right: AppSpacing.s2),
+                    child: AppIcon(
+                        name: AppIconName.search, size: 20, color: t.text2),
+                  ),
+                  prefixIconConstraints:
+                      const BoxConstraints(minWidth: 0, minHeight: 0),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: AppIcon(
+                              name: AppIconName.close, size: 18, color: t.text2),
+                          onPressed: () {
+                            _searchController.clear();
+                            notifier.setSearch('');
+                            setState(() {});
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s4, vertical: AppSpacing.s3),
+                ),
+                onChanged: (v) {
+                  notifier.setSearch(v);
+                  setState(() {});
+                },
+              ),
             ),
           ),
-
-          const Divider(height: 1),
 
           // ── Customer list ─────────────────────────────────────
           Expanded(
             child: customersAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: AppSpinner(size: 32)),
               error: (e, _) => _ErrorView(
                 message: e.toString(),
                 onRetry: notifier.refresh,
@@ -74,12 +105,14 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                   );
                 }
                 return RefreshIndicator(
+                  color: t.accent,
                   onRefresh: notifier.refresh,
                   child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.s4, 0, AppSpacing.s4, AppSpacing.s4),
                     itemCount: customers.length,
                     separatorBuilder: (_, __) =>
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacing.s2),
                     itemBuilder: (ctx, i) => _CustomerCard(
                       customer: customers[i],
                       onTap: () =>
@@ -106,109 +139,100 @@ class _CustomerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              // Avatar
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: Theme.of(context)
-                    .colorScheme
-                    .primaryContainer,
-                child: Text(
-                  customer.name.isNotEmpty
-                      ? customer.name[0].toUpperCase()
-                      : '?',
+    final t = AppTokens.of(context);
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.s3),
+      child: Row(
+        children: [
+          AppAvatar(name: customer.name, size: AppAvatarSize.md),
+          const SizedBox(width: AppSpacing.s3),
+
+          // Name + handle + stage
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  customer.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: AppFontWeights.semibold,
+                    fontSize: AppTextSizes.sm,
+                    color: t.text1,
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-
-              // Name + handle + stage
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      customer.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14),
-                    ),
-                    if (customer.telegramUsername != null)
-                      Text(
-                        '@${customer.telegramUsername}',
-                        style: TextStyle(
-                            color: Colors.grey[600], fontSize: 12),
-                      )
-                    else if (customer.phone != null)
-                      Text(
-                        customer.phone!,
-                        style: TextStyle(
-                            color: Colors.grey[600], fontSize: 12),
-                      ),
-                    if (customer.currentStage != null) ...[
-                      const SizedBox(height: 4),
-                      _StagePill(stage: customer.currentStage!),
-                    ],
-                  ],
-                ),
-              ),
-
-              // Stats
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
+                if (customer.telegramUsername != null)
                   Text(
-                    l.homeOrdersCount(customer.orderCount),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w500, fontSize: 12),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    formatDate(customer.lastInteractionAt),
+                    '@${customer.telegramUsername}',
                     style: TextStyle(
-                        color: Colors.grey[500], fontSize: 11),
+                        color: t.text2, fontSize: AppTextSizes.caption),
+                  )
+                else if (customer.phone != null)
+                  Text(
+                    customer.phone!,
+                    style: TextStyle(
+                        color: t.text2, fontSize: AppTextSizes.caption),
                   ),
+                if (customer.currentStage != null) ...[
+                  const SizedBox(height: AppSpacing.s1),
+                  StagePill(stage: customer.currentStage!),
                 ],
+              ],
+            ),
+          ),
+
+          const SizedBox(width: AppSpacing.s2),
+
+          // Stats
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                l.homeOrdersCount(customer.orderCount),
+                style: TextStyle(
+                  fontWeight: AppFontWeights.medium,
+                  fontSize: AppTextSizes.caption,
+                  color: t.text1,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                formatDate(customer.lastInteractionAt),
+                style:
+                    TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-// ── Stage pill ──────────────────────────────────────────────────────
+// ── Stage pill (shared; preserves the user-picked stage color) ──────
 
-class _StagePill extends StatelessWidget {
+class StagePill extends StatelessWidget {
   final CustomerStage stage;
-  const _StagePill({required this.stage});
+  const StagePill({super.key, required this.stage});
 
   @override
   Widget build(BuildContext context) {
-    final color = () {
-      try {
-        return Color(
-            int.parse('FF${stage.color.replaceFirst('#', '')}', radix: 16));
-      } catch (_) {
-        return const Color(0xFF6366F1);
-      }
-    }();
+    final t = AppTokens.of(context);
+    Color color;
+    try {
+      color =
+          Color(int.parse('FF${stage.color.replaceFirst('#', '')}', radix: 16));
+    } catch (_) {
+      color = t.accent;
+    }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.s2, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: AppRadii.pill,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -218,11 +242,14 @@ class _StagePill extends StatelessWidget {
             height: 6,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppSpacing.s1),
           Text(
             stage.name,
             style: TextStyle(
-                fontSize: 10, fontWeight: FontWeight.w600, color: color),
+              fontSize: AppTextSizes.caption,
+              fontWeight: AppFontWeights.semibold,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -239,21 +266,22 @@ class _EmptyView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.people_outline, size: 56, color: Colors.grey[300]),
-          const SizedBox(height: 12),
+          AppIcon(name: AppIconName.customers, size: 56, color: t.text3),
+          const SizedBox(height: AppSpacing.s3),
           Text(
             hasFilter ? l.customersEmptyFiltered : l.customersEmpty,
-            style: TextStyle(color: Colors.grey[600]),
+            style: TextStyle(color: t.text2),
           ),
           if (!hasFilter) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: AppSpacing.s1),
             Text(
               l.customersEmptyHint,
-              style: TextStyle(color: Colors.grey[400], fontSize: 12),
+              style: TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
               textAlign: TextAlign.center,
             ),
           ],
@@ -270,17 +298,26 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.s5),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: Text(AppLocalizations.of(context)!.buttonRetry)),
+            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
+            const SizedBox(height: AppSpacing.s3),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: t.text2)),
+            const SizedBox(height: AppSpacing.s4),
+            AppButton(
+              label: l.buttonRetry,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              onPressed: onRetry,
+            ),
           ],
         ),
       ),

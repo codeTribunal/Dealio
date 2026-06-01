@@ -3,12 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/icons/app_icon.dart';
 import '../../core/models/customer.dart';
 import '../../core/models/order.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../features/settings/customization_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
-import '../../shared/utils/status_labels.dart';
+import '../../shared/widgets/app_avatar.dart';
+import '../../shared/widgets/app_badge.dart';
+import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_spinner.dart';
 import 'customer_detail_provider.dart';
 
 class CustomerDetailScreen extends ConsumerStatefulWidget {
@@ -56,7 +62,10 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
       if (!mounted) return;
       setState(() => _notesSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text(
+                AppLocalizations.of(context)!.errorWithMessage(e.toString())),
+            backgroundColor: AppTokens.of(context).error),
       );
     }
   }
@@ -72,24 +81,26 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
     return customerAsync.when(
       loading: () => Scaffold(
         appBar: AppBar(title: Text(l.customerDetailTitle)),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const Center(child: AppSpinner(size: 32)),
       ),
       error: (e, _) => _ErrorView(customerId: widget.customerId),
       data: (customer) {
         _syncNotes(customer);
+        final t = AppTokens.of(context);
         return Scaffold(
           appBar: AppBar(title: Text(customer.name)),
           body: RefreshIndicator(
+            color: t.accent,
             onRefresh: notifier.refresh,
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.s4),
               children: [
                 _HeaderCard(customer: customer, notifier: notifier),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.s3),
                 _StatsRow(customer: customer),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.s3),
                 _RemindersCard(customer: customer, notifier: notifier),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.s3),
                 _NotesCard(
                   controller: _notesCtrl,
                   editing: _notesEditing,
@@ -101,17 +112,27 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                   }),
                   onSave: _saveNotes,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.s3),
                 _CustomFieldsCard(customer: customer, notifier: notifier),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.s3),
                 _OrderHistorySection(orders: customer.orders),
-                const SizedBox(height: 32),
+                const SizedBox(height: AppSpacing.s6),
               ],
             ),
           ),
         );
       },
     );
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────
+
+Color _parseHex(BuildContext context, String hex) {
+  try {
+    return Color(int.parse('FF${hex.replaceFirst('#', '')}', radix: 16));
+  } catch (_) {
+    return AppTokens.of(context).accent;
   }
 }
 
@@ -129,37 +150,43 @@ class _HeaderCard extends ConsumerWidget {
 
   void _showAddTag(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final ctrl = TextEditingController();
     String pickedColor = _tagPalette[0];
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: t.surface,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Padding(
-          padding: EdgeInsets.fromLTRB(
-              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          padding: EdgeInsets.fromLTRB(AppSpacing.s5, AppSpacing.s5,
+              AppSpacing.s5, MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.s5),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(l.customerAddTag,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 12),
+                  style: TextStyle(
+                      fontWeight: AppFontWeights.bold,
+                      fontSize: AppTextSizes.base,
+                      color: t.text1)),
+              const SizedBox(height: AppSpacing.s3),
               TextField(
                 controller: ctrl,
                 autofocus: true,
+                style: TextStyle(color: t.text1),
                 decoration: InputDecoration(
                   hintText: l.customerTagHint,
                   isDense: true,
                 ),
                 maxLength: 30,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.s2),
               Wrap(
-                spacing: 8,
+                spacing: AppSpacing.s2,
                 children: _tagPalette.map((hex) {
-                  final color = Color(int.parse('FF${hex.replaceFirst('#', '')}', radix: 16));
+                  final color = _parseHex(ctx, hex);
                   return GestureDetector(
                     onTap: () => setModalState(() => pickedColor = hex),
                     child: Container(
@@ -169,35 +196,34 @@ class _HeaderCard extends ConsumerWidget {
                         color: color,
                         shape: BoxShape.circle,
                         border: pickedColor == hex
-                            ? Border.all(color: Colors.black54, width: 2)
+                            ? Border.all(color: t.text1, width: 2)
                             : null,
                       ),
                     ),
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () async {
-                    final label = ctrl.text.trim();
-                    if (label.isEmpty) return;
-                    Navigator.pop(ctx);
-                    try {
-                      await notifier.addTag(label, pickedColor);
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
-                              backgroundColor: Colors.red),
-                        );
-                      }
+              const SizedBox(height: AppSpacing.s4),
+              AppButton(
+                label: l.customerAddTag,
+                fullWidth: true,
+                onPressed: () async {
+                  final label = ctrl.text.trim();
+                  if (label.isEmpty) return;
+                  Navigator.pop(ctx);
+                  try {
+                    await notifier.addTag(label, pickedColor);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(AppLocalizations.of(context)!
+                                .errorWithMessage(e.toString())),
+                            backgroundColor: t.error),
+                      );
                     }
-                  },
-                  child: Text(l.customerAddTag),
-                ),
+                  }
+                },
               ),
             ],
           ),
@@ -206,32 +232,30 @@ class _HeaderCard extends ConsumerWidget {
     );
   }
 
-  Color _parseColor(String hex) {
-    try {
-      return Color(int.parse('FF${hex.replaceFirst('#', '')}', radix: 16));
-    } catch (_) {
-      return const Color(0xFF6366F1);
-    }
-  }
-
   void _showChangeStage(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final stages = ref.read(stagesProvider).valueOrNull ?? [];
     showModalBottomSheet(
       context: context,
+      backgroundColor: t.surface,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.s5, AppSpacing.s5,
+                  AppSpacing.s5, AppSpacing.s2),
               child: Text(l.customerSetStage,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  style: TextStyle(
+                      fontWeight: AppFontWeights.bold,
+                      fontSize: AppTextSizes.base,
+                      color: t.text1)),
             ),
             ListTile(
-              leading: const Icon(Icons.block_outlined, size: 18, color: Colors.grey),
-              title: Text(l.customerNoStage),
+              leading: AppIcon(name: AppIconName.close, size: 18, color: t.text3),
+              title: Text(l.customerNoStage, style: TextStyle(color: t.text1)),
               onTap: () async {
                 Navigator.pop(ctx);
                 try {
@@ -239,21 +263,25 @@ class _HeaderCard extends ConsumerWidget {
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())), backgroundColor: Colors.red),
+                      SnackBar(
+                          content: Text(AppLocalizations.of(context)!
+                              .errorWithMessage(e.toString())),
+                          backgroundColor: t.error),
                     );
                   }
                 }
               },
             ),
             ...stages.map((s) {
-              final color = _parseColor(s.color);
+              final color = _parseHex(ctx, s.color);
               return ListTile(
                 leading: Container(
                   width: 14,
                   height: 14,
-                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  decoration:
+                      BoxDecoration(color: color, shape: BoxShape.circle),
                 ),
-                title: Text(s.name),
+                title: Text(s.name, style: TextStyle(color: t.text1)),
                 selected: customer.currentStage?.id == s.id,
                 onTap: () async {
                   Navigator.pop(ctx);
@@ -262,14 +290,17 @@ class _HeaderCard extends ConsumerWidget {
                   } catch (e) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())), backgroundColor: Colors.red),
+                        SnackBar(
+                            content: Text(AppLocalizations.of(context)!
+                                .errorWithMessage(e.toString())),
+                            backgroundColor: t.error),
                       );
                     }
                   }
                 },
               );
             }),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.s2),
           ],
         ),
       ),
@@ -279,113 +310,101 @@ class _HeaderCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     ref.watch(stagesProvider); // keep stage list fresh
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor:
-                      Theme.of(context).colorScheme.primaryContainer,
-                  child: Text(
-                    customer.name.isNotEmpty
-                        ? customer.name[0].toUpperCase()
-                        : '?',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppAvatar(name: customer.name, size: AppAvatarSize.lg),
+              const SizedBox(width: AppSpacing.s4),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      customer.name,
+                      style: TextStyle(
+                          fontWeight: AppFontWeights.bold,
+                          fontSize: AppTextSizes.base,
+                          color: t.text1),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        customer.name,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      if (customer.telegramUsername != null)
-                        _InfoRow(
-                          icon: Icons.telegram,
-                          text: '@${customer.telegramUsername}',
-                          color: const Color(0xFF229ED9),
-                        ),
-                      if (customer.phone != null)
-                        _InfoRow(
-                          icon: Icons.phone_outlined,
-                          text: customer.phone!,
-                        ),
-                      if (customer.birthday != null)
-                        _InfoRow(
-                          icon: Icons.cake_outlined,
-                          text: DateFormat('d MMMM').format(customer.birthday!),
-                        ),
+                    if (customer.telegramUsername != null)
                       _InfoRow(
-                        icon: Icons.calendar_today_outlined,
-                        text: l.customerSince(formatDate(customer.createdAt)),
+                        icon: AppIconName.inbox,
+                        text: '@${customer.telegramUsername}',
+                        color: t.accent,
                       ),
+                    if (customer.phone != null)
+                      _InfoRow(
+                        icon: AppIconName.customers,
+                        text: customer.phone!,
+                      ),
+                    if (customer.birthday != null)
+                      _InfoRow(
+                        icon: AppIconName.calendar,
+                        text: DateFormat('d MMMM').format(customer.birthday!),
+                      ),
+                    _InfoRow(
+                      icon: AppIconName.calendar,
+                      text: l.customerSince(formatDate(customer.createdAt)),
+                      color: t.text3,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s3),
+          Wrap(
+            spacing: AppSpacing.s2,
+            runSpacing: AppSpacing.s2,
+            children: [
+              ...customer.tags.map(
+                (tag) => _TagChip(
+                  tag: tag,
+                  onRemove: () async {
+                    try {
+                      await notifier.removeTag(tag.id);
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content: Text(AppLocalizations.of(context)!
+                                  .errorWithMessage(e.toString())),
+                              backgroundColor: t.error),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ),
+              _AddTagChip(onTap: () => _showAddTag(context)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s3),
+          GestureDetector(
+            onTap: () => _showChangeStage(context, ref),
+            child: customer.currentStage != null
+                ? _StagePill(
+                    name: customer.currentStage!.name,
+                    color: _parseHex(context, customer.currentStage!.color),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppIcon(name: AppIconName.add, size: 14, color: t.text3),
+                      const SizedBox(width: AppSpacing.s1),
+                      Text(l.customerSetStageShort,
+                          style: TextStyle(
+                              fontSize: AppTextSizes.caption, color: t.text3)),
                     ],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                ...customer.tags.map(
-                  (tag) => _TagChip(
-                    tag: tag,
-                    onRemove: () async {
-                      try {
-                        await notifier.removeTag(tag.id);
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
-                                backgroundColor: Colors.red),
-                          );
-                        }
-                      }
-                    },
-                  ),
-                ),
-                _AddTagChip(onTap: () => _showAddTag(context)),
-              ],
-            ),
-            const SizedBox(height: 10),
-            GestureDetector(
-              onTap: () => _showChangeStage(context, ref),
-              child: customer.currentStage != null
-                  ? _StagePill(
-                      name: customer.currentStage!.name,
-                      color: _parseColor(customer.currentStage!.color),
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.add, size: 12, color: Colors.grey[400]),
-                        const SizedBox(width: 4),
-                        Text(l.customerSetStageShort,
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey[400])),
-                      ],
-                    ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -399,10 +418,11 @@ class _StagePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.s3, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: AppRadii.pill,
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
@@ -413,10 +433,12 @@ class _StagePill extends StatelessWidget {
             height: 8,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-          const SizedBox(width: 5),
+          const SizedBox(width: AppSpacing.s1),
           Text(name,
               style: TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+                  fontSize: AppTextSizes.caption,
+                  fontWeight: AppFontWeights.semibold,
+                  color: color)),
         ],
       ),
     );
@@ -428,30 +450,24 @@ class _TagChip extends StatelessWidget {
   final VoidCallback onRemove;
   const _TagChip({required this.tag, required this.onRemove});
 
-  Color get _color {
-    try {
-      return Color(
-          int.parse('FF${tag.color.replaceFirst('#', '')}', radix: 16));
-    } catch (_) {
-      return const Color(0xFF6366F1);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final c = _color;
+    final c = _parseHex(context, tag.color);
     return GestureDetector(
       onLongPress: onRemove,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding:
+            const EdgeInsets.symmetric(horizontal: AppSpacing.s3, vertical: 5),
         decoration: BoxDecoration(
           color: c.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: AppRadii.pill,
         ),
         child: Text(
           tag.label,
           style: TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w600, color: c),
+              fontSize: AppTextSizes.caption,
+              fontWeight: AppFontWeights.semibold,
+              color: c),
         ),
       ),
     );
@@ -464,23 +480,24 @@ class _AddTagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            const EdgeInsets.symmetric(horizontal: AppSpacing.s3, vertical: 5),
         decoration: BoxDecoration(
-          border:
-              Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
-          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: t.border),
+          borderRadius: AppRadii.pill,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.add, size: 12, color: Colors.grey[500]),
-            const SizedBox(width: 3),
+            AppIcon(name: AppIconName.add, size: 12, color: t.text2),
+            const SizedBox(width: AppSpacing.s1),
             Text(AppLocalizations.of(context)!.customerAddTag,
-                style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                style: TextStyle(
+                    fontSize: AppTextSizes.caption, color: t.text2)),
           ],
         ),
       ),
@@ -489,23 +506,24 @@ class _AddTagChip extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  final IconData icon;
+  final AppIconName icon;
   final String text;
   final Color? color;
   const _InfoRow({required this.icon, required this.text, this.color});
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.only(top: AppSpacing.s1),
       child: Row(
         children: [
-          Icon(icon, size: 13, color: color ?? Colors.grey[500]),
-          const SizedBox(width: 5),
+          AppIcon(name: icon, size: 14, color: color ?? t.text3),
+          const SizedBox(width: AppSpacing.s1),
           Expanded(
             child: Text(
               text,
-              style: TextStyle(color: Colors.grey[700], fontSize: 13),
+              style: TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
             ),
           ),
         ],
@@ -525,31 +543,31 @@ class _StatsRow extends StatelessWidget {
     final l = AppLocalizations.of(context)!;
     final d = customer.daysSinceLastOrder;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: _StatCard(
             label: l.customerStatOrders,
             value: customer.totalOrders.toString(),
-            icon: Icons.receipt_long_outlined,
-            color: Colors.blue,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: AppSpacing.s3),
         Expanded(
           child: _StatCard(
             label: l.customerStatTotalSpent,
             value: formatUZS(customer.totalSpent),
-            icon: Icons.payments_outlined,
-            color: Colors.green,
+            money: true,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: AppSpacing.s3),
         Expanded(
           child: _StatCard(
             label: l.customerStatLastOrder,
-            value: d < 0 ? '—' : d == 0 ? l.commonToday : l.customerDaysAgo(d),
-            icon: Icons.history_outlined,
-            color: d > 30 ? Colors.orange : Colors.grey,
+            value: d < 0
+                ? '—'
+                : d == 0
+                    ? l.commonToday
+                    : l.customerDaysAgo(d),
           ),
         ),
       ],
@@ -560,47 +578,41 @@ class _StatsRow extends StatelessWidget {
 class _StatCard extends StatelessWidget {
   final String label;
   final String value;
-  final IconData icon;
-  final Color color;
+  final bool money;
   const _StatCard({
     required this.label,
     required this.value,
-    required this.icon,
-    required this.color,
+    this.money = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(height: 6),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                value,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(fontWeight: FontWeight.bold),
+    final t = AppTokens.of(context);
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.s3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: AppTextSizes.lg,
+                fontWeight: AppFontWeights.bold,
+                color: money ? t.successStrong : t.text1,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: Colors.grey[600]),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: AppSpacing.s1),
+          Text(
+            label,
+            style:
+                TextStyle(color: t.text2, fontSize: AppTextSizes.caption),
+          ),
+        ],
       ),
     );
   }
@@ -615,89 +627,91 @@ class _RemindersCard extends StatelessWidget {
 
   void _showAddReminder(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final ctrl = TextEditingController();
-    DateTime pickedDate =
-        DateTime.now().add(const Duration(days: 1));
+    DateTime pickedDate = DateTime.now().add(const Duration(days: 1));
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: t.surface,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Padding(
-          padding: EdgeInsets.fromLTRB(
-              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          padding: EdgeInsets.fromLTRB(AppSpacing.s5, AppSpacing.s5,
+              AppSpacing.s5, MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.s5),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(l.customerAddReminder,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 12),
+                  style: TextStyle(
+                      fontWeight: AppFontWeights.bold,
+                      fontSize: AppTextSizes.base,
+                      color: t.text1)),
+              const SizedBox(height: AppSpacing.s3),
               TextField(
                 controller: ctrl,
                 autofocus: true,
+                style: TextStyle(color: t.text1),
                 decoration: InputDecoration(
                   hintText: l.customerReminderHint,
                   isDense: true,
                 ),
                 maxLength: 200,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.s2),
               InkWell(
                 onTap: () async {
                   final picked = await showDatePicker(
                     context: ctx,
                     initialDate: pickedDate,
                     firstDate: DateTime.now(),
-                    lastDate: DateTime.now()
-                        .add(const Duration(days: 365)),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
                   );
                   if (picked != null) {
                     setModalState(() => pickedDate = picked);
                   }
                 },
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: AppRadii.sm,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
+                      horizontal: AppSpacing.s3, vertical: AppSpacing.s3),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: t.border),
+                    borderRadius: AppRadii.sm,
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today_outlined,
-                          size: 16),
-                      const SizedBox(width: 8),
-                      Text(DateFormat('d MMM yyyy')
-                          .format(pickedDate)),
+                      AppIcon(
+                          name: AppIconName.calendar, size: 16, color: t.text2),
+                      const SizedBox(width: AppSpacing.s2),
+                      Text(DateFormat('d MMM yyyy').format(pickedDate),
+                          style: TextStyle(color: t.text1)),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () async {
-                    final note = ctrl.text.trim();
-                    if (note.isEmpty) return;
-                    Navigator.pop(ctx);
-                    try {
-                      await notifier.addReminder(note, pickedDate);
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
-                              backgroundColor: Colors.red),
-                        );
-                      }
+              const SizedBox(height: AppSpacing.s4),
+              AppButton(
+                label: l.customerSaveReminder,
+                fullWidth: true,
+                onPressed: () async {
+                  final note = ctrl.text.trim();
+                  if (note.isEmpty) return;
+                  Navigator.pop(ctx);
+                  try {
+                    await notifier.addReminder(note, pickedDate);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(AppLocalizations.of(context)!
+                                .errorWithMessage(e.toString())),
+                            backgroundColor: t.error),
+                      );
                     }
-                  },
-                  child: Text(l.customerSaveReminder),
-                ),
+                  }
+                },
               ),
             ],
           ),
@@ -711,55 +725,42 @@ class _RemindersCard extends StatelessWidget {
     final l = AppLocalizations.of(context)!;
     final pending = customer.reminders.where((r) => !r.done).toList();
     final done = customer.reminders.where((r) => r.done).toList();
+    final t = AppTokens.of(context);
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  l.settingsReminders,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Colors.grey[600],
-                        letterSpacing: 0.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline, size: 20),
-                  onPressed: () => _showAddReminder(context),
-                  tooltip: l.customerAddReminder,
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppCardHeader(
+            title: l.settingsReminders,
+            trailing: IconButton(
+              icon: AppIcon(name: AppIconName.add, size: 20, color: t.accent),
+              onPressed: () => _showAddReminder(context),
+              tooltip: l.customerAddReminder,
+              visualDensity: VisualDensity.compact,
             ),
-            if (pending.isEmpty && done.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Text(
-                  l.customerNoReminders,
-                  style:
-                      TextStyle(color: Colors.grey[400], fontSize: 13),
-                ),
+          ),
+          if (pending.isEmpty && done.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.s2),
+              child: Text(
+                l.customerNoReminders,
+                style:
+                    TextStyle(color: t.text3, fontSize: AppTextSizes.sm),
               ),
-            ...pending.map((r) => _ReminderRow(
+            ),
+          ...pending.map((r) => _ReminderRow(
+                reminder: r,
+                onToggle: (v) => notifier.toggleReminder(r.id, v),
+              )),
+          if (done.isNotEmpty) ...[
+            const Divider(height: AppSpacing.s4),
+            ...done.map((r) => _ReminderRow(
                   reminder: r,
                   onToggle: (v) => notifier.toggleReminder(r.id, v),
                 )),
-            if (done.isNotEmpty) ...[
-              const Divider(height: 16),
-              ...done.map((r) => _ReminderRow(
-                    reminder: r,
-                    onToggle: (v) => notifier.toggleReminder(r.id, v),
-                  )),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }
@@ -772,21 +773,27 @@ class _ReminderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
     final isOverdue = reminder.isOverdue;
     final isDueToday = reminder.isDueToday;
+    final dateColor = isOverdue
+        ? t.errorStrong
+        : isDueToday
+            ? t.warningStrong
+            : t.text3;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s1),
       child: Row(
         children: [
           Checkbox(
             value: reminder.done,
             onChanged: (v) => onToggle(v ?? false),
             visualDensity: VisualDensity.compact,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4)),
+            activeColor: t.accent,
+            shape: const RoundedRectangleBorder(borderRadius: AppRadii.sm),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppSpacing.s1),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -794,32 +801,27 @@ class _ReminderRow extends StatelessWidget {
                 Text(
                   reminder.note,
                   style: TextStyle(
-                    fontSize: 13,
-                    decoration: reminder.done
-                        ? TextDecoration.lineThrough
-                        : null,
-                    color: reminder.done ? Colors.grey[400] : null,
+                    fontSize: AppTextSizes.sm,
+                    decoration:
+                        reminder.done ? TextDecoration.lineThrough : null,
+                    color: reminder.done ? t.text3 : t.text1,
                   ),
                 ),
                 Text(
                   DateFormat('d MMM yyyy').format(reminder.dueDate),
                   style: TextStyle(
-                    fontSize: 11,
-                    color: isOverdue
-                        ? Colors.red[600]
-                        : isDueToday
-                            ? Colors.orange[700]
-                            : Colors.grey[400],
+                    fontSize: AppTextSizes.caption,
+                    color: dateColor,
                     fontWeight: (isOverdue || isDueToday) && !reminder.done
-                        ? FontWeight.w600
-                        : FontWeight.normal,
+                        ? AppFontWeights.semibold
+                        : AppFontWeights.regular,
                   ),
                 ),
               ],
             ),
           ),
           if (isOverdue && !reminder.done)
-            const Icon(Icons.alarm, size: 14, color: Colors.red),
+            AppIcon(name: AppIconName.bell, size: 14, color: t.errorStrong),
         ],
       ),
     );
@@ -848,87 +850,71 @@ class _NotesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  l.customerNotesLabel,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Colors.grey[600],
-                        letterSpacing: 0.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const Spacer(),
-                if (!editing)
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 18),
+    final t = AppTokens.of(context);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppCardHeader(
+            title: l.customerNotesLabel,
+            trailing: !editing
+                ? IconButton(
+                    icon: AppIcon(
+                        name: AppIconName.settings, size: 18, color: t.text2),
                     onPressed: onEdit,
                     visualDensity: VisualDensity.compact,
-                  ),
+                  )
+                : null,
+          ),
+          const SizedBox(height: AppSpacing.s2),
+          if (editing)
+            TextField(
+              controller: controller,
+              maxLines: 4,
+              autofocus: true,
+              style: TextStyle(color: t.text1),
+              decoration: InputDecoration(
+                hintText: l.customerNotesHint,
+                isDense: true,
+              ),
+            )
+          else
+            Text(
+              controller.text.isEmpty ? l.customerNoNotes : controller.text,
+              style: TextStyle(
+                color: controller.text.isEmpty ? t.text3 : t.text1,
+                fontSize: AppTextSizes.sm,
+              ),
+            ),
+          if (editing) ...[
+            const SizedBox(height: AppSpacing.s3),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                AppButton(
+                  label: l.buttonCancel,
+                  variant: AppButtonVariant.ghost,
+                  size: AppButtonSize.sm,
+                  onPressed: saving ? null : onCancel,
+                ),
+                const SizedBox(width: AppSpacing.s2),
+                AppButton(
+                  label: l.buttonSave,
+                  variant: AppButtonVariant.secondary,
+                  size: AppButtonSize.sm,
+                  loading: saving,
+                  onPressed: saving ? null : onSave,
+                ),
               ],
             ),
-            const SizedBox(height: 8),
-            if (editing)
-              TextField(
-                controller: controller,
-                maxLines: 4,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: l.customerNotesHint,
-                  isDense: true,
-                ),
-              )
-            else
-              Text(
-                controller.text.isEmpty
-                    ? l.customerNoNotes
-                    : controller.text,
-                style: TextStyle(
-                  color: controller.text.isEmpty
-                      ? Colors.grey[400]
-                      : Colors.grey[800],
-                  fontSize: 14,
-                ),
-              ),
-            if (editing) ...[
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: saving ? null : onCancel,
-                    child: Text(l.buttonCancel),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: saving ? null : onSave,
-                    child: saving
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child:
-                                CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(l.buttonSave),
-                  ),
-                ],
-              ),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-// ── Custom fields card (typed, from BusinessCustomField definitions) ──
+// ── Custom fields card ────────────────────────────────────────────────
 
 class _CustomFieldsCard extends ConsumerStatefulWidget {
   final CustomerDetail customer;
@@ -940,7 +926,6 @@ class _CustomFieldsCard extends ConsumerStatefulWidget {
 }
 
 class _CustomFieldsCardState extends ConsumerState<_CustomFieldsCard> {
-  // fieldId → editing controller (for TEXT/NUMBER)
   final Map<String, TextEditingController> _ctrls = {};
   final Map<String, bool> _editing = {};
 
@@ -964,7 +949,10 @@ class _CustomFieldsCardState extends ConsumerState<_CustomFieldsCard> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!
+                  .errorWithMessage(e.toString())),
+              backgroundColor: AppTokens.of(context).error),
         );
       }
     }
@@ -981,76 +969,68 @@ class _CustomFieldsCardState extends ConsumerState<_CustomFieldsCard> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final fieldsAsync = ref.watch(customFieldsProvider);
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l.customerCustomFields,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Colors.grey[600],
-                    letterSpacing: 0.5,
-                    fontWeight: FontWeight.w600,
-                  ),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppCardHeader(title: l.customerCustomFields),
+          fieldsAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.s2),
+              child: LinearProgressIndicator(),
             ),
-            fieldsAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: LinearProgressIndicator(),
-              ),
-              error: (e, _) => Text(l.errorWithMessage(e.toString()),
-                  style: const TextStyle(color: Colors.red, fontSize: 12)),
-              data: (fields) {
-                if (fields.isEmpty) {
+            error: (e, _) => Text(l.errorWithMessage(e.toString()),
+                style: TextStyle(color: t.errorStrong, fontSize: AppTextSizes.caption)),
+            data: (fields) {
+              if (fields.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.s2),
+                  child: Text(
+                    l.customerNoCustomFields,
+                    style:
+                        TextStyle(color: t.text3, fontSize: AppTextSizes.sm),
+                  ),
+                );
+              }
+              return Column(
+                children: fields.map((field) {
+                  final value = _currentValue(field.id);
+                  final isEditing = _editing[field.id] ?? false;
+
                   return Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      l.customerNoCustomFields,
-                      style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                    padding: const EdgeInsets.only(top: AppSpacing.s3),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(field.name,
+                            style: TextStyle(
+                                color: t.text2,
+                                fontSize: AppTextSizes.caption)),
+                        const SizedBox(height: AppSpacing.s1),
+                        _FieldValueEditor(
+                          field: field,
+                          value: value,
+                          isEditing: isEditing,
+                          ctrl: _ctrl(field.id, value),
+                          onEdit: () => setState(() {
+                            _ctrls[field.id]?.text = value;
+                            _editing[field.id] = true;
+                          }),
+                          onCancel: () =>
+                              setState(() => _editing[field.id] = false),
+                          onSave: (v) => _save(field.id, v),
+                        ),
+                      ],
                     ),
                   );
-                }
-                return Column(
-                  children: fields.map((field) {
-                    final value = _currentValue(field.id);
-                    final isEditing = _editing[field.id] ?? false;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(field.name,
-                              style: TextStyle(
-                                  color: Colors.grey[600], fontSize: 12)),
-                          const SizedBox(height: 4),
-                          _FieldValueEditor(
-                            field: field,
-                            value: value,
-                            isEditing: isEditing,
-                            ctrl: _ctrl(field.id, value),
-                            onEdit: () => setState(() {
-                              _ctrls[field.id]?.text = value;
-                              _editing[field.id] = true;
-                            }),
-                            onCancel: () =>
-                                setState(() => _editing[field.id] = false),
-                            onSave: (v) => _save(field.id, v),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ],
-        ),
+                }).toList(),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -1078,16 +1058,18 @@ class _FieldValueEditor extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     if (field.fieldType == 'YESNO') {
       final isBool = value == 'true';
       return Row(
         children: [
           Switch(
             value: isBool,
+            activeThumbColor: t.accent,
             onChanged: (v) => onSave(v.toString()),
           ),
           Text(isBool ? l.commonYes : l.commonNo,
-              style: const TextStyle(fontSize: 13)),
+              style: TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
         ],
       );
     }
@@ -1103,7 +1085,7 @@ class _FieldValueEditor extends StatelessWidget {
             }()
           : '—';
       return InkWell(
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: AppRadii.sm,
         onTap: () async {
           final picked = await showDatePicker(
             context: context,
@@ -1121,11 +1103,10 @@ class _FieldValueEditor extends StatelessWidget {
           children: [
             Text(displayDate,
                 style: TextStyle(
-                    fontSize: 14,
-                    color: value.isEmpty ? Colors.grey[400] : null)),
-            const SizedBox(width: 6),
-            Icon(Icons.edit_calendar_outlined,
-                size: 14, color: Colors.grey[400]),
+                    fontSize: AppTextSizes.sm,
+                    color: value.isEmpty ? t.text3 : t.text1)),
+            const SizedBox(width: AppSpacing.s1),
+            AppIcon(name: AppIconName.calendar, size: 14, color: t.text3),
           ],
         ),
       );
@@ -1139,6 +1120,7 @@ class _FieldValueEditor extends StatelessWidget {
             child: TextField(
               controller: ctrl,
               autofocus: true,
+              style: TextStyle(color: t.text1),
               keyboardType: field.fieldType == 'NUMBER'
                   ? TextInputType.number
                   : TextInputType.text,
@@ -1147,12 +1129,13 @@ class _FieldValueEditor extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.check, size: 18, color: Colors.green),
+            icon: AppIcon(
+                name: AppIconName.paid, size: 18, color: t.successStrong),
             visualDensity: VisualDensity.compact,
             onPressed: () => onSave(ctrl.text.trim()),
           ),
           IconButton(
-            icon: const Icon(Icons.close, size: 18),
+            icon: AppIcon(name: AppIconName.close, size: 18, color: t.text2),
             visualDensity: VisualDensity.compact,
             onPressed: onCancel,
           ),
@@ -1161,19 +1144,19 @@ class _FieldValueEditor extends StatelessWidget {
     }
 
     return InkWell(
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: AppRadii.sm,
       onTap: onEdit,
       child: Row(
         children: [
           Text(
             value.isEmpty ? l.customerTapToSet : value,
             style: TextStyle(
-              fontSize: 14,
-              color: value.isEmpty ? Colors.grey[400] : null,
+              fontSize: AppTextSizes.sm,
+              color: value.isEmpty ? t.text3 : t.text1,
             ),
           ),
-          const SizedBox(width: 6),
-          Icon(Icons.edit_outlined, size: 13, color: Colors.grey[400]),
+          const SizedBox(width: AppSpacing.s1),
+          AppIcon(name: AppIconName.settings, size: 13, color: t.text3),
         ],
       ),
     );
@@ -1186,74 +1169,46 @@ class _OrderHistorySection extends StatelessWidget {
   final List<Order> orders;
   const _OrderHistorySection({required this.orders});
 
-  static const _statusColor = {
-    'NEW': Color(0xFF1A56DB),
-    'PREPARING': Color(0xFFD97706),
-    'READY': Color(0xFF059669),
-    'DELIVERED': Color(0xFF6B7280),
-    'CANCELLED': Color(0xFFDC2626),
-  };
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  l.customerOrderHistory,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Colors.grey[600],
-                        letterSpacing: 0.5,
-                        fontWeight: FontWeight.w600,
-                      ),
+    final t = AppTokens.of(context);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppCardHeader(
+            title: l.customerOrderHistory,
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s2, vertical: 2),
+              decoration: BoxDecoration(
+                color: t.accentSoft,
+                borderRadius: AppRadii.pill,
+              ),
+              child: Text(
+                orders.length.toString(),
+                style: TextStyle(
+                  fontSize: AppTextSizes.caption,
+                  fontWeight: AppFontWeights.bold,
+                  color: t.accent,
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    orders.length.toString(),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-            if (orders.isEmpty) ...[
-              const SizedBox(height: 16),
-              Center(
-                child: Text(
-                  l.ordersEmpty,
-                  style: TextStyle(color: Colors.grey[400]),
-                ),
+          ),
+          if (orders.isEmpty) ...[
+            const SizedBox(height: AppSpacing.s4),
+            Center(
+              child: Text(
+                l.ordersEmpty,
+                style: TextStyle(color: t.text3),
               ),
-            ] else ...[
-              const SizedBox(height: 8),
-              ...orders.map(
-                (o) => _OrderRow(
-                  order: o,
-                  statusColor: _statusColor[o.orderStatus] ??
-                      const Color(0xFF6B7280),
-                  statusLabel: orderStatusLabel(l, o.orderStatus),
-                ),
-              ),
-            ],
+            ),
+          ] else ...[
+            const SizedBox(height: AppSpacing.s2),
+            ...orders.map((o) => _OrderRow(order: o)),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -1261,42 +1216,37 @@ class _OrderHistorySection extends StatelessWidget {
 
 class _OrderRow extends StatelessWidget {
   final Order order;
-  final Color statusColor;
-  final String statusLabel;
-  const _OrderRow({
-    required this.order,
-    required this.statusColor,
-    required this.statusLabel,
-  });
+  const _OrderRow({required this.order});
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
     return InkWell(
       onTap: () => context.push('/orders/${order.id}'),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: AppRadii.sm,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s2),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: statusColor.withValues(alpha: 0.1),
+                color: t.accentSoft,
               ),
-              child: Center(
-                child: Text(
-                  '#${order.orderNumber}',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    color: statusColor,
-                  ),
+              child: Text(
+                '#${order.orderNumber}',
+                style: TextStyle(
+                  fontSize: AppTextSizes.caption,
+                  fontWeight: AppFontWeights.bold,
+                  color: t.accent,
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppSpacing.s3),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1305,44 +1255,42 @@ class _OrderRow extends StatelessWidget {
                     order.items
                         .map((i) => '${i.productName} ×${i.quantity}')
                         .join(', '),
-                    style: const TextStyle(fontSize: 13),
+                    style:
+                        TextStyle(fontSize: AppTextSizes.sm, color: t.text1),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 2),
                   Text(
                     formatDateTime(order.createdAt),
                     style: TextStyle(
-                        color: Colors.grey[500], fontSize: 11),
+                        color: t.text3, fontSize: AppTextSizes.caption),
+                  ),
+                  const SizedBox(height: AppSpacing.s1),
+                  Wrap(
+                    spacing: AppSpacing.s1,
+                    runSpacing: AppSpacing.s1,
+                    children: [
+                      AppBadge(
+                          status: order.paymentStatus,
+                          type: AppBadgeType.payment),
+                      AppBadge(
+                          status: order.orderStatus,
+                          type: AppBadgeType.order),
+                    ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  formatUZS(order.total),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 12),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    statusLabel,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: statusColor,
-                    ),
-                  ),
-                ),
-              ],
+            const SizedBox(width: AppSpacing.s2),
+            Text(
+              formatUZS(order.total),
+              style: TextStyle(
+                fontWeight: AppFontWeights.bold,
+                fontSize: AppTextSizes.sm,
+                color: t.text1,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
           ],
         ),
@@ -1360,29 +1308,38 @@ class _ErrorView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l.customerDetailTitle)),
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.wifi_off_outlined, size: 64, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
-            Text(
-              l.customerLoadError,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l.customerLoadErrorHint,
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => ref.invalidate(customerDetailProvider(customerId)),
-              child: Text(l.buttonRetry),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.s5),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppIcon(name: AppIconName.close, size: 64, color: t.text3),
+              const SizedBox(height: AppSpacing.s4),
+              Text(
+                l.customerLoadError,
+                style: TextStyle(
+                    fontSize: AppTextSizes.lg,
+                    fontWeight: AppFontWeights.bold,
+                    color: t.text1),
+              ),
+              const SizedBox(height: AppSpacing.s2),
+              Text(
+                l.customerLoadErrorHint,
+                style: TextStyle(fontSize: AppTextSizes.sm, color: t.text2),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.s5),
+              AppButton(
+                label: l.buttonRetry,
+                onPressed: () =>
+                    ref.invalidate(customerDetailProvider(customerId)),
+              ),
+            ],
+          ),
         ),
       ),
     );

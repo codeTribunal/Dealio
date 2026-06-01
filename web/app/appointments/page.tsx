@@ -1,9 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, Calendar, X, Plus } from 'lucide-react'
 import AuthLayout from '@/components/AuthLayout'
 import LoadingSpinner from '@/components/LoadingSpinner'
-import ActivityBadge from '@/components/ActivityBadge'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Input, Textarea } from '@/components/ui/Input'
+import { Badge } from '@/components/ui/Badge'
+import { Avatar } from '@/components/ui/Avatar'
+import { Icon } from '@/components/icons/Icon'
 import {
   getAppointments,
   updateAppointmentStatus,
@@ -14,7 +18,7 @@ import {
   getStaffForForm,
   getCustomers,
 } from '@/lib/api'
-import { formatUZS, formatDate, formatTime, getInitials } from '@/lib/format'
+import { formatUZS, formatDate, formatTime } from '@/lib/format'
 import type { Appointment, Service, StaffMember, Customer } from '@/types'
 
 const STATUS_FILTERS = [
@@ -25,12 +29,13 @@ const STATUS_FILTERS = [
   { label: 'Cancelled', value: 'CANCELLED' },
 ]
 
+// Semantic left-border accent for the row, mapped through tokens.
 const STATUS_BORDER: Record<string, string> = {
-  REQUESTED: 'border-l-4 border-l-amber-400',
-  CONFIRMED: 'border-l-4 border-l-green-500',
-  COMPLETED: 'border-l-4 border-l-gray-400',
-  CANCELLED: 'border-l-4 border-l-red-400',
-  NO_SHOW: 'border-l-4 border-l-red-600',
+  REQUESTED: 'border-l-4 border-l-warning',
+  CONFIRMED: 'border-l-4 border-l-success',
+  COMPLETED: 'border-l-4 border-l-border-strong',
+  CANCELLED: 'border-l-4 border-l-error',
+  NO_SHOW: 'border-l-4 border-l-error',
 }
 
 function getDurationMinutes(start: string, end: string): number {
@@ -50,6 +55,9 @@ function getDayOfWeek(dateStr: string): string {
 function isToday(dateStr: string): boolean {
   return dateStr === new Date().toISOString().split('T')[0]
 }
+
+const SELECT_CLASS =
+  'w-full bg-surface border border-border rounded-md py-2.5 px-3.5 text-sm text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors'
 
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
@@ -218,38 +226,59 @@ export default function AppointmentsPage() {
     }
   }
 
+  // Inline segmented-style chip, used for filters and mode toggles.
+  const chip = (active: boolean, sm = false) =>
+    `${sm ? 'px-3 py-1.5 text-xs' : 'px-3 py-1.5 text-sm'} rounded-md font-semibold transition-colors ${
+      active
+        ? 'bg-accent-soft text-accent'
+        : 'bg-surface border border-border text-text-2 hover:bg-surface-2'
+    }`
+
+  const segButton = (active: boolean) =>
+    `px-4 py-2 rounded-md text-sm font-semibold transition-colors ${
+      active
+        ? 'bg-accent text-accent-on'
+        : 'border border-border bg-surface text-text-1 hover:bg-surface-2'
+    }`
+
   return (
     <AuthLayout title="Appointments">
+      {/* ── Header: date navigator + filters + new ──────────────── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={() => setSelectedDate(addDays(selectedDate, -1))}
-            className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+            className="h-10 w-10 rounded-md border border-border bg-surface text-text-1 hover:bg-surface-2 transition-colors flex items-center justify-center font-bold"
+            aria-label="Previous day"
           >
-            <ChevronLeft size={16} />
+            ‹
           </button>
 
-          <div className="text-center">
-            <p className="text-lg font-bold text-gray-900">
+          <div className="text-center min-w-[10rem]">
+            <p className="text-lg font-bold text-text-1">
               {isToday(selectedDate) ? 'Today' : formatDate(selectedDate + 'T00:00:00')}
             </p>
-            <p className="text-sm text-gray-500">{getDayOfWeek(selectedDate)}</p>
+            <p className="text-sm text-text-2">{getDayOfWeek(selectedDate)}</p>
           </div>
 
           <button
+            type="button"
             onClick={() => setSelectedDate(addDays(selectedDate, 1))}
-            className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+            className="h-10 w-10 rounded-md border border-border bg-surface text-text-1 hover:bg-surface-2 transition-colors flex items-center justify-center font-bold"
+            aria-label="Next day"
           >
-            <ChevronRight size={16} />
+            ›
           </button>
 
           {!isToday(selectedDate) && (
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
-              className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Today
-            </button>
+            </Button>
           )}
         </div>
 
@@ -257,35 +286,34 @@ export default function AppointmentsPage() {
           {STATUS_FILTERS.map(({ label, value }) => (
             <button
               key={value}
+              type="button"
               onClick={() => setStatusFilter(value)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                statusFilter === value
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-              }`}
+              className={chip(statusFilter === value)}
             >
               {label}
             </button>
           ))}
-          <button
+          <Button
+            variant="primary"
+            leftIcon="add"
             onClick={() => setShowCreateForm(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors"
+            className="ml-1"
           >
-            <Plus className="w-4 h-4" />
             New appointment
-          </button>
+          </Button>
         </div>
       </div>
 
+      {/* ── List ─────────────────────────────────────────────────── */}
       <div className="space-y-3">
         {loading ? (
           <LoadingSpinner />
         ) : error ? (
-          <div className="p-6">
-            <p className="text-sm text-red-600">
+          <Card>
+            <p className="text-sm text-error-strong">
               {error}
               <button
-                className="text-sm text-blue-600 ml-2"
+                className="ml-2 text-sm font-semibold text-accent hover:text-accent-hover"
                 onClick={() => {
                   setError(null)
                   fetchAppointments()
@@ -294,88 +322,100 @@ export default function AppointmentsPage() {
                 Try again
               </button>
             </p>
-          </div>
+          </Card>
         ) : appointments.length === 0 ? (
-          <div className="text-center py-16">
-            <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-sm">
+          <Card className="text-center py-12">
+            <div className="mx-auto mb-4 w-16 h-16 rounded-lg bg-accent-soft flex items-center justify-center text-accent">
+              <Icon name="calendar" size={28} />
+            </div>
+            <p className="text-sm text-text-2">
               {statusFilter !== 'ALL'
                 ? `No ${statusFilter.toLowerCase()} appointments on this day`
                 : 'No appointments on this day'}
             </p>
-          </div>
+          </Card>
         ) : (
           appointments.map((appointment) => (
-            <div
+            <Card
               key={appointment.id}
+              padded={false}
               onClick={() => setSelectedAppointment(appointment)}
-              className={`bg-white rounded-2xl border border-gray-200 p-5 cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all ${
+              className={`p-5 cursor-pointer hover:border-border-strong hover:shadow-md transition-shadow ${
                 STATUS_BORDER[appointment.status] || ''
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-bold text-gray-900">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-text-1 tabular-nums">
                     {formatTime(appointment.startTime)} — {formatTime(appointment.endTime)}
                   </p>
-                  <p className="text-base font-semibold text-gray-900 mt-1">
+                  <p className="text-base font-bold text-text-1 mt-1 truncate">
                     {appointment.service.name}
                   </p>
                   <div className="flex items-center gap-2 mt-2">
-                    <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold flex items-center justify-center">
-                      {getInitials(appointment.customer.name)}
-                    </div>
-                    <p className="text-sm text-gray-600">{appointment.customer.name}</p>
+                    <Avatar name={appointment.customer.name} size="sm" />
+                    <p className="text-sm text-text-2 truncate">
+                      {appointment.customer.name}
+                      {appointment.customer.telegramUsername && (
+                        <span className="text-text-3">
+                          {' '}
+                          · @{appointment.customer.telegramUsername}
+                        </span>
+                      )}
+                    </p>
                   </div>
                   {appointment.staff && (
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-text-3 mt-1">
                       with {appointment.staff.name}
                     </p>
                   )}
                 </div>
 
-                <div className="flex flex-col items-end gap-2">
-                  <ActivityBadge status={appointment.status} type="appointment" />
-                  <p className="text-sm font-semibold text-gray-900">
+                <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                  <Badge status={appointment.status} type="appointment" />
+                  <p className="text-sm font-semibold text-text-1 tabular-nums">
                     {formatUZS(appointment.price)}
                   </p>
                 </div>
               </div>
-            </div>
+            </Card>
           ))
         )}
       </div>
 
+      {/* ── Detail slide-over ───────────────────────────────────── */}
       {selectedAppointment && (
         <div className="fixed inset-0 z-50 flex">
           <div
-            className="flex-1 bg-black/30"
+            className="flex-1 bg-text-1/30"
             onClick={() => setSelectedAppointment(null)}
           />
-          <div className="relative z-50 w-full md:max-w-lg bg-white shadow-2xl flex flex-col h-full overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div>
-                <p className="text-lg font-bold text-gray-900">
+          <div className="relative z-50 w-full md:max-w-lg bg-surface border-l border-border shadow-lg flex flex-col h-full overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-border">
+              <div className="min-w-0 mr-3">
+                <p className="text-lg font-bold text-text-1 truncate">
                   {selectedAppointment.service.name}
                 </p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-text-2 mt-1 tabular-nums">
                   {formatDate(selectedAppointment.startTime)} at{' '}
                   {formatTime(selectedAppointment.startTime)}
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedAppointment(null)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                aria-label="Close"
+                className="text-text-3 hover:text-text-1 transition-colors"
               >
-                <X size={20} className="text-gray-500" />
+                <Icon name="close" size={20} />
               </button>
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="flex gap-2">
-                <ActivityBadge status={selectedAppointment.status} type="appointment" />
+              <div className="flex flex-wrap gap-2">
+                <Badge status={selectedAppointment.status} type="appointment" />
                 {selectedAppointment.paymentType === 'IN_ADVANCE' && (
-                  <ActivityBadge
+                  <Badge
                     status={selectedAppointment.paymentStatus}
                     type="payment"
                   />
@@ -383,18 +423,16 @@ export default function AppointmentsPage() {
               </div>
 
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                <p className="text-xs font-semibold text-text-2 uppercase tracking-wider mb-3">
                   Customer
                 </p>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold flex items-center justify-center">
-                    {getInitials(selectedAppointment.customer.name)}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">
+                  <Avatar name={selectedAppointment.customer.name} size="md" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-text-1 truncate">
                       {selectedAppointment.customer.name}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-text-2 truncate">
                       {selectedAppointment.customer.telegramUsername
                         ? `@${selectedAppointment.customer.telegramUsername}`
                         : selectedAppointment.customer.phone || '—'}
@@ -404,19 +442,19 @@ export default function AppointmentsPage() {
               </div>
 
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                <p className="text-xs font-semibold text-text-2 uppercase tracking-wider mb-3">
                   Details
                 </p>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <p className="text-sm text-gray-600">Service</p>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm text-text-2">Service</p>
+                    <p className="text-sm font-medium text-text-1">
                       {selectedAppointment.service.name}
                     </p>
                   </div>
                   <div className="flex justify-between">
-                    <p className="text-sm text-gray-600">Duration</p>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm text-text-2">Duration</p>
+                    <p className="text-sm font-medium text-text-1 tabular-nums">
                       {getDurationMinutes(
                         selectedAppointment.startTime,
                         selectedAppointment.endTime
@@ -425,14 +463,14 @@ export default function AppointmentsPage() {
                     </p>
                   </div>
                   <div className="flex justify-between">
-                    <p className="text-sm text-gray-600">Price</p>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm text-text-2">Price</p>
+                    <p className="text-sm font-medium text-text-1 tabular-nums">
                       {formatUZS(selectedAppointment.price)}
                     </p>
                   </div>
                   <div className="flex justify-between">
-                    <p className="text-sm text-gray-600">Payment</p>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm text-text-2">Payment</p>
+                    <p className="text-sm font-medium text-text-1">
                       {selectedAppointment.paymentType === 'AT_APPOINTMENT'
                         ? 'Pay at appointment'
                         : 'Pay in advance'}
@@ -440,8 +478,8 @@ export default function AppointmentsPage() {
                   </div>
                   {selectedAppointment.staff && (
                     <div className="flex justify-between">
-                      <p className="text-sm text-gray-600">Staff</p>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm text-text-2">Staff</p>
+                      <p className="text-sm font-medium text-text-1">
                         {selectedAppointment.staff.name}
                       </p>
                     </div>
@@ -451,120 +489,121 @@ export default function AppointmentsPage() {
 
               {selectedAppointment.notes && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                  <p className="text-xs font-semibold text-text-2 uppercase tracking-wider mb-3">
                     Notes
                   </p>
-                  <p className="text-sm text-gray-700">{selectedAppointment.notes}</p>
+                  <p className="text-sm text-text-1">{selectedAppointment.notes}</p>
                 </div>
               )}
 
-              <div>
-                <div className="space-y-3">
-                  {selectedAppointment.status === 'REQUESTED' && (
-                    <>
-                      <button
-                        onClick={() =>
-                          handleStatusUpdate(selectedAppointment.id, 'CONFIRMED')
-                        }
-                        className="w-full py-3 rounded-xl text-sm font-semibold transition-colors bg-green-600 text-white hover:bg-green-700"
-                      >
-                        Confirm appointment
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleStatusUpdate(selectedAppointment.id, 'CANCELLED')
-                        }
-                        className="w-full py-3 rounded-xl text-sm font-semibold transition-colors border border-red-300 text-red-600 hover:bg-red-50"
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  )}
+              <div className="space-y-3">
+                {selectedAppointment.status === 'REQUESTED' && (
+                  <>
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      onClick={() =>
+                        handleStatusUpdate(selectedAppointment.id, 'CONFIRMED')
+                      }
+                    >
+                      Confirm appointment
+                    </Button>
+                    <Button
+                      variant="danger"
+                      fullWidth
+                      onClick={() =>
+                        handleStatusUpdate(selectedAppointment.id, 'CANCELLED')
+                      }
+                    >
+                      Cancel
+                    </Button>
+                  </>
+                )}
 
-                  {selectedAppointment.status === 'CONFIRMED' && (
-                    <>
-                      <button
-                        onClick={() =>
-                          handleStatusUpdate(selectedAppointment.id, 'COMPLETED')
-                        }
-                        className="w-full py-3 rounded-xl text-sm font-semibold transition-colors bg-blue-600 text-white hover:bg-blue-700"
-                      >
-                        Mark as completed
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleStatusUpdate(selectedAppointment.id, 'NO_SHOW')
-                        }
-                        className="w-full py-3 rounded-xl text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-700"
-                      >
-                        Mark as no-show
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleStatusUpdate(selectedAppointment.id, 'CANCELLED')
-                        }
-                        className="w-full py-3 rounded-xl text-sm font-semibold transition-colors border border-red-300 text-red-600 hover:bg-red-50"
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  )}
+                {selectedAppointment.status === 'CONFIRMED' && (
+                  <>
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      onClick={() =>
+                        handleStatusUpdate(selectedAppointment.id, 'COMPLETED')
+                      }
+                    >
+                      Mark as completed
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      fullWidth
+                      onClick={() =>
+                        handleStatusUpdate(selectedAppointment.id, 'NO_SHOW')
+                      }
+                    >
+                      Mark as no-show
+                    </Button>
+                    <Button
+                      variant="danger"
+                      fullWidth
+                      onClick={() =>
+                        handleStatusUpdate(selectedAppointment.id, 'CANCELLED')
+                      }
+                    >
+                      Cancel
+                    </Button>
+                  </>
+                )}
 
-                  {(selectedAppointment.status === 'COMPLETED' ||
-                    selectedAppointment.status === 'CANCELLED' ||
-                    selectedAppointment.status === 'NO_SHOW') && (
-                    <p className="text-sm text-gray-500 text-center py-4">
-                      No actions available for this appointment
-                    </p>
-                  )}
-                </div>
+                {(selectedAppointment.status === 'COMPLETED' ||
+                  selectedAppointment.status === 'CANCELLED' ||
+                  selectedAppointment.status === 'NO_SHOW') && (
+                  <p className="text-sm text-text-3 text-center py-4">
+                    No actions available for this appointment
+                  </p>
+                )}
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Create appointment panel */}
+      {/* ── Create appointment slide-over ───────────────────────── */}
       {showCreateForm && (
         <div className="fixed inset-0 z-40 flex justify-end">
           <div
-            className="absolute inset-0 bg-black/20"
+            className="absolute inset-0 bg-text-1/30"
             onClick={() => setShowCreateForm(false)}
           />
-          <div className="relative z-50 w-full max-w-lg bg-white shadow-2xl flex flex-col h-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
-              <p className="text-lg font-bold text-gray-900">New appointment</p>
-              <button onClick={() => setShowCreateForm(false)}>
-                <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+          <div className="relative z-50 w-full max-w-lg bg-surface border-l border-border shadow-lg flex flex-col h-full">
+            <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
+              <p className="text-lg font-bold text-text-1">New appointment</p>
+              <button
+                type="button"
+                onClick={() => setShowCreateForm(false)}
+                aria-label="Close"
+                className="text-text-3 hover:text-text-1 transition-colors"
+              >
+                <Icon name="close" size={20} />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
-              {/* Field 1 — Customer */}
+              {/* Customer */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   Customer *
                 </label>
 
-                {/* Mode toggle */}
                 <div className="flex gap-2 mb-2">
                   <button
+                    type="button"
                     onClick={() => setApptCustomerMode('select')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      apptCustomerMode === 'select'
-                        ? 'bg-gray-900 text-white'
-                        : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
-                    }`}
+                    className={chip(apptCustomerMode === 'select', true)}
                   >
                     Select existing
                   </button>
                   <button
+                    type="button"
                     onClick={() => setApptCustomerMode('manual')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      apptCustomerMode === 'manual'
-                        ? 'bg-gray-900 text-white'
-                        : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
-                    }`}
+                    className={chip(apptCustomerMode === 'manual', true)}
                   >
                     Enter manually
                   </button>
@@ -574,7 +613,7 @@ export default function AppointmentsPage() {
                   <select
                     value={apptCustomerId}
                     onChange={(e) => setApptCustomerId(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className={SELECT_CLASS}
                   >
                     <option value="">Select a customer</option>
                     {customers.map((c) => (
@@ -582,42 +621,34 @@ export default function AppointmentsPage() {
                     ))}
                   </select>
                 ) : (
-                  <input
+                  <Input
                     type="text"
                     value={apptManualCustomerName}
                     onChange={(e) => setApptManualCustomerName(e.target.value)}
                     placeholder="Customer name"
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 )}
               </div>
 
-              {/* Field 2 — Service */}
+              {/* Service */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   Service *
                 </label>
 
-                {/* Mode toggle — only show if there are existing services */}
                 {services.length > 0 && (
                   <div className="flex gap-2 mb-2">
                     <button
+                      type="button"
                       onClick={() => setApptServiceMode('manual')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                        apptServiceMode === 'manual'
-                          ? 'bg-gray-900 text-white'
-                          : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
-                      }`}
+                      className={chip(apptServiceMode === 'manual', true)}
                     >
                       Enter manually
                     </button>
                     <button
+                      type="button"
                       onClick={() => setApptServiceMode('select')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                        apptServiceMode === 'select'
-                          ? 'bg-gray-900 text-white'
-                          : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
-                      }`}
+                      className={chip(apptServiceMode === 'select', true)}
                     >
                       From my services
                     </button>
@@ -628,7 +659,7 @@ export default function AppointmentsPage() {
                   <select
                     value={apptServiceId}
                     onChange={(e) => setApptServiceId(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className={SELECT_CLASS}
                   >
                     <option value="">Select a service</option>
                     {services.map(s => (
@@ -639,51 +670,50 @@ export default function AppointmentsPage() {
                   </select>
                 ) : (
                   <div className="space-y-2">
-                    <input
+                    <Input
                       type="text"
                       value={apptManualServiceName}
                       onChange={(e) => setApptManualServiceName(e.target.value)}
                       placeholder="Service name (e.g. Haircut, Consultation)"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <div className="flex gap-2">
                       <div className="flex-1">
-                        <input
+                        <Input
                           type="number"
                           value={apptManualDuration}
                           onChange={(e) => setApptManualDuration(e.target.value)}
                           placeholder="Duration (min)"
                           min="1"
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="tabular-nums"
                         />
-                        <p className="text-xs text-gray-400 mt-1">Duration (minutes)</p>
+                        <p className="text-xs text-text-3 mt-1">Duration (minutes)</p>
                       </div>
                       <div className="flex-1">
-                        <input
+                        <Input
                           type="number"
                           value={apptManualPrice}
                           onChange={(e) => setApptManualPrice(e.target.value)}
                           placeholder="Price (UZS)"
                           min="0"
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="tabular-nums"
                         />
-                        <p className="text-xs text-gray-400 mt-1">Price (UZS)</p>
+                        <p className="text-xs text-text-3 mt-1">Price (UZS)</p>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Field 3 — Staff member */}
+              {/* Staff member */}
               {staff.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-sm font-medium text-text-2 mb-1.5">
                     Staff member
                   </label>
                   <select
                     value={apptStaffId}
                     onChange={(e) => setApptStaffId(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className={SELECT_CLASS}
                   >
                     <option value="">Any available</option>
                     {staff
@@ -696,118 +726,116 @@ export default function AppointmentsPage() {
                 </div>
               )}
 
-              {/* Field 4 — Date */}
+              {/* Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   Date *
                 </label>
-                <input
+                <Input
                   type="date"
                   value={apptDate}
                   onChange={(e) => setApptDate(e.target.value)}
                   min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
-              {/* Field 5 — Time */}
+              {/* Time — two-number HH:MM kept for locale safety */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   Time *
                 </label>
                 <div className="flex gap-2 items-center">
-                  <input
-                    type="number"
-                    value={apptHour}
-                    onChange={(e) => {
-                      const v = Math.max(0, Math.min(23, Number(e.target.value)))
-                      setApptHour(v.toString().padStart(2, '0'))
-                    }}
-                    min="0"
-                    max="23"
-                    placeholder="HH"
-                    className="w-20 px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <span className="text-gray-500 font-bold">:</span>
-                  <input
-                    type="number"
-                    value={apptMinute}
-                    onChange={(e) => {
-                      const v = Math.max(0, Math.min(59, Number(e.target.value)))
-                      setApptMinute(v.toString().padStart(2, '0'))
-                    }}
-                    min="0"
-                    max="59"
-                    placeholder="MM"
-                    className="w-20 px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <span className="text-xs text-gray-400">24h format</span>
+                  <div className="w-20">
+                    <Input
+                      type="number"
+                      value={apptHour}
+                      onChange={(e) => {
+                        const v = Math.max(0, Math.min(23, Number(e.target.value)))
+                        setApptHour(v.toString().padStart(2, '0'))
+                      }}
+                      min="0"
+                      max="23"
+                      placeholder="HH"
+                      className="text-center tabular-nums"
+                    />
+                  </div>
+                  <span className="text-text-1 font-bold">:</span>
+                  <div className="w-20">
+                    <Input
+                      type="number"
+                      value={apptMinute}
+                      onChange={(e) => {
+                        const v = Math.max(0, Math.min(59, Number(e.target.value)))
+                        setApptMinute(v.toString().padStart(2, '0'))
+                      }}
+                      min="0"
+                      max="59"
+                      placeholder="MM"
+                      className="text-center tabular-nums"
+                    />
+                  </div>
+                  <span className="text-xs text-text-3">24h format</span>
                 </div>
               </div>
 
-              {/* Field 6 — Payment type */}
+              {/* Payment type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   Payment
                 </label>
                 <div className="flex gap-2">
                   <button
+                    type="button"
                     onClick={() => setApptPaymentType('AT_APPOINTMENT')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      apptPaymentType === 'AT_APPOINTMENT'
-                        ? 'bg-gray-900 text-white'
-                        : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
+                    className={segButton(apptPaymentType === 'AT_APPOINTMENT')}
                   >
                     Pay at appointment
                   </button>
                   <button
+                    type="button"
                     onClick={() => setApptPaymentType('IN_ADVANCE')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      apptPaymentType === 'IN_ADVANCE'
-                        ? 'bg-gray-900 text-white'
-                        : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
+                    className={segButton(apptPaymentType === 'IN_ADVANCE')}
                   >
                     Pay in advance
                   </button>
                 </div>
               </div>
 
-              {/* Field 7 — Notes */}
+              {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   Notes (optional)
                 </label>
-                <textarea
+                <Textarea
                   rows={2}
                   value={apptNotes}
                   onChange={(e) => setApptNotes(e.target.value)}
                   placeholder="Any notes about this appointment..."
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-200 flex-shrink-0 space-y-3">
+            <div className="p-6 border-t border-border flex-shrink-0 space-y-3">
               {apptError && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
-                  <p className="text-sm text-red-700">{apptError}</p>
+                <div className="p-3 bg-error-soft border border-error-strong rounded-md">
+                  <p className="text-sm text-error-strong">{apptError}</p>
                 </div>
               )}
-              <button
+              <Button
+                variant="primary"
+                fullWidth
+                loading={apptSaving}
                 onClick={handleCreateAppointment}
-                disabled={apptSaving}
-                className="w-full py-3 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {apptSaving ? 'Saving...' : 'Create appointment'}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                fullWidth
                 onClick={() => setShowCreateForm(false)}
-                className="w-full py-3 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -815,7 +843,10 @@ export default function AppointmentsPage() {
 
       {/* Success toast */}
       {savedMessage && (
-        <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-4 py-3 rounded-xl text-sm font-medium shadow-lg z-50 flex items-center gap-2">
+        <div className="fixed bottom-6 right-6 bg-text-1 text-surface px-4 py-3 rounded-md text-sm font-medium shadow-md z-50 flex items-center gap-2">
+          <span className="text-success-soft">
+            <Icon name="paid" size={16} />
+          </span>
           {savedMessage}
         </div>
       )}

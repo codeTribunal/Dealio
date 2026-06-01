@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -147,14 +148,55 @@ class _AppState extends ConsumerState<App> {
     return MaterialApp.router(
       title: 'Uzbek CRM',
       theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      // Default to light for now; a real light/dark toggle comes in a later phase.
+      themeMode: ThemeMode.light,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
       locale: locale,
       builder: (context, child) {
-        return MediaQuery(
+        Widget content = MediaQuery(
           data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
           child: child!,
         );
+        // Debug-only shortcut to the design reference screen. Never ships in
+        // release builds (stripped by the kDebugMode constant).
+        if (kDebugMode) {
+          content = Stack(
+            textDirection: TextDirection.ltr,
+            children: [
+              content,
+              Positioned(
+                right: 8,
+                bottom: 80,
+                child: SafeArea(
+                  // Self-contained Material buttons — no Overlay/Tooltip
+                  // dependency, so they are safe to host above the Navigator.
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _DebugJumpButton(
+                        icon: Icons.widgets_outlined,
+                        onTap: () => router.go('/design-components'),
+                      ),
+                      const SizedBox(height: 10),
+                      _DebugJumpButton(
+                        icon: Icons.grid_view_outlined,
+                        onTap: () => router.go('/design-icons'),
+                      ),
+                      const SizedBox(height: 10),
+                      _DebugJumpButton(
+                        icon: Icons.palette_outlined,
+                        onTap: () => router.go('/design-tokens'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        return content;
       },
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -163,6 +205,33 @@ class _AppState extends ConsumerState<App> {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
+    );
+  }
+}
+
+/// Small self-contained circular button used only for the debug design-screen
+/// shortcuts. Avoids Tooltip/FAB so it can live above the Navigator safely.
+class _DebugJumpButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _DebugJumpButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFF2563EB),
+      shape: const CircleBorder(),
+      elevation: 3,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Icon(icon, color: Colors.white, size: 22),
+        ),
+      ),
     );
   }
 }

@@ -766,6 +766,30 @@ class AppLocalizationsRu extends AppLocalizations {
   String get homeNoActivity => 'Сегодня активности нет';
 
   @override
+  String get homeWelcome => 'Здравствуйте';
+
+  @override
+  String get homeHeroTodayOrders => 'Заказы сегодня';
+
+  @override
+  String get homeStatPending => 'Ожидают оплаты';
+
+  @override
+  String get homeStatNewCustomers => 'Новые клиенты';
+
+  @override
+  String homePendingPaymentsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ожидают оплаты',
+      one: '1 ожидает оплаты',
+      zero: 'Нет ожидающих оплат',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get ordersTitle => 'Заказы';
 
   @override
@@ -1483,4 +1507,109 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get schedulingWorkingHours => 'Часы работы';
+
+  @override
+  String get schedulingWorkingHoursHint =>
+      'Когда клиенты могут записаться. Время по Ташкенту, 24-часовой формат.';
+
+  @override
+  String get schedulingOpen => 'Открыто';
+
+  @override
+  String get schedulingClosed => 'Закрыто';
+
+  @override
+  String get schedulingDayMon => 'Понедельник';
+
+  @override
+  String get schedulingDayTue => 'Вторник';
+
+  @override
+  String get schedulingDayWed => 'Среда';
+
+  @override
+  String get schedulingDayThu => 'Четверг';
+
+  @override
+  String get schedulingDayFri => 'Пятница';
+
+  @override
+  String get schedulingDaySat => 'Суббота';
+
+  @override
+  String get schedulingDaySun => 'Воскресенье';
+
+  @override
+  String get schedulingStart => 'Начало';
+
+  @override
+  String get schedulingEnd => 'Конец';
+
+  @override
+  String get schedulingTimeInvalid =>
+      'Время начала должно быть раньше времени окончания.';
+
+  @override
+  String get schedulingBuffer => 'Перерыв между записями';
+
+  @override
+  String get schedulingBufferHint =>
+      'Промежуток после каждой записи, например для уборки.';
+
+  @override
+  String get schedulingBufferUnit => 'минут';
+
+  @override
+  String get schedulingWorkingHoursSaved => 'Часы работы сохранены';
+
+  @override
+  String get schedulingBlockedTime => 'Заблокированное время';
+
+  @override
+  String get schedulingBlockedTimeHint =>
+      'Заблокируйте отпуска, перерывы или разовые закрытия, чтобы клиенты не могли записаться.';
+
+  @override
+  String get schedulingAddBlocked => 'Добавить блокировку';
+
+  @override
+  String get schedulingNoBlocked => 'Нет заблокированного времени';
+
+  @override
+  String get schedulingScope => 'Относится к';
+
+  @override
+  String get schedulingWholeBusiness => 'Весь бизнес';
+
+  @override
+  String get schedulingDate => 'Дата';
+
+  @override
+  String get schedulingReason => 'Причина';
+
+  @override
+  String get schedulingReasonHint => 'Необязательно, например Праздник';
+
+  @override
+  String get schedulingAddBlockedSubmit => 'Добавить';
+
+  @override
+  String get schedulingDeleteBlockedTitle => 'Удалить блокировку?';
+
+  @override
+  String get schedulingDeleteBlockedConfirm =>
+      'Это время снова станет доступным для записи.';
+
+  @override
+  String get staffFormDaysOffLabel => 'Выходные';
+
+  @override
+  String get staffFormDaysOffHint =>
+      'Конкретные даты, когда этот сотрудник недоступен.';
+
+  @override
+  String get staffFormAddDayOff => 'Добавить выходной';
 }

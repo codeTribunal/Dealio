@@ -43,6 +43,12 @@ dependencies:
   # Launching external URLs (calendar subscription links)
   url_launcher: ^6.3.0
 
+  # Typography — Manrope (full Cyrillic + Latin), fetched & cached at runtime
+  google_fonts: ^6.2.1
+
+  # SVG rendering — the "Micro-Detail" icon set is drawn from inline SVG strings
+  flutter_svg: ^2.0.10
+
 
 dev_dependencies:
   flutter_test:

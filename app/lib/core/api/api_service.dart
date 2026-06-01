@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_config.dart';
 import '../models/analytics.dart';
 import '../models/appointment.dart';
+import '../models/blocked_slot.dart';
 import '../models/business.dart';
 import '../models/project.dart';
 import '../models/service.dart';
@@ -838,6 +839,47 @@ class ApiService {
         },
       );
       return (res.data as List).cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  // ── Blocked time (scheduling) ─────────────────────────────────
+
+  Future<List<BlockedSlot>> getBlockedSlots({
+    String? from,
+    String? to,
+    String? staffId,
+  }) async {
+    try {
+      final res = await _dio.get(
+        '/blocked-slots',
+        queryParameters: {
+          if (from != null) 'from': from,
+          if (to != null) 'to': to,
+          if (staffId != null) 'staffId': staffId,
+        },
+      );
+      return (res.data as List)
+          .map((e) => BlockedSlot.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  Future<BlockedSlot> createBlockedSlot(Map<String, dynamic> data) async {
+    try {
+      final res = await _dio.post('/blocked-slots', data: data);
+      return BlockedSlot.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  Future<void> deleteBlockedSlot(String id) async {
+    try {
+      await _dio.delete('/blocked-slots/$id');
     } on DioException catch (e) {
       throw _wrap(e);
     }

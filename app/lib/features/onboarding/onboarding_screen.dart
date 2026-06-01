@@ -5,8 +5,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_notifier.dart';
 import '../../core/api/api_service.dart';
+import '../../core/icons/app_icon.dart';
 import '../../core/locale/locale_provider.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_spinner.dart';
 import 'onboarding_provider.dart';
 
 class OnboardingScreen extends ConsumerWidget {
@@ -50,7 +55,7 @@ class OnboardingScreen extends ConsumerWidget {
               if (state.step < 5) _ProgressBar(step: state.step),
               Expanded(
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
+                  duration: AppMotion.durSlow,
                   child: KeyedSubtree(
                     key: ValueKey(state.step),
                     child: _stepWidget(state.step),
@@ -88,19 +93,20 @@ class _ProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+    final t = AppTokens.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.s5, AppSpacing.s4, AppSpacing.s5, 0),
       child: Row(
         children: List.generate(4, (i) {
           final active = i < step;
           return Expanded(
             child: Container(
               height: 4,
-              margin: EdgeInsets.only(right: i < 3 ? 6 : 0),
+              margin: EdgeInsets.only(right: i < 3 ? AppSpacing.s1 : 0),
               decoration: BoxDecoration(
-                color: active ? primary : Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(2),
+                color: active ? t.accent : t.border,
+                borderRadius: AppRadii.pill,
               ),
             ),
           );
@@ -145,88 +151,70 @@ class _Step1BusinessState extends ConsumerState<_Step1Business> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final state = ref.watch(onboardingProvider);
     final notifier = ref.read(onboardingProvider.notifier);
-    final primary = Theme.of(context).colorScheme.primary;
 
     final canContinue =
         state.businessName.trim().isNotEmpty && state.modes.isNotEmpty;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.s5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.s4),
           Text(
             l.onboardingSetupTitle,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: AppTextSizes.h3,
+              fontWeight: AppFontWeights.bold,
+              color: t.text1,
+            ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.s1),
           Text(
             l.onboardingBusinessStepTitle,
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: Colors.grey[600]),
+            style: TextStyle(fontSize: AppTextSizes.base, color: t.text2),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: AppSpacing.s6),
           TextField(
             controller: _nameController,
-            decoration: InputDecoration(
-              labelText: l.onboardingBusinessNameLabel,
-              hintText: l.onboardingBusinessNameHint,
-              border: const OutlineInputBorder(),
-            ),
+            style: TextStyle(color: t.text1),
+            decoration: _decoration(context,
+                label: l.onboardingBusinessNameLabel,
+                hint: l.onboardingBusinessNameHint),
             onChanged: notifier.setBusinessName,
           ),
-          const SizedBox(height: 24),
-          Text(
-            l.onboardingBusinessType,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(fontWeight: FontWeight.w600, color: Colors.grey[700]),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.s5),
+          _FieldLabel(l.onboardingBusinessType),
+          const SizedBox(height: AppSpacing.s2),
           _ModeCard(
-            mode: 'PRODUCTS',
-            icon: Icons.shopping_bag_outlined,
+            icon: AppIconName.orders,
             title: l.onboardingModeProductsTitle,
             subtitle: l.onboardingModeProductsSubtitle,
             selected: state.modes.contains('PRODUCTS'),
             onTap: () => notifier.toggleMode('PRODUCTS'),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.s2),
           _ModeCard(
-            mode: 'SERVICES',
-            icon: Icons.calendar_today_outlined,
+            icon: AppIconName.calendar,
             title: l.onboardingModeServicesTitle,
             subtitle: l.onboardingModeServicesSubtitle,
             selected: state.modes.contains('SERVICES'),
             onTap: () => notifier.toggleMode('SERVICES'),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.s2),
           _ModeCard(
-            mode: 'FREELANCE',
-            icon: Icons.work_outline,
+            icon: AppIconName.projects,
             title: l.onboardingModeFreelanceTitle,
             subtitle: l.onboardingModeFreelanceSubtitle,
             selected: state.modes.contains('FREELANCE'),
             onTap: () => notifier.toggleMode('FREELANCE'),
           ),
-          const SizedBox(height: 24),
-          Text(
-            l.onboardingLanguageLabel,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(fontWeight: FontWeight.w600, color: Colors.grey[700]),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.s5),
+          _FieldLabel(l.onboardingLanguageLabel),
+          const SizedBox(height: AppSpacing.s2),
           Row(
             children: [
               Expanded(
@@ -236,7 +224,7 @@ class _Step1BusinessState extends ConsumerState<_Step1Business> {
                   onTap: () => _selectLanguage('UZBEK'),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.s2),
               Expanded(
                 child: _ToggleButton(
                   label: 'Русский',
@@ -244,7 +232,7 @@ class _Step1BusinessState extends ConsumerState<_Step1Business> {
                   onTap: () => _selectLanguage('RUSSIAN'),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.s2),
               Expanded(
                 child: _ToggleButton(
                   label: 'English',
@@ -254,20 +242,13 @@ class _Step1BusinessState extends ConsumerState<_Step1Business> {
               ),
             ],
           ),
-          const SizedBox(height: 32),
-          ElevatedButton(
+          const SizedBox(height: AppSpacing.s6),
+          AppButton(
+            label: l.buttonContinue,
+            fullWidth: true,
             onPressed: canContinue
                 ? () => ref.read(onboardingProvider.notifier).setStep(2)
                 : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primary,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(52),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text(l.buttonContinue,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
           ),
         ],
       ),
@@ -276,15 +257,13 @@ class _Step1BusinessState extends ConsumerState<_Step1Business> {
 }
 
 class _ModeCard extends StatelessWidget {
-  final String mode;
-  final IconData icon;
+  final AppIconName icon;
   final String title;
   final String subtitle;
   final bool selected;
   final VoidCallback onTap;
 
   const _ModeCard({
-    required this.mode,
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -294,41 +273,42 @@ class _ModeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+    final t = AppTokens.of(context);
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: AnimatedContainer(
+        duration: AppMotion.durFast,
+        curve: AppMotion.ease,
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s4, vertical: AppSpacing.s3),
         decoration: BoxDecoration(
-          color: selected ? primary.withValues(alpha: 0.05) : Colors.white,
+          color: selected ? t.accentSoft : t.surface,
           border: Border.all(
-            color: selected ? primary : Colors.grey.shade300,
+            color: selected ? t.accent : t.border,
             width: selected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadii.lg,
         ),
         child: Row(
           children: [
-            Icon(icon,
-                size: 22,
-                color: selected ? primary : Colors.grey[600]),
-            const SizedBox(width: 14),
+            AppIcon(name: icon, size: 22, color: selected ? t.accent : t.text2),
+            const SizedBox(width: AppSpacing.s3),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
                       style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: selected ? primary : Colors.black87)),
+                          fontWeight: AppFontWeights.semibold,
+                          color: selected ? t.accent : t.text1)),
                   Text(subtitle,
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey[600])),
+                      style: TextStyle(
+                          fontSize: AppTextSizes.caption, color: t.text2)),
                 ],
               ),
             ),
             if (selected)
-              Icon(Icons.check_circle, color: primary, size: 20),
+              AppIcon(name: AppIconName.paid, color: t.accent, size: 20),
           ],
         ),
       ),
@@ -349,23 +329,24 @@ class _ToggleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+    final t = AppTokens.of(context);
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+      child: AnimatedContainer(
+        duration: AppMotion.durFast,
+        curve: AppMotion.ease,
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s3),
         decoration: BoxDecoration(
-          color: selected ? primary : Colors.white,
-          border: Border.all(
-              color: selected ? primary : Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(10),
+          color: selected ? t.accentSoft : t.surface,
+          border: Border.all(color: selected ? t.accent : t.border),
+          borderRadius: AppRadii.md,
         ),
         child: Center(
           child: Text(
             label,
             style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : Colors.grey.shade700),
+                fontWeight: AppFontWeights.semibold,
+                color: selected ? t.accent : t.text2),
           ),
         ),
       ),
@@ -400,105 +381,86 @@ class _Step2BotState extends ConsumerState<_Step2Bot> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final state = ref.watch(onboardingProvider);
     final notifier = ref.read(onboardingProvider.notifier);
-    final primary = Theme.of(context).colorScheme.primary;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.s5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back),
+                icon: AppIcon(name: AppIconName.menu, color: t.text1),
                 onPressed: () => notifier.setStep(1),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: AppSpacing.s1),
               Text(l.onboardingBotHeader,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      fontSize: AppTextSizes.lg,
+                      fontWeight: AppFontWeights.bold,
+                      color: t.text1)),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.s4),
           Text(l.onboardingBotCreateTitle,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 6),
+              style: TextStyle(
+                  fontSize: AppTextSizes.lg,
+                  fontWeight: AppFontWeights.bold,
+                  color: t.text1)),
+          const SizedBox(height: AppSpacing.s1),
           Text(l.onboardingBotCreateSubtitle,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Colors.grey[600])),
-          const SizedBox(height: 24),
-          ..._instructions(context, l),
-          const SizedBox(height: 20),
-          Text(l.onboardingBotPasteToken,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+              style: TextStyle(fontSize: AppTextSizes.base, color: t.text2)),
+          const SizedBox(height: AppSpacing.s5),
+          AppCard(
+            child: Column(
+              children: _instructions(context, l),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s5),
+          _FieldLabel(l.onboardingBotPasteToken),
+          const SizedBox(height: AppSpacing.s2),
           TextField(
             controller: _tokenController,
-            decoration: InputDecoration(
-              hintText: '1234567890:AAHxyz...',
-              border: const OutlineInputBorder(),
+            style: TextStyle(color: t.text1),
+            decoration: _decoration(
+              context,
+              hint: '1234567890:AAHxyz...',
               errorText: state.tokenError,
             ),
             onChanged: notifier.setBotToken,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.s4),
           if (!state.tokenVerified) ...[
-            ElevatedButton(
+            AppButton(
+              label: l.onboardingVerifyToken,
+              fullWidth: true,
+              loading: state.verifyingToken,
               onPressed: state.verifyingToken || state.botToken.isEmpty
                   ? null
                   : notifier.verifyBotToken,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primary,
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: state.verifyingToken
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : Text(l.onboardingVerifyToken,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 16)),
             ),
           ] else ...[
             Row(
               children: [
-                const Icon(Icons.check_circle, color: Colors.green, size: 22),
-                const SizedBox(width: 8),
-                Text(l.onboardingBotReady(state.botUsername),
-                    style: const TextStyle(
-                        color: Colors.green, fontWeight: FontWeight.w600)),
+                AppIcon(
+                    name: AppIconName.paid, color: t.successStrong, size: 22),
+                const SizedBox(width: AppSpacing.s2),
+                Expanded(
+                  child: Text(l.onboardingBotReady(state.botUsername),
+                      style: TextStyle(
+                          color: t.successStrong,
+                          fontWeight: AppFontWeights.semibold)),
+                ),
               ],
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
+            const SizedBox(height: AppSpacing.s4),
+            AppButton(
+              label: l.buttonContinue,
+              fullWidth: true,
               onPressed: state.tokenVerified ? () => notifier.setStep(3) : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primary,
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text(l.buttonContinue,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 16)),
             ),
           ],
         ],
@@ -507,42 +469,42 @@ class _Step2BotState extends ConsumerState<_Step2Bot> {
   }
 
   List<Widget> _instructions(BuildContext context, AppLocalizations l) {
+    final t = AppTokens.of(context);
     final steps = [
-      (l.onboardingBotStep1, Icons.search),
-      (l.onboardingBotStep2, Icons.send_outlined),
-      (l.onboardingBotStep3, Icons.badge_outlined),
-      (l.onboardingBotStep4, Icons.alternate_email),
-      (l.onboardingBotStep5, Icons.copy_outlined),
+      l.onboardingBotStep1,
+      l.onboardingBotStep2,
+      l.onboardingBotStep3,
+      l.onboardingBotStep4,
+      l.onboardingBotStep5,
     ];
     return steps.indexed.map((entry) {
-      final (i, step) = entry;
-      final (text, icon) = step;
+      final (i, text) = entry;
       return Padding(
-        padding: const EdgeInsets.only(bottom: 10),
+        padding: EdgeInsets.only(bottom: i < steps.length - 1 ? AppSpacing.s3 : 0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               width: 28,
               height: 28,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
+                color: t.accent,
                 shape: BoxShape.circle,
               ),
-              child: Center(
-                child: Text('${i + 1}',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold)),
-              ),
+              child: Text('${i + 1}',
+                  style: TextStyle(
+                      color: t.accentOn,
+                      fontSize: AppTextSizes.caption,
+                      fontWeight: AppFontWeights.bold)),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.s3),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.only(top: AppSpacing.s1),
                 child: Text(text,
-                    style: const TextStyle(fontSize: 14)),
+                    style:
+                        TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
               ),
             ),
           ],
@@ -588,55 +550,52 @@ class _Step3PaymentState extends ConsumerState<_Step3Payment> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final state = ref.watch(onboardingProvider);
     final notifier = ref.read(onboardingProvider.notifier);
-    final primary = Theme.of(context).colorScheme.primary;
 
     void goNext() => notifier.setStep(4);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.s5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back),
+                icon: AppIcon(name: AppIconName.menu, color: t.text1),
                 onPressed: () => notifier.setStep(2),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: AppSpacing.s1),
               Text(l.onboardingPaymentHeader,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      fontSize: AppTextSizes.lg,
+                      fontWeight: AppFontWeights.bold,
+                      color: t.text1)),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.s4),
           Text(l.onboardingPaymentStepTitle,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 6),
+              style: TextStyle(
+                  fontSize: AppTextSizes.lg,
+                  fontWeight: AppFontWeights.bold,
+                  color: t.text1)),
+          const SizedBox(height: AppSpacing.s1),
           Text(l.onboardingPaymentSubtitle,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Colors.grey[600])),
-          const SizedBox(height: 28),
+              style: TextStyle(fontSize: AppTextSizes.base, color: t.text2)),
+          const SizedBox(height: AppSpacing.s6),
           TextField(
             controller: _cardController,
             keyboardType: TextInputType.number,
             maxLength: 19, // 16 digits + 3 spaces
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              labelText: l.onboardingCardNumberLabel(l.commonOptional),
-              hintText: '8600 1234 5678 1234',
-              border: const OutlineInputBorder(),
-              counterText: '',
-            ),
+            style: TextStyle(color: t.text1),
+            decoration: _decoration(
+              context,
+              label: l.onboardingCardNumberLabel(l.commonOptional),
+              hint: '8600 1234 5678 1234',
+            ).copyWith(counterText: ''),
             onChanged: (raw) {
               final formatted = _formatCard(raw);
               final digits = raw.replaceAll(RegExp(r'\D'), '');
@@ -650,7 +609,7 @@ class _Step3PaymentState extends ConsumerState<_Step3Payment> {
               }
             },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.s4),
           Row(
             children: [
               Expanded(
@@ -660,7 +619,7 @@ class _Step3PaymentState extends ConsumerState<_Step3Payment> {
                   onTap: () => notifier.setCardBank('UZCARD'),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.s3),
               Expanded(
                 child: _ToggleButton(
                   label: 'Humo',
@@ -670,27 +629,21 @@ class _Step3PaymentState extends ConsumerState<_Step3Payment> {
               ),
             ],
           ),
-          const SizedBox(height: 32),
-          ElevatedButton(
+          const SizedBox(height: AppSpacing.s6),
+          AppButton(
+            label: l.buttonContinue,
+            fullWidth: true,
             onPressed: goNext,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primary,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(52),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text(l.buttonContinue,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 16)),
           ),
-          const SizedBox(height: 12),
-          TextButton(
+          const SizedBox(height: AppSpacing.s3),
+          AppButton(
+            label: l.onboardingSkipForNow,
+            variant: AppButtonVariant.ghost,
+            fullWidth: true,
             onPressed: () {
               notifier.setCardNumber('');
               goNext();
             },
-            child: Text(l.onboardingSkipForNow),
           ),
         ],
       ),
@@ -730,46 +683,39 @@ class _Step4Review extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final state = ref.watch(onboardingProvider);
     final notifier = ref.read(onboardingProvider.notifier);
-    final primary = Theme.of(context).colorScheme.primary;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.s5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back),
+                icon: AppIcon(name: AppIconName.menu, color: t.text1),
                 onPressed: () => notifier.setStep(3),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: AppSpacing.s1),
               Text(l.onboardingAlmostDone,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      fontSize: AppTextSizes.lg,
+                      fontWeight: AppFontWeights.bold,
+                      color: t.text1)),
             ],
           ),
-          const SizedBox(height: 24),
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade200),
-              borderRadius: BorderRadius.circular(16),
-            ),
+          const SizedBox(height: AppSpacing.s5),
+          AppCard(
+            padding: EdgeInsets.zero,
             child: Column(
               children: [
                 _SummaryRow(l.onboardingBusinessNameLabel, state.businessName),
+                _SummaryRow(l.onboardingSummaryType,
+                    state.modes.map((m) => _modeName(l, m)).join(', ')),
                 _SummaryRow(
-                    l.onboardingSummaryType,
-                    state.modes
-                        .map((m) => _modeName(l, m))
-                        .join(', ')),
-                _SummaryRow(
-                    l.onboardingLanguageLabel,
-                    _languageName(state.language)),
+                    l.onboardingLanguageLabel, _languageName(state.language)),
                 _SummaryRow(l.onboardingSummaryBot, '@${state.botUsername}'),
                 _SummaryRow(
                     l.onboardingSummaryPayment,
@@ -780,28 +726,22 @@ class _Step4Review extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: AppSpacing.s6),
           if (state.completing) ...[
-            const Center(child: CircularProgressIndicator()),
+            const Center(child: AppSpinner(size: 28)),
           ] else ...[
-            ElevatedButton(
+            AppButton(
+              label: l.onboardingLaunchCrm,
+              size: AppButtonSize.lg,
+              fullWidth: true,
               onPressed: notifier.complete,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primary,
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(56),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text(l.onboardingLaunchCrm,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 17)),
             ),
           ],
           if (state.completionError != null) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s3),
             Text(state.completionError!,
-                style: const TextStyle(color: Colors.red, fontSize: 13),
+                style: TextStyle(
+                    color: t.errorStrong, fontSize: AppTextSizes.sm),
                 textAlign: TextAlign.center),
           ],
         ],
@@ -819,27 +759,35 @@ class _SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s4, vertical: AppSpacing.s4),
           child: Row(
             children: [
               Text(label,
-                  style: TextStyle(
-                      color: Colors.grey[600], fontSize: 14)),
+                  style:
+                      TextStyle(color: t.text2, fontSize: AppTextSizes.sm)),
               const Spacer(),
               Flexible(
                 child: Text(value,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14),
+                    style: TextStyle(
+                        fontWeight: AppFontWeights.semibold,
+                        fontSize: AppTextSizes.sm,
+                        color: t.text1),
                     textAlign: TextAlign.right),
               ),
             ],
           ),
         ),
         if (!isLast)
-          Divider(height: 1, color: Colors.grey.shade200, indent: 20, endIndent: 20),
+          Divider(
+              height: 1,
+              color: t.border,
+              indent: AppSpacing.s4,
+              endIndent: AppSpacing.s4),
       ],
     );
   }
@@ -856,14 +804,14 @@ class _DoneStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
-    final primary = Theme.of(context).colorScheme.primary;
+    final t = AppTokens.of(context);
 
     return PopScope(
       canPop: false,
       child: Scaffold(
         body: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.all(AppSpacing.s6),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -873,49 +821,58 @@ class _DoneStep extends ConsumerWidget {
                   child: Container(
                     width: 80,
                     height: 80,
-                    decoration: const BoxDecoration(
-                      color: Colors.green,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: t.successSoft,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.check,
-                        color: Colors.white, size: 44),
+                    child: AppIcon(
+                        name: AppIconName.paid,
+                        color: t.successStrong,
+                        size: 44),
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: AppSpacing.s6),
                 Text(
                   l.onboardingDoneTitle,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: AppTextSizes.h2,
+                    fontWeight: AppFontWeights.extra,
+                    color: t.text1,
+                  ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.s3),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s2),
                   child: Text(
                     l.onboardingDoneShareHint,
-                    style: const TextStyle(color: Colors.grey, fontSize: 14),
+                    style: TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
                     textAlign: TextAlign.center,
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: AppSpacing.s6),
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.s4),
                   decoration: BoxDecoration(
-                    border: Border.all(color: primary.withValues(alpha: 0.4)),
-                    borderRadius: BorderRadius.circular(12),
+                    color: t.surface,
+                    border: Border.all(color: t.border),
+                    borderRadius: AppRadii.lg,
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.telegram, color: primary, size: 28),
-                      const SizedBox(width: 12),
+                      AppIcon(name: AppIconName.inbox, color: t.accent, size: 28),
+                      const SizedBox(width: AppSpacing.s3),
                       Expanded(
                         child: Text('@$botUsername',
                             style: TextStyle(
-                                fontWeight: FontWeight.w600, color: primary)),
+                                fontWeight: AppFontWeights.semibold,
+                                color: t.accent)),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.copy_outlined),
-                        color: primary,
+                        icon: AppIcon(
+                            name: AppIconName.add, color: t.accent, size: 20),
+                        tooltip: l.settingsCopyLinkTooltip,
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: botLink));
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -929,18 +886,11 @@ class _DoneStep extends ConsumerWidget {
                   ),
                 ),
                 const Spacer(),
-                ElevatedButton(
+                AppButton(
+                  label: l.onboardingFinishButton,
+                  size: AppButtonSize.lg,
+                  fullWidth: true,
                   onPressed: () => context.go('/home'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primary,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(56),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text(l.onboardingFinishButton,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 16)),
                 ),
               ],
             ),
@@ -949,4 +899,59 @@ class _DoneStep extends ConsumerWidget {
       ),
     );
   }
+}
+
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+class _FieldLabel extends StatelessWidget {
+  final String text;
+  const _FieldLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: AppTextSizes.caption,
+          fontWeight: AppFontWeights.semibold,
+          color: t.text2,
+        ),
+      ),
+    );
+  }
+}
+
+InputDecoration _decoration(
+  BuildContext context, {
+  String? label,
+  String? hint,
+  String? errorText,
+}) {
+  final t = AppTokens.of(context);
+  OutlineInputBorder border(Color color, [double width = 1]) =>
+      OutlineInputBorder(
+        borderRadius: AppRadii.md,
+        borderSide: BorderSide(color: color, width: width),
+      );
+  return InputDecoration(
+    labelText: label,
+    labelStyle: TextStyle(color: t.text2),
+    hintText: hint,
+    hintStyle: TextStyle(color: t.text3),
+    errorText: errorText,
+    errorStyle: TextStyle(color: t.errorStrong),
+    filled: true,
+    fillColor: t.surface,
+    isDense: true,
+    contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s4, vertical: AppSpacing.s3),
+    border: border(t.border),
+    enabledBorder: border(t.border),
+    focusedBorder: border(t.accent, 2),
+    errorBorder: border(t.error),
+    focusedErrorBorder: border(t.error, 2),
+  );
 }

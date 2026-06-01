@@ -20,6 +20,7 @@ export default async function analyticsRoutes(app: FastifyInstance) {
       thisMonthRevResult,
       lastMonthRevResult,
       ordersCompleted,
+      ordersThisMonth,
       topCustomerRows,
       bestItemRows,
       avgResult,
@@ -44,6 +45,15 @@ export default async function analyticsRoutes(app: FastifyInstance) {
       // Orders delivered this month
       prisma.order.count({
         where: { ...baseWhere, orderStatus: 'DELIVERED', createdAt: { gte: thisMonthStart } },
+      }),
+
+      // All orders placed this month (excluding cancelled)
+      prisma.order.count({
+        where: {
+          ...baseWhere,
+          orderStatus: { not: 'CANCELLED' },
+          createdAt: { gte: thisMonthStart },
+        },
       }),
 
       // Top 3 customers by spend in last 90 days
@@ -114,6 +124,7 @@ export default async function analyticsRoutes(app: FastifyInstance) {
     return reply.send({
       revenueThisMonth: thisMonthRevResult._sum.total ?? 0,
       revenueLastMonth: lastMonthRevResult._sum.total ?? 0,
+      ordersThisMonth,
       ordersCompletedThisMonth: ordersCompleted,
       topCustomers,
       bestSellingProduct,

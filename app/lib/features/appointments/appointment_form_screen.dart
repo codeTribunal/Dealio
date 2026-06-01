@@ -7,8 +7,10 @@ import '../../core/api/api_service.dart';
 import '../../core/models/customer.dart';
 import '../../core/models/service.dart';
 import '../../core/models/staff.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
+import '../../shared/widgets/app_button.dart';
 import 'appointments_provider.dart';
 
 final _displayFmt = DateFormat('d MMM yyyy');
@@ -108,13 +110,14 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final hasServices = (_services?.isNotEmpty ?? false);
     final hasStaff = (_staff?.isNotEmpty ?? false);
 
     return Scaffold(
       appBar: AppBar(title: Text(l.apptFormTitle)),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.s5),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -127,7 +130,7 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
                   selected: !_customerManualMode,
                   onTap: () => setState(() => _customerManualMode = false),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.s2),
                 _toggleButton(
                   label: l.apptFormEnterManually,
                   selected: _customerManualMode,
@@ -135,15 +138,12 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.s3),
             if (!_customerManualMode)
               DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  labelText: l.orderSectionCustomer,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+                decoration: _decoration(context, label: l.orderSectionCustomer),
+                dropdownColor: t.surface,
+                style: TextStyle(color: t.text1),
                 // ignore: deprecated_member_use
                 value: _selectedCustomerId,
                 hint: _customers == null
@@ -161,16 +161,13 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
               )
             else
               TextFormField(
-                decoration: InputDecoration(
-                  labelText: l.apptFormCustomerNameLabel,
-                  hintText: l.apptFormCustomerNameHint,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+                style: TextStyle(color: t.text1),
+                decoration: _decoration(context,
+                    label: l.apptFormCustomerNameLabel,
+                    hint: l.apptFormCustomerNameHint),
                 onChanged: (v) => setState(() => _manualCustomerName = v),
               ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.s5),
 
             // ── Service ───────────────────────────────────────────
             _label(l.apptFormServiceLabel),
@@ -182,7 +179,7 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
                     selected: _serviceManualMode,
                     onTap: () => setState(() => _serviceManualMode = true),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.s2),
                   _toggleButton(
                     label: l.apptFormFromServices,
                     selected: !_serviceManualMode,
@@ -190,15 +187,12 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
                   ),
                 ],
               ),
-            if (hasServices) const SizedBox(height: 12),
+            if (hasServices) const SizedBox(height: AppSpacing.s3),
             if (!_serviceManualMode && hasServices)
               DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  labelText: l.apptFormServiceField,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+                decoration: _decoration(context, label: l.apptFormServiceField),
+                dropdownColor: t.surface,
+                style: TextStyle(color: t.text1),
                 // ignore: deprecated_member_use
                 value: _selectedServiceId,
                 hint: Text(l.apptFormSelectService),
@@ -223,45 +217,34 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   TextFormField(
-                    decoration: InputDecoration(
-                      labelText: l.serviceFormNameLabel,
-                      hintText: l.apptFormServiceNameHint,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                    style: TextStyle(color: t.text1),
+                    decoration: _decoration(context,
+                        label: l.serviceFormNameLabel,
+                        hint: l.apptFormServiceNameHint),
                     onChanged: (v) => setState(() => _manualServiceName = v),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.s3),
                   Row(
                     children: [
                       Expanded(
                         child: TextFormField(
                           initialValue: _manualServiceDuration,
                           keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: l.apptFormDurationLabel,
-                            hintText: '60',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
+                          style: TextStyle(color: t.text1),
+                          decoration: _decoration(context,
+                              label: l.apptFormDurationLabel, hint: '60'),
                           onChanged: (v) =>
                               setState(() => _manualServiceDuration = v),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppSpacing.s3),
                       Expanded(
                         child: TextFormField(
                           initialValue: _manualServicePrice,
                           keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: l.serviceFormPriceLabel,
-                            hintText: '0',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
+                          style: TextStyle(color: t.text1),
+                          decoration: _decoration(context,
+                              label: l.serviceFormPriceLabel, hint: '0'),
                           onChanged: (v) =>
                               setState(() => _manualServicePrice = v),
                         ),
@@ -270,18 +253,15 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
                   ),
                 ],
               ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.s5),
 
             // ── Staff (optional) ──────────────────────────────────
             if (hasStaff) ...[
               _label(l.apptFormStaffLabel),
               DropdownButtonFormField<String?>(
-                decoration: InputDecoration(
-                  labelText: l.staffTitle,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+                decoration: _decoration(context, label: l.staffTitle),
+                dropdownColor: t.surface,
+                style: TextStyle(color: t.text1),
                 // ignore: deprecated_member_use
                 value: _selectedStaffId,
                 items: [
@@ -298,7 +278,7 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
                 ],
                 onChanged: (v) => setState(() => _selectedStaffId = v),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.s5),
             ],
 
             // ── Date & time ───────────────────────────────────────
@@ -308,37 +288,34 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
                 Expanded(
                   child: InkWell(
                     onTap: _pickDate,
+                    borderRadius: AppRadii.md,
                     child: InputDecorator(
-                      decoration: InputDecoration(
-                        labelText: l.apptFormDateLabel,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
+                      decoration: _decoration(context, label: l.apptFormDateLabel),
                       child: Text(
-                        _date == null ? l.apptFormSelectDate : _displayFmt.format(_date!),
+                        _date == null
+                            ? l.apptFormSelectDate
+                            : _displayFmt.format(_date!),
                         style: TextStyle(
-                          color: _date == null ? Colors.grey.shade600 : null,
+                          color: _date == null ? t.text3 : t.text1,
                         ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.s3),
                 Expanded(
                   child: InkWell(
                     onTap: _pickTime,
+                    borderRadius: AppRadii.md,
                     child: InputDecorator(
-                      decoration: InputDecoration(
-                        labelText: l.productFormTimeLabel,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
+                      decoration:
+                          _decoration(context, label: l.productFormTimeLabel),
                       child: Text(
-                        _time == null ? l.apptFormSelectTime : formatTimeOfDay(_time!),
+                        _time == null
+                            ? l.apptFormSelectTime
+                            : formatTimeOfDay(_time!),
                         style: TextStyle(
-                          color: _time == null ? Colors.grey.shade600 : null,
+                          color: _time == null ? t.text3 : t.text1,
                         ),
                       ),
                     ),
@@ -346,7 +323,7 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.s5),
 
             // ── Payment ───────────────────────────────────────────
             _label(l.apptFormPaymentLabel),
@@ -355,9 +332,10 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
                 _toggleButton(
                   label: l.apptPayAtAppointment,
                   selected: _paymentType == 'AT_APPOINTMENT',
-                  onTap: () => setState(() => _paymentType = 'AT_APPOINTMENT'),
+                  onTap: () =>
+                      setState(() => _paymentType = 'AT_APPOINTMENT'),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.s2),
                 _toggleButton(
                   label: l.apptPayInAdvance,
                   selected: _paymentType == 'IN_ADVANCE',
@@ -365,82 +343,79 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.s5),
 
             // ── Notes ─────────────────────────────────────────────
             _label(l.orderSectionNotes),
             TextFormField(
               controller: _notesCtrl,
               maxLines: 2,
-              decoration: InputDecoration(
-                hintText: l.apptFormNotesHint,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
+              style: TextStyle(color: t.text1),
+              decoration: _decoration(context, hint: l.apptFormNotesHint),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.s5),
 
             if (_error != null) ...[
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-              const SizedBox(height: 12),
+              Text(_error!, style: TextStyle(color: t.errorStrong)),
+              const SizedBox(height: AppSpacing.s3),
             ],
 
-            FilledButton(
+            AppButton(
+              label: l.apptFormCreate,
+              fullWidth: true,
+              loading: _saving,
               onPressed: _saving ? null : _submit,
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              child: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(l.apptFormCreate),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.s6),
           ],
         ),
       ),
     );
   }
 
-  Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            text,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+  Widget _label(String text) {
+    final t = AppTokens.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.s2),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: AppTextSizes.caption,
+            fontWeight: AppFontWeights.semibold,
+            color: t.text2,
           ),
         ),
-      );
+      ),
+    );
+  }
 
   Widget _toggleButton({
     required String label,
     required bool selected,
     required VoidCallback onTap,
   }) {
+    final t = AppTokens.of(context);
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+        child: AnimatedContainer(
+          duration: AppMotion.durFast,
+          curve: AppMotion.ease,
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.s2),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF1F2937) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: selected ? const Color(0xFF1F2937) : Colors.grey.shade300,
-            ),
+            color: selected ? t.accentSoft : t.surface,
+            borderRadius: AppRadii.sm,
+            border: Border.all(color: selected ? t.accent : t.border),
           ),
           child: Text(
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: selected ? Colors.white : Colors.grey.shade700,
+              fontSize: AppTextSizes.caption,
+              fontWeight: AppFontWeights.semibold,
+              color: selected ? t.accent : t.text2,
             ),
           ),
         ),
@@ -548,4 +523,31 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
       });
     }
   }
+}
+
+InputDecoration _decoration(
+  BuildContext context, {
+  String? label,
+  String? hint,
+}) {
+  final t = AppTokens.of(context);
+  OutlineInputBorder border(Color color, [double width = 1]) =>
+      OutlineInputBorder(
+        borderRadius: AppRadii.md,
+        borderSide: BorderSide(color: color, width: width),
+      );
+  return InputDecoration(
+    labelText: label,
+    labelStyle: TextStyle(color: t.text2),
+    hintText: hint,
+    hintStyle: TextStyle(color: t.text3),
+    filled: true,
+    fillColor: t.surface,
+    isDense: true,
+    contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s4, vertical: AppSpacing.s3),
+    border: border(t.border),
+    enabledBorder: border(t.border),
+    focusedBorder: border(t.accent, 2),
+  );
 }

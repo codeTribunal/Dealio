@@ -1,8 +1,6 @@
 {
   "@@locale": "en",
-
   "appTitle": "Uzbek CRM",
-
   "buttonSave": "Save",
   "buttonSaveChanges": "Save changes",
   "buttonCancel": "Cancel",
@@ -19,7 +17,6 @@
   "buttonNext": "Next",
   "buttonShare": "Share",
   "buttonCopy": "Copy",
-
   "commonSearch": "Search",
   "commonLoading": "Loading",
   "commonToday": "Today",
@@ -33,16 +30,16 @@
   "commonNo": "No",
   "commonAll": "All",
   "commonNone": "None",
-
   "errorGeneric": "Something went wrong",
   "errorLoadFailed": "Failed to load",
   "errorWithMessage": "Error: {message}",
   "@errorWithMessage": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
-
   "navHome": "Home",
   "navCustomers": "Customers",
   "navOrders": "Orders",
@@ -54,40 +51,32 @@
   "navAnalytics": "Analytics",
   "navSettings": "Settings",
   "navMessages": "Messages",
-
   "orderStatusNew": "New",
   "orderStatusPreparing": "Preparing",
   "orderStatusReady": "Ready",
   "orderStatusDelivered": "Delivered",
   "orderStatusCancelled": "Cancelled",
-
   "paymentStatusPending": "Pending",
   "paymentStatusPaymentReceived": "Payment received",
   "paymentStatusConfirmed": "Confirmed",
-
   "appointmentStatusRequested": "Requested",
   "appointmentStatusConfirmed": "Confirmed",
   "appointmentStatusCompleted": "Completed",
   "appointmentStatusCancelled": "Cancelled",
   "appointmentStatusNoShow": "No-show",
-
   "projectStatusProposalSent": "Proposal sent",
   "projectStatusInProgress": "In progress",
   "projectStatusReview": "In review",
   "projectStatusCompleted": "Completed",
   "projectStatusCancelled": "Cancelled",
-
   "milestoneStatusPending": "Pending",
   "milestoneStatusSubmittedForReview": "Submitted for review",
   "milestoneStatusApproved": "Approved",
   "milestoneStatusPaymentReceived": "Payment received",
-
   "invoiceStatusUnpaid": "Unpaid",
   "invoiceStatusPaid": "Paid",
-
   "deliveryMethodPickup": "Pickup",
   "deliveryMethodDelivery": "Delivery",
-
   "loginWelcomeTitle": "Welcome",
   "loginWelcomeSubtitle": "Sign in to manage your business",
   "loginPhoneLabel": "Phone number",
@@ -95,12 +84,13 @@
   "loginContinueButton": "Continue",
   "loginOtpHint": "A 4-digit code will be sent to your number",
   "loginErrorInvalidPhone": "Enter a valid phone number",
-
   "otpTitle": "Enter the code",
   "otpSubtitle": "We sent a code to {phone}",
   "@otpSubtitle": {
     "placeholders": {
-      "phone": { "type": "String" }
+      "phone": {
+        "type": "String"
+      }
     }
   },
   "otpCodeLabel": "Verification code",
@@ -112,7 +102,6 @@
   "consentGeneral": "I have read the Privacy Policy and consent to the processing of my personal data in accordance with the Law of the Republic of Uzbekistan \"On Personal Data\".",
   "consentGeneralLink": "Privacy Policy",
   "consentCrossBorder": "I consent to the storage and transfer of my personal data on servers located outside Uzbekistan (Railway, Cloudflare).",
-
   "onboardingBusinessStepTitle": "Tell us about your business",
   "onboardingBusinessNameLabel": "Business name",
   "onboardingBusinessNameHint": "e.g. Laylo Cakes",
@@ -155,7 +144,9 @@
   "onboardingBotReady": "@{username} is ready!",
   "@onboardingBotReady": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "onboardingPaymentHeader": "Payment Method",
@@ -163,7 +154,9 @@
   "onboardingCardNumberLabel": "Card number ({optional})",
   "@onboardingCardNumberLabel": {
     "placeholders": {
-      "optional": { "type": "String" }
+      "optional": {
+        "type": "String"
+      }
     }
   },
   "onboardingSkipForNow": "Skip for now",
@@ -173,14 +166,15 @@
   "onboardingSummaryPayment": "Payment",
   "onboardingNotSet": "Not set",
   "onboardingLaunchCrm": "Launch my CRM",
-
   "settingsTitle": "Settings",
   "settingsBusinessProfile": "BUSINESS PROFILE",
   "settingsEditProfileTooltip": "Edit profile",
   "settingsDescriptionLabel": "Description ({optional})",
   "@settingsDescriptionLabel": {
     "placeholders": {
-      "optional": { "type": "String" }
+      "optional": {
+        "type": "String"
+      }
     }
   },
   "settingsBusinessMode": "BUSINESS MODE",
@@ -219,13 +213,17 @@
   "settingsReminderHoursBefore": "{count, plural, =1{1 hour before} other{{count} hours before}}",
   "@settingsReminderHoursBefore": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "settingsReminderDaysBefore": "{count, plural, =1{1 day before} other{{count} days before}}",
   "@settingsReminderDaysBefore": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "settingsRemindersFootnote": "Reminders are sent to this app and your Telegram.",
@@ -265,14 +263,15 @@
   "settingsManageServices": "Manage services",
   "settingsStaff": "STAFF",
   "settingsManageStaff": "Manage staff",
-
   "homeSearchHint": "Search customers...",
   "homeNoCustomersFound": "No customers found",
   "homeNoContactInfo": "No contact info",
   "homeOrdersCount": "{count, plural, =1{1 order} other{{count} orders}}",
   "@homeOrdersCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "homeNeedsAttention": "Needs attention",
@@ -281,7 +280,9 @@
   "homeDaysSilent": "{days}d silent",
   "@homeDaysSilent": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "homeBadgeAppointment": "Appointment",
@@ -290,35 +291,53 @@
   "homeActivityCancelled": "{service} — cancelled",
   "@homeActivityCancelled": {
     "placeholders": {
-      "service": { "type": "String" }
+      "service": {
+        "type": "String"
+      }
     }
   },
   "homeActivityNewProject": "New project • {customer}",
   "@homeActivityNewProject": {
     "placeholders": {
-      "customer": { "type": "String" }
+      "customer": {
+        "type": "String"
+      }
     }
   },
   "homeActivityMilestoneApproved": "Approved • {project}",
   "@homeActivityMilestoneApproved": {
     "placeholders": {
-      "project": { "type": "String" }
+      "project": {
+        "type": "String"
+      }
     }
   },
   "homeNoActivity": "No activity today",
-
+  "homeWelcome": "Welcome",
+  "homeHeroTodayOrders": "Today's orders",
+  "homeStatPending": "Pending payments",
+  "homeStatNewCustomers": "New customers",
+  "homePendingPaymentsCount": "{count, plural, =0{No pending payments} =1{1 pending payment} other{{count} pending payments}}",
+  "@homePendingPaymentsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "ordersTitle": "Orders",
   "ordersSearchHint": "Search by name or order #",
   "orderNumberLabel": "Order #{number}",
   "@orderNumberLabel": {
     "placeholders": {
-      "number": { "type": "int" }
+      "number": {
+        "type": "int"
+      }
     }
   },
   "orderPaidBadge": "💰 Paid",
   "ordersEmpty": "No orders yet",
   "ordersEmptyFiltered": "No orders match your filter",
-
   "commonTotal": "Total",
   "orderDetailTitle": "Order",
   "orderPaymentPaid": "Paid",
@@ -341,13 +360,11 @@
   "orderCancelTitle": "Cancel order?",
   "orderCancelConfirm": "This action cannot be undone.",
   "orderKeep": "Keep",
-
   "customersTitle": "Customers",
   "customersSearchHint": "Search by name, @handle or phone",
   "customersEmpty": "No customers yet",
   "customersEmptyFiltered": "No customers match your search",
   "customersEmptyHint": "Customers are added when they order through the bot",
-
   "customerDetailTitle": "Customer",
   "customerAddTag": "Add tag",
   "customerTagHint": "Tag label (e.g. VIP, Cake lover)",
@@ -357,7 +374,9 @@
   "customerSince": "Since {date}",
   "@customerSince": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "customerStatOrders": "Orders",
@@ -366,7 +385,9 @@
   "customerDaysAgo": "{days}d ago",
   "@customerDaysAgo": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "customerAddReminder": "Add reminder",
@@ -382,12 +403,13 @@
   "customerOrderHistory": "ORDER HISTORY",
   "customerLoadError": "Could not load customer",
   "customerLoadErrorHint": "Check your connection and try again",
-
   "catalogTitle": "Catalog",
   "catalogPrepTime": "Prep: {time}",
   "@catalogPrepTime": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "catalogEmpty": "No products yet",
@@ -398,10 +420,11 @@
   "stockIn": "In stock: {count}",
   "@stockIn": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "productFormNewTitle": "New Product",
   "productFormEditTitle": "Edit Product",
   "productFormNameLabel": "Product name *",
@@ -424,13 +447,14 @@
   "productFormActiveOn": "Product is visible in the bot catalog",
   "productFormActiveOff": "Product is hidden from customers",
   "productFormCreate": "Create product",
-
   "formRequired": "Required",
   "formPositiveInteger": "Enter a positive integer",
   "durationMinutes": "{min} min",
   "@durationMinutes": {
     "placeholders": {
-      "min": { "type": "int" }
+      "min": {
+        "type": "int"
+      }
     }
   },
   "servicesTitle": "Services",
@@ -441,7 +465,6 @@
   "serviceFormDurationLabel": "Duration (minutes)",
   "serviceFormPriceLabel": "Price (UZS)",
   "serviceFormActiveSubtitle": "Visible to customers in the bot",
-
   "staffTitle": "Staff",
   "staffEmpty": "No staff yet. Tap + to add one.",
   "staffNoServices": "No services assigned",
@@ -450,7 +473,9 @@
   "staffDeleteTitle": "Delete {name}?",
   "@staffDeleteTitle": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "staffThisMember": "this staff member",
@@ -460,7 +485,6 @@
   "staffFormServicesLabel": "Services performed",
   "staffNoServicesAvailable": "No services available. Add services first.",
   "staffSelectService": "Select at least one service",
-
   "appointmentsTitle": "Appointments",
   "apptTomorrow": "Tomorrow",
   "apptEmpty": "No appointments on this day",
@@ -502,7 +526,6 @@
   "apptErrSelectService": "Select a service",
   "apptErrEnterService": "Enter a service name",
   "apptErrSelectDateTime": "Select date and time",
-
   "projectsTitle": "Projects",
   "projectsFilterProposal": "Proposal",
   "projectsFilterReview": "Review",
@@ -510,8 +533,12 @@
   "projectsMilestoneCount": "{done}/{total} milestones",
   "@projectsMilestoneCount": {
     "placeholders": {
-      "done": { "type": "int" },
-      "total": { "type": "int" }
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "projectDetailTitle": "Project",
@@ -522,7 +549,9 @@
   "projectStatusUpdated": "Status updated to {status}",
   "@projectStatusUpdated": {
     "placeholders": {
-      "status": { "type": "String" }
+      "status": {
+        "type": "String"
+      }
     }
   },
   "projectClient": "Client",
@@ -540,14 +569,18 @@
   "projectDuePrefix": "Due {date}",
   "@projectDuePrefix": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "projectResetMilestone": "Reset milestone",
   "projectResetMilestoneBody": "Reset \"{name}\" back to Pending?\n\nThis is for testing — the client will not be notified.",
   "@projectResetMilestoneBody": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "projectResetToPending": "Reset to pending",
@@ -589,14 +622,18 @@
   "analyticsVsLastMonth": "{change}% vs last month",
   "@analyticsVsLastMonth": {
     "placeholders": {
-      "change": { "type": "String" }
+      "change": {
+        "type": "String"
+      }
     }
   },
   "analyticsRevenueThisMonth": "Revenue this month",
   "analyticsLastMonth": "Last month: {amount}",
   "@analyticsLastMonth": {
     "placeholders": {
-      "amount": { "type": "String" }
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "analyticsCompletedThisMonth": "Completed\nthis month",
@@ -609,7 +646,42 @@
   "analyticsUnitsSold": "{count, plural, =1{1 unit sold} other{{count} units sold}}",
   "@analyticsUnitsSold": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
-  }
+  },
+  "schedulingWorkingHours": "Working hours",
+  "schedulingWorkingHoursHint": "When customers can book. Times are Tashkent time, 24-hour.",
+  "schedulingOpen": "Open",
+  "schedulingClosed": "Closed",
+  "schedulingDayMon": "Monday",
+  "schedulingDayTue": "Tuesday",
+  "schedulingDayWed": "Wednesday",
+  "schedulingDayThu": "Thursday",
+  "schedulingDayFri": "Friday",
+  "schedulingDaySat": "Saturday",
+  "schedulingDaySun": "Sunday",
+  "schedulingStart": "Start",
+  "schedulingEnd": "End",
+  "schedulingTimeInvalid": "Start time must be before end time.",
+  "schedulingBuffer": "Buffer between appointments",
+  "schedulingBufferHint": "Gap added after each appointment, e.g. for cleanup.",
+  "schedulingBufferUnit": "minutes",
+  "schedulingWorkingHoursSaved": "Working hours saved",
+  "schedulingBlockedTime": "Blocked time",
+  "schedulingBlockedTimeHint": "Block off vacations, breaks or one-off closures so customers cannot book them.",
+  "schedulingAddBlocked": "Add blocked time",
+  "schedulingNoBlocked": "No blocked time",
+  "schedulingScope": "Applies to",
+  "schedulingWholeBusiness": "Whole business",
+  "schedulingDate": "Date",
+  "schedulingReason": "Reason",
+  "schedulingReasonHint": "Optional, e.g. Public holiday",
+  "schedulingAddBlockedSubmit": "Add block",
+  "schedulingDeleteBlockedTitle": "Delete blocked time?",
+  "schedulingDeleteBlockedConfirm": "This time will become bookable again.",
+  "staffFormDaysOffLabel": "Days off",
+  "staffFormDaysOffHint": "Specific dates this staff member is unavailable.",
+  "staffFormAddDayOff": "Add day off"
 }

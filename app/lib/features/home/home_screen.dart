@@ -3,16 +3,24 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/api/api_service.dart';
 import '../../core/auth/auth_notifier.dart';
+import '../../core/icons/app_icon.dart';
 import '../../core/models/customer.dart';
-import '../../core/providers/business_provider.dart';
 import '../../core/models/order.dart';
+import '../../core/providers/business_provider.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
-import '../../shared/utils/status_labels.dart';
+import '../../shared/widgets/app_avatar.dart';
+import '../../shared/widgets/app_badge.dart';
+import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_spinner.dart';
+import '../../shared/widgets/app_stat_card.dart';
+import '../../shared/widgets/hero_card.dart';
+import '../../shared/widgets/quick_actions.dart';
 import 'home_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -21,6 +29,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final homeAsync = ref.watch(homeProvider);
     final auth = ref.watch(authNotifierProvider);
 
@@ -29,12 +38,12 @@ class HomeScreen extends ConsumerWidget {
         title: Text(auth.state?.business?.name ?? 'CRM'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.bar_chart_outlined),
+            icon: AppIcon(name: AppIconName.analytics, color: t.text1),
             tooltip: l.navAnalytics,
             onPressed: () => context.push('/analytics'),
           ),
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
+            icon: AppIcon(name: AppIconName.settings, color: t.text1),
             tooltip: l.navSettings,
             onPressed: () => context.push('/settings'),
           ),
@@ -44,85 +53,174 @@ class HomeScreen extends ConsumerWidget {
         onTap: () => FocusScope.of(context).unfocus(),
         behavior: HitTestBehavior.translucent,
         child: homeAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _ErrorView(
-          message: e.toString(),
-          onRetry: () => ref.read(homeProvider.notifier).refresh(),
-        ),
-        data: (data) {
-          // Build the unified activity feed and sort by time descending
-          final activityItems = <({DateTime time, Widget widget})>[
-            for (final o in data.todayOrders)
-              (time: o.createdAt, widget: _OrderActivityCard(order: o)),
-            for (final a in data.todayAppointments)
-              (
-                time: a.startTime,
-                widget: _AppointmentActivityCard(appt: a),
-              ),
-            for (final a in data.recentCancellations)
-              (
-                time: a.startTime,
-                widget: _CancellationActivityCard(appt: a),
-              ),
-            for (final p in data.todayProjects)
-              (time: p.createdAt, widget: _ProjectActivityCard(project: p)),
-            for (final m in data.recentMilestones)
-              (
-                time: m.updatedAt,
-                widget: _MilestoneActivityCard(milestone: m),
-              ),
-          ];
-          activityItems.sort((a, b) => b.time.compareTo(a.time));
-
-          return RefreshIndicator(
-            onRefresh: () => ref.read(homeProvider.notifier).refresh(),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-              children: [
-                // Quick search
-                const _SearchBar(),
-                const SizedBox(height: 16),
-
-                // Quick nav row
-                const _QuickActions(),
-                const SizedBox(height: 20),
-
-                // Needs attention
-                if (data.hasAttentionItems) ...[
-                  _SectionHeader(
-                    title: l.homeNeedsAttention,
-                    count: data.overdueReminders.length +
-                        data.dormantCustomers.length,
-                    color: Colors.orange,
-                  ),
-                  const SizedBox(height: 8),
-                  ...data.overdueReminders.map(
-                    (r) => _ReminderCard(reminder: r),
-                  ),
-                  ...data.dormantCustomers.map(
-                    (c) => _DormantCard(customer: c),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-
-                // Today's activity — unified feed
-                _SectionHeader(
-                  title: l.homeTodaysActivity,
-                  count: activityItems.length,
-                  color: Theme.of(context).colorScheme.primary,
+          loading: () => const Center(child: AppSpinner(size: 32)),
+          error: (e, _) => _ErrorView(
+            message: e.toString(),
+            onRetry: () => ref.read(homeProvider.notifier).refresh(),
+          ),
+          data: (data) {
+            // Build the unified activity feed and sort by time descending.
+            final activityItems = <({DateTime time, Widget widget})>[
+              for (final o in data.todayOrders)
+                (time: o.createdAt, widget: _OrderActivityCard(order: o)),
+              for (final a in data.todayAppointments)
+                (
+                  time: a.startTime,
+                  widget: _AppointmentActivityCard(appt: a),
                 ),
-                const SizedBox(height: 8),
+              for (final a in data.recentCancellations)
+                (
+                  time: a.startTime,
+                  widget: _CancellationActivityCard(appt: a),
+                ),
+              for (final p in data.todayProjects)
+                (time: p.createdAt, widget: _ProjectActivityCard(project: p)),
+              for (final m in data.recentMilestones)
+                (
+                  time: m.updatedAt,
+                  widget: _MilestoneActivityCard(milestone: m),
+                ),
+            ];
+            activityItems.sort((a, b) => b.time.compareTo(a.time));
 
-                if (activityItems.isEmpty)
-                  const _EmptyActivity()
-                else
-                  ...activityItems.map((item) => item.widget),
-              ],
-            ),
-          );
-        },
+            return RefreshIndicator(
+              color: t.accent,
+              onRefresh: () => ref.read(homeProvider.notifier).refresh(),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.s4, AppSpacing.s4, AppSpacing.s4, AppSpacing.s6),
+                children: [
+                  // Greeting
+                  _Greeting(businessName: data.businessName),
+                  const SizedBox(height: AppSpacing.s4),
+
+                  // Quick search
+                  const _SearchBar(),
+                  const SizedBox(height: AppSpacing.s5),
+
+                  // Headline metric — today's orders
+                  HeroCard(
+                    label: l.homeHeroTodayOrders,
+                    value: '${data.todayOrders.length}',
+                    sub: l.homePendingPaymentsCount(data.pendingPayments.length),
+                  ),
+                  const SizedBox(height: AppSpacing.s4),
+
+                  // Summary stats
+                  _StatRow(data: data),
+                  const SizedBox(height: AppSpacing.s5),
+
+                  // Quick nav grid (mode-filtered)
+                  const _QuickActionsGrid(),
+                  const SizedBox(height: AppSpacing.s6),
+
+                  // Needs attention
+                  if (data.hasAttentionItems) ...[
+                    _SectionHeader(
+                      title: l.homeNeedsAttention,
+                      count: data.overdueReminders.length +
+                          data.dormantCustomers.length,
+                      color: t.warningStrong,
+                    ),
+                    const SizedBox(height: AppSpacing.s2),
+                    ...data.overdueReminders.map(
+                      (r) => _ReminderCard(reminder: r),
+                    ),
+                    ...data.dormantCustomers.map(
+                      (c) => _DormantCard(customer: c),
+                    ),
+                    const SizedBox(height: AppSpacing.s5),
+                  ],
+
+                  // Today's activity — unified feed
+                  _SectionHeader(
+                    title: l.homeTodaysActivity,
+                    count: activityItems.length,
+                    color: t.accent,
+                  ),
+                  const SizedBox(height: AppSpacing.s2),
+
+                  if (activityItems.isEmpty)
+                    const _EmptyActivity()
+                  else
+                    ...activityItems.map((item) => item.widget),
+                ],
+              ),
+            );
+          },
         ),
       ),
+    );
+  }
+}
+
+// ── Greeting ─────────────────────────────────────────────────────────
+
+class _Greeting extends StatelessWidget {
+  final String businessName;
+  const _Greeting({required this.businessName});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l.homeWelcome,
+          style: TextStyle(fontSize: AppTextSizes.sm, color: t.text2),
+        ),
+        const SizedBox(height: AppSpacing.s1),
+        Text(
+          businessName,
+          style: TextStyle(
+            fontSize: AppTextSizes.h3,
+            fontWeight: AppFontWeights.bold,
+            color: t.text1,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.s1),
+        Text(
+          formatDate(DateTime.now()),
+          style: TextStyle(fontSize: AppTextSizes.sm, color: t.text3),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Summary stats ────────────────────────────────────────────────────
+
+class _StatRow extends StatelessWidget {
+  final HomeData data;
+  const _StatRow({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final pendingTotal =
+        data.pendingPayments.fold<int>(0, (sum, p) => sum + p.total);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: AppStatCard(
+            label: l.homeStatPending,
+            value: formatUZS(pendingTotal),
+            money: true,
+            onTap: () => context.push('/orders'),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.s3),
+        Expanded(
+          child: AppStatCard(
+            label: l.homeStatNewCustomers,
+            value: '${data.newCustomers.length}',
+            onTap: () => context.push('/customers'),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -184,9 +282,19 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
       try {
         final results =
             await ref.read(apiServiceProvider).searchCustomers(value.trim());
-        if (mounted) setState(() { _searchResults = results; _loading = false; });
+        if (mounted) {
+          setState(() {
+            _searchResults = results;
+            _loading = false;
+          });
+        }
       } catch (_) {
-        if (mounted) setState(() { _searchResults = []; _loading = false; });
+        if (mounted) {
+          setState(() {
+            _searchResults = [];
+            _loading = false;
+          });
+        }
       }
     });
   }
@@ -205,50 +313,39 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final primary = Theme.of(context).colorScheme.primary;
+    final t = AppTokens.of(context);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            color: t.surface,
+            borderRadius: AppRadii.md,
+            border: Border.all(color: t.border),
+            boxShadow: t.shadowSm,
           ),
           child: TextField(
             controller: _searchController,
             focusNode: _focusNode,
-            onChanged: (value) => _onSearchChanged(value),
-            style: const TextStyle(
-              fontSize: 15,
-              color: Color(0xFF111827),
-              fontWeight: FontWeight.w400,
-            ),
+            onChanged: _onSearchChanged,
+            style: TextStyle(fontSize: AppTextSizes.base, color: t.text1),
             decoration: InputDecoration(
               hintText: l.homeSearchHint,
-              hintStyle: TextStyle(
-                fontSize: 15,
-                color: Colors.grey.shade400,
-                fontWeight: FontWeight.w400,
+              hintStyle:
+                  TextStyle(fontSize: AppTextSizes.base, color: t.text3),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(
+                    left: AppSpacing.s4, right: AppSpacing.s2),
+                child: AppIcon(
+                    name: AppIconName.search, size: 20, color: t.text2),
               ),
-              prefixIcon: Icon(
-                Icons.search_rounded,
-                color: Colors.grey.shade400,
-                size: 22,
-              ),
+              prefixIconConstraints:
+                  const BoxConstraints(minWidth: 0, minHeight: 0),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
-                      icon: Icon(Icons.close_rounded,
-                          color: Colors.grey.shade400, size: 20),
+                      icon: AppIcon(
+                          name: AppIconName.close, size: 18, color: t.text2),
                       onPressed: () {
                         _searchController.clear();
                         _onSearchChanged('');
@@ -257,90 +354,74 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
                   : null,
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 14),
+                  horizontal: AppSpacing.s4, vertical: AppSpacing.s3),
             ),
           ),
         ),
         if (_isSearching)
           Container(
             constraints: const BoxConstraints(maxHeight: 320),
-            margin: const EdgeInsets.only(top: 4),
-            child: Material(
-              elevation: 8,
-              borderRadius: BorderRadius.circular(16),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: _loading
-                    ? const SizedBox(
+            margin: const EdgeInsets.only(top: AppSpacing.s1),
+            decoration: BoxDecoration(
+              color: t.surface,
+              borderRadius: AppRadii.md,
+              border: Border.all(color: t.border),
+              boxShadow: t.shadowMd,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: _loading
+                ? const SizedBox(
+                    height: 80,
+                    child: Center(child: AppSpinner()),
+                  )
+                : _searchResults.isEmpty
+                    ? SizedBox(
                         height: 80,
                         child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: Text(
+                            l.homeNoCustomersFound,
+                            style: TextStyle(
+                                color: t.text2, fontSize: AppTextSizes.sm),
+                          ),
                         ),
                       )
-                    : _searchResults.isEmpty
-                        ? SizedBox(
-                            height: 80,
-                            child: Center(
-                              child: Text(
-                                l.homeNoCustomersFound,
-                                style: const TextStyle(
-                                    color: Colors.grey, fontSize: 14),
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        padding: EdgeInsets.zero,
+                        itemCount: _searchResults.length,
+                        itemBuilder: (ctx, i) {
+                          final result = _searchResults[i];
+                          final subtitle = result.telegramUsername != null
+                              ? '@${result.telegramUsername}'
+                              : result.phone ?? l.homeNoContactInfo;
+                          return ListTile(
+                            leading: AppAvatar(
+                                name: result.name, size: AppAvatarSize.sm),
+                            title: Text(
+                              result.name,
+                              style: TextStyle(
+                                fontWeight: AppFontWeights.semibold,
+                                fontSize: AppTextSizes.sm,
+                                color: t.text1,
                               ),
                             ),
-                          )
-                        : ListView.builder(
-                            shrinkWrap: true,
-                            padding: EdgeInsets.zero,
-                            itemCount: _searchResults.length,
-                            itemBuilder: (ctx, i) {
-                              final result = _searchResults[i];
-                              final subtitle = result.telegramUsername != null
-                                  ? '@${result.telegramUsername}'
-                                  : result.phone ?? l.homeNoContactInfo;
-                              return ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor:
-                                      primary.withValues(alpha: 0.1),
-                                  child: Text(
-                                    result.name.isNotEmpty
-                                        ? result.name[0].toUpperCase()
-                                        : '?',
-                                    style: TextStyle(
-                                      color: primary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                title: Text(
-                                  result.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  subtitle,
-                                  style: TextStyle(
-                                    color: Colors.grey[500],
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                trailing: Text(
-                                  l.homeOrdersCount(result.orderCount),
-                                  style: TextStyle(
-                                    color: Colors.grey[500],
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                onTap: () {
-                                  _clearSearch();
-                                  context.push('/customers/${result.id}');
-                                },
-                              );
+                            subtitle: Text(
+                              subtitle,
+                              style: TextStyle(
+                                  color: t.text2, fontSize: AppTextSizes.caption),
+                            ),
+                            trailing: Text(
+                              l.homeOrdersCount(result.orderCount),
+                              style: TextStyle(
+                                  color: t.text2, fontSize: AppTextSizes.caption),
+                            ),
+                            onTap: () {
+                              _clearSearch();
+                              context.push('/customers/${result.id}');
                             },
-                          ),
-              ),
-            ),
+                          );
+                        },
+                      ),
           ),
       ],
     );
@@ -349,8 +430,8 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
 
 // ── Quick actions ────────────────────────────────────────────────────
 
-class _QuickActions extends ConsumerWidget {
-  const _QuickActions();
+class _QuickActionsGrid extends ConsumerWidget {
+  const _QuickActionsGrid();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -358,127 +439,39 @@ class _QuickActions extends ConsumerWidget {
     final business = ref.watch(businessProvider).valueOrNull;
     final modes = business?.mode ?? [];
 
-    final buttons = <({String label, IconData icon, String route, int badge})>[
-      (label: l.navCustomers, icon: Icons.people_outline, route: '/customers', badge: 0),
+    final items = <QuickActionItem>[
+      QuickActionItem(
+        icon: AppIconName.customers,
+        label: l.navCustomers,
+        onTap: () => context.push('/customers'),
+      ),
       if (modes.contains('PRODUCTS'))
-        (label: l.navOrders, icon: Icons.receipt_outlined, route: '/orders', badge: 0),
+        QuickActionItem(
+          icon: AppIconName.orders,
+          label: l.navOrders,
+          onTap: () => context.push('/orders'),
+        ),
       if (modes.contains('SERVICES'))
-        (label: l.navAppointments, icon: Icons.calendar_month_outlined, route: '/appointments', badge: 0),
+        QuickActionItem(
+          icon: AppIconName.calendar,
+          label: l.navAppointments,
+          onTap: () => context.push('/appointments'),
+        ),
       if (modes.contains('FREELANCE'))
-        (label: l.navProjects, icon: Icons.work_outline, route: '/projects', badge: 0),
+        QuickActionItem(
+          icon: AppIconName.projects,
+          label: l.navProjects,
+          onTap: () => context.push('/projects'),
+        ),
       if (modes.contains('PRODUCTS'))
-        (label: l.navCatalog, icon: Icons.inventory_2_outlined, route: '/catalog', badge: 0),
+        QuickActionItem(
+          icon: AppIconName.catalog,
+          label: l.navCatalog,
+          onTap: () => context.push('/catalog'),
+        ),
     ];
 
-    // 4 buttons → 2 per row (2+2); 5+ buttons → 3 per row
-    final cols = buttons.length <= 4 ? 2 : 3;
-
-    final rows =
-        <List<({String label, IconData icon, String route, int badge})>>[];
-    for (var i = 0; i < buttons.length; i += cols) {
-      rows.add(buttons.sublist(
-          i, i + cols > buttons.length ? buttons.length : i + cols));
-    }
-
-    return Column(
-      children: [
-        for (var ri = 0; ri < rows.length; ri++) ...[
-          if (ri > 0) const SizedBox(height: 10),
-          Row(
-            children: [
-              for (var bi = 0; bi < rows[ri].length; bi++) ...[
-                if (bi > 0) const SizedBox(width: 10),
-                _ActionButton(
-                  label: rows[ri][bi].label,
-                  icon: rows[ri][bi].icon,
-                  badge: rows[ri][bi].badge,
-                  onTap: () => context.push(rows[ri][bi].route),
-                ),
-              ],
-              for (var pad = rows[ri].length; pad < cols; pad++) ...[
-                const SizedBox(width: 10),
-                const Expanded(child: SizedBox()),
-              ],
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-  final int badge;
-
-  const _ActionButton({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-    this.badge = 0,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(icon,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 22),
-                ),
-                if (badge > 0)
-                  Positioned(
-                    top: -5,
-                    right: -5,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 5, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(10),
-                        border:
-                            Border.all(color: Colors.white, width: 1.5),
-                      ),
-                      child: Text(
-                        badge > 99 ? '99+' : badge.toString(),
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(fontWeight: FontWeight.w500),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
+    return QuickActions(items: items);
   }
 }
 
@@ -497,35 +490,126 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
     return Row(
       children: [
         Expanded(
           child: Text(
             title,
-            style: Theme.of(context)
-                .textTheme
-                .titleSmall
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: AppTextSizes.base,
+              fontWeight: AppFontWeights.bold,
+              color: t.text1,
+            ),
           ),
         ),
         if (count > 0)
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s2, vertical: 2),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadii.pill,
             ),
             child: Text(
               count.toString(),
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+                fontSize: AppTextSizes.caption,
+                fontWeight: AppFontWeights.bold,
                 color: color,
               ),
             ),
           ),
       ],
+    );
+  }
+}
+
+// ── Activity / attention building blocks ─────────────────────────────
+
+/// Leading accentSoft square holding an [AppIcon].
+class _IconTile extends StatelessWidget {
+  final AppIconName icon;
+  final Color? color;
+  const _IconTile({required this.icon, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
+    final c = color ?? t.accent;
+    return Container(
+      width: 40,
+      height: 40,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.12),
+        borderRadius: AppRadii.md,
+      ),
+      child: AppIcon(name: icon, size: 22, color: c),
+    );
+  }
+}
+
+/// Shared activity/attention row built on [AppCard].
+class _FeedCard extends StatelessWidget {
+  final Widget leading;
+  final String title;
+  final String subtitle;
+  final Widget? trailing;
+  final VoidCallback onTap;
+
+  const _FeedCard({
+    required this.leading,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.s2),
+      child: AppCard(
+        onTap: onTap,
+        padding: const EdgeInsets.all(AppSpacing.s3),
+        child: Row(
+          children: [
+            leading,
+            const SizedBox(width: AppSpacing.s3),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: AppTextSizes.sm,
+                      fontWeight: AppFontWeights.semibold,
+                      color: t.text1,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: AppTextSizes.caption, color: t.text2),
+                  ),
+                ],
+              ),
+            ),
+            if (trailing != null) ...[
+              const SizedBox(width: AppSpacing.s2),
+              trailing!,
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -539,65 +623,21 @@ class _ReminderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final isOverdue = reminder.isOverdue;
+    final color = isOverdue ? t.errorStrong : t.warningStrong;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => context.push('/customers/${reminder.customerId}'),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: isOverdue
-                      ? Colors.red.withValues(alpha: 0.12)
-                      : Colors.orange.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.alarm_outlined,
-                  size: 18,
-                  color: isOverdue ? Colors.red[700] : Colors.orange[700],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      reminder.customerName,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 13),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      reminder.note,
-                      style:
-                          TextStyle(color: Colors.grey[600], fontSize: 12),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                isOverdue ? l.homeOverdue : l.commonToday,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color:
-                      isOverdue ? Colors.red[700] : Colors.orange[700],
-                ),
-              ),
-            ],
-          ),
+    return _FeedCard(
+      leading: _IconTile(icon: AppIconName.bell, color: color),
+      title: reminder.customerName,
+      subtitle: reminder.note,
+      onTap: () => context.push('/customers/${reminder.customerId}'),
+      trailing: Text(
+        isOverdue ? l.homeOverdue : l.commonToday,
+        style: TextStyle(
+          fontSize: AppTextSizes.caption,
+          fontWeight: AppFontWeights.semibold,
+          color: color,
         ),
       ),
     );
@@ -611,61 +651,16 @@ class _DormantCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => context.push('/customers/${customer.id}'),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    customer.name.isNotEmpty
-                        ? customer.name[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      customer.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 13),
-                    ),
-                    Text(
-                      l.homeOrdersCount(customer.orderCount),
-                      style: TextStyle(
-                          color: Colors.grey[500], fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                l.homeDaysSilent(customer.daysSince),
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[500],
-                ),
-              ),
-            ],
-          ),
-        ),
+    final t = AppTokens.of(context);
+
+    return _FeedCard(
+      leading: AppAvatar(name: customer.name, size: AppAvatarSize.md),
+      title: customer.name,
+      subtitle: l.homeOrdersCount(customer.orderCount),
+      onTap: () => context.push('/customers/${customer.id}'),
+      trailing: Text(
+        l.homeDaysSilent(customer.daysSince),
+        style: TextStyle(fontSize: AppTextSizes.caption, color: t.text3),
       ),
     );
   }
@@ -673,75 +668,23 @@ class _DormantCard extends StatelessWidget {
 
 // ── Activity feed cards ──────────────────────────────────────────────
 
-Card _activityCard({
-  required BuildContext context,
-  required IconData icon,
-  required Color iconColor,
-  required String title,
-  required String subtitle,
-  required Widget trailing,
-  required VoidCallback onTap,
-}) {
-  return Card(
-    elevation: 0,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    color: Theme.of(context).cardColor,
-    margin: const EdgeInsets.symmetric(vertical: 4),
-    child: ListTile(
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      leading: Icon(icon, color: iconColor),
-      title: Text(title,
-          style: const TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text(subtitle),
-      trailing: trailing,
-      onTap: onTap,
-    ),
-  );
-}
-
 class _OrderActivityCard extends StatelessWidget {
   final Order order;
   const _OrderActivityCard({required this.order});
 
-  static const _statusColor = {
-    'NEW': Color(0xFF1A56DB),
-    'PREPARING': Color(0xFFD97706),
-    'READY': Color(0xFF059669),
-    'DELIVERED': Color(0xFF6B7280),
-    'CANCELLED': Color(0xFFDC2626),
-  };
-
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final color =
-        _statusColor[order.orderStatus] ?? const Color(0xFF6B7280);
     final firstItem =
         order.items.isNotEmpty ? order.items.first.productName : '';
     final subtitle = firstItem.isNotEmpty
         ? '$firstItem • ${formatUZS(order.total)}'
         : formatUZS(order.total);
 
-    return _activityCard(
-      context: context,
-      icon: Icons.shopping_bag_outlined,
-      iconColor: Colors.blue,
+    return _FeedCard(
+      leading: const _IconTile(icon: AppIconName.orders),
       title: order.customer.name,
       subtitle: subtitle,
-      trailing: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          orderStatusLabel(l, order.orderStatus),
-          style: TextStyle(
-              color: color, fontSize: 11, fontWeight: FontWeight.w600),
-        ),
-      ),
+      trailing: AppBadge(status: order.orderStatus, type: AppBadgeType.order),
       onTap: () => context.push('/orders/${order.id}'),
     );
   }
@@ -754,15 +697,16 @@ class _AppointmentActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final time = DateFormat('HH:mm').format(appt.startTime.toLocal());
-    return _activityCard(
-      context: context,
-      icon: Icons.calendar_today_outlined,
-      iconColor: Colors.green,
+    final t = AppTokens.of(context);
+    final time = formatTime(appt.startTime.toLocal());
+    return _FeedCard(
+      leading: _IconTile(icon: AppIconName.calendar, color: t.successStrong),
       title: appt.customerName,
       subtitle: '${appt.serviceName} • $time',
-      trailing: Text(l.homeBadgeAppointment,
-          style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+      trailing: Text(
+        l.homeBadgeAppointment,
+        style: TextStyle(fontSize: AppTextSizes.caption, color: t.text2),
+      ),
       onTap: () => context.push('/appointments'),
     );
   }
@@ -775,14 +719,13 @@ class _CancellationActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return _activityCard(
-      context: context,
-      icon: Icons.cancel_outlined,
-      iconColor: Colors.red,
+    return _FeedCard(
+      leading: _IconTile(
+          icon: AppIconName.close, color: AppTokens.of(context).errorStrong),
       title: appt.customerName,
       subtitle: l.homeActivityCancelled(appt.serviceName),
-      trailing: Text(l.appointmentStatusCancelled,
-          style: const TextStyle(color: Colors.red, fontSize: 12)),
+      trailing:
+          const AppBadge(status: 'CANCELLED', type: AppBadgeType.appointment),
       onTap: () => context.push('/appointments'),
     );
   }
@@ -795,14 +738,15 @@ class _ProjectActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return _activityCard(
-      context: context,
-      icon: Icons.work_outline,
-      iconColor: Colors.purple,
+    final t = AppTokens.of(context);
+    return _FeedCard(
+      leading: const _IconTile(icon: AppIconName.projects),
       title: project.name,
       subtitle: l.homeActivityNewProject(project.customerName),
-      trailing: Text(l.homeBadgeProject,
-          style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+      trailing: Text(
+        l.homeBadgeProject,
+        style: TextStyle(fontSize: AppTextSizes.caption, color: t.text2),
+      ),
       onTap: () => context.push('/projects/${project.id}'),
     );
   }
@@ -815,35 +759,37 @@ class _MilestoneActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return _activityCard(
-      context: context,
-      icon: Icons.check_circle_outline,
-      iconColor: Colors.orange,
+    final t = AppTokens.of(context);
+    return _FeedCard(
+      leading: _IconTile(icon: AppIconName.paid, color: t.successStrong),
       title: milestone.milestoneName,
       subtitle: l.homeActivityMilestoneApproved(milestone.projectName),
-      trailing: Text(l.homeBadgeMilestone,
-          style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+      trailing: Text(
+        l.homeBadgeMilestone,
+        style: TextStyle(fontSize: AppTextSizes.caption, color: t.text2),
+      ),
       onTap: () => context.push('/projects/${milestone.projectId}'),
     );
   }
 }
 
-// ── Empty states ─────────────────────────────────────────────────────
+// ── Empty / error states ─────────────────────────────────────────────
 
 class _EmptyActivity extends StatelessWidget {
   const _EmptyActivity();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 24),
+    final t = AppTokens.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s5),
       child: Column(
         children: [
-          Icon(Icons.inbox_outlined, size: 40, color: Colors.grey[300]),
-          const SizedBox(height: 8),
+          AppIcon(name: AppIconName.inbox, size: 40, color: t.text3),
+          const SizedBox(height: AppSpacing.s2),
           Text(
             AppLocalizations.of(context)!.homeNoActivity,
-            style: TextStyle(color: Colors.grey[500], fontSize: 13),
+            style: TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
           ),
         ],
       ),
@@ -858,17 +804,28 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.s5),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: Text(AppLocalizations.of(context)!.buttonRetry)),
+            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
+            const SizedBox(height: AppSpacing.s3),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: t.text2),
+            ),
+            const SizedBox(height: AppSpacing.s4),
+            AppButton(
+              label: l.buttonRetry,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              onPressed: onRetry,
+            ),
           ],
         ),
       ),
