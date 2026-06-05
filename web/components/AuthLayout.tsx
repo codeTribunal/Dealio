@@ -21,8 +21,11 @@ export default function AuthLayout({
   const { setLocale } = useI18n()
 
   useEffect(() => {
+    // Valid (present + unexpired) token → render. Otherwise go to the arrival
+    // screen to log in or sign up. This is the cold-start session-persistence
+    // gate: a returning user with a live 30-day token lands straight here.
     if (!isAuthenticated()) {
-      router.replace('/login')
+      router.replace('/welcome')
     } else {
       setChecked(true)
     }

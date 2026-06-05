@@ -628,6 +628,156 @@ abstract class AppLocalizations {
   /// **'I consent to the storage and transfer of my personal data on servers located outside Uzbekistan (Railway, Cloudflare).'**
   String get consentCrossBorder;
 
+  /// No description provided for @arrivalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to your CRM'**
+  String get arrivalTitle;
+
+  /// No description provided for @arrivalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage your business — all in one place.'**
+  String get arrivalSubtitle;
+
+  /// No description provided for @arrivalLogIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in'**
+  String get arrivalLogIn;
+
+  /// No description provided for @arrivalSignUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign up'**
+  String get arrivalSignUp;
+
+  /// No description provided for @loginReturningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back'**
+  String get loginReturningTitle;
+
+  /// No description provided for @loginPhoneSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your phone number — we\'ll send a code to your Telegram.'**
+  String get loginPhoneSubtitle;
+
+  /// No description provided for @loginSendCodeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Send code'**
+  String get loginSendCodeButton;
+
+  /// No description provided for @loginCodeSentNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'If an account exists, we\'ve sent a 6-digit code to your Telegram.'**
+  String get loginCodeSentNotice;
+
+  /// No description provided for @loginTooManyAttempts.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Please try again in a few minutes.'**
+  String get loginTooManyAttempts;
+
+  /// No description provided for @loginSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send the code. Check your number and try again.'**
+  String get loginSendFailed;
+
+  /// No description provided for @loginChangeNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Change number'**
+  String get loginChangeNumber;
+
+  /// No description provided for @onboardingVerifyHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify via Telegram'**
+  String get onboardingVerifyHeader;
+
+  /// No description provided for @onboardingVerifyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'One last step to secure your account'**
+  String get onboardingVerifyTitle;
+
+  /// No description provided for @onboardingVerifyStep1.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap \"Connect Telegram\" to open our bot'**
+  String get onboardingVerifyStep1;
+
+  /// No description provided for @onboardingVerifyStep2.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap \"Share my phone number\" in the chat'**
+  String get onboardingVerifyStep2;
+
+  /// No description provided for @onboardingVerifyStep3.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the 6-digit code the bot sends you'**
+  String get onboardingVerifyStep3;
+
+  /// No description provided for @onboardingConnectTelegram.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect Telegram'**
+  String get onboardingConnectTelegram;
+
+  /// No description provided for @onboardingConnectPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing…'**
+  String get onboardingConnectPreparing;
+
+  /// No description provided for @onboardingGetNewLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Get a new link'**
+  String get onboardingGetNewLink;
+
+  /// No description provided for @onboardingCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'6-digit code'**
+  String get onboardingCodeLabel;
+
+  /// No description provided for @onboardingVerifyLaunch.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify & launch'**
+  String get onboardingVerifyLaunch;
+
+  /// No description provided for @onboardingVerifyingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying…'**
+  String get onboardingVerifyingLabel;
+
+  /// No description provided for @onboardingLinkExpiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Your verification link expired. Tap \"Connect Telegram\" to get a new one.'**
+  String get onboardingLinkExpiredError;
+
+  /// No description provided for @onboardingInvalidCodeError.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid or expired code. Please check and try again.'**
+  String get onboardingInvalidCodeError;
+
+  /// No description provided for @onboardingEnrollStartError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start Telegram verification. Please try again.'**
+  String get onboardingEnrollStartError;
+
   /// No description provided for @onboardingBusinessStepTitle.
   ///
   /// In en, this message translates to:

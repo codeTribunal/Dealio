@@ -38,8 +38,17 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // A 401 from a protected resource means the session is gone/expired: clear
+    // the token and bounce to the arrival screen. Auth endpoints (login/enroll
+    // verify) legitimately return 401 for a bad code — those are handled by the
+    // caller and must NOT trigger a redirect.
+    const url: string = error.config?.url ?? ''
+    const isAuthEndpoint = url.includes('/auth/')
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       clearToken()
+      if (typeof window !== 'undefined' && window.location.pathname !== '/welcome') {
+        window.location.href = '/welcome'
+      }
     }
     return Promise.reject(error)
   }
@@ -68,18 +77,38 @@ export async function completeOnboarding(data: {
   return res.data.business
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+// ── Auth (Telegram OTP) ─────────────────────────────────────────────────────
 
-export async function requestOtp(phone: string): Promise<void> {
-  await api.post('/auth/request-otp', { phone })
+// Enrollment (first-time sign up) — the final onboarding step.
+export async function enrollStart(): Promise<{ token: string; botDeepLink: string }> {
+  const res = await api.post('/auth/enroll/start', {})
+  return res.data
 }
 
-export async function verifyOtp(
-  phone: string,
-  code: string,
-  consent?: { generalConsent: boolean; crossBorderConsent: boolean }
-): Promise<AuthResponse> {
-  const res = await api.post('/auth/verify-otp', { phone, code, ...consent })
+export async function enrollStatus(
+  token: string
+): Promise<{ chatStarted: boolean; phoneBound: boolean }> {
+  const res = await api.get('/auth/enroll/status', { params: { token } })
+  return res.data
+}
+
+export async function enrollVerify(data: {
+  token: string
+  code: string
+  generalConsent: boolean
+  crossBorderConsent: boolean
+}): Promise<AuthResponse> {
+  const res = await api.post('/auth/enroll/verify', data)
+  return res.data
+}
+
+// Returning login — phone → code, no consent.
+export async function loginRequest(phone: string): Promise<void> {
+  await api.post('/auth/login/request', { phone })
+}
+
+export async function loginVerify(phone: string, code: string): Promise<AuthResponse> {
+  const res = await api.post('/auth/login/verify', { phone, code })
   return res.data
 }
 

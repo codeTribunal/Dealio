@@ -46,7 +46,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
 
   function handleSignOut() {
     clearToken()
-    router.replace('/login')
+    router.replace('/welcome')
   }
 
   const brandInitial = business?.name?.[0]?.toUpperCase() ?? '·'

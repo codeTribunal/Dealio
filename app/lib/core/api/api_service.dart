@@ -54,33 +54,65 @@ class ApiService {
 
   const ApiService(this._dio);
 
-  // ── Auth ──────────────────────────────────────────────────────
+  // ── Auth (Telegram OTP) ───────────────────────────────────────
 
-  Future<void> requestOtp(String phone) async {
+  /// Sign-up: start enrollment. Returns the platform-bot deep link the user
+  /// opens to share their contact, plus the link token used on verify.
+  Future<({String token, String botDeepLink})> enrollStart() async {
     try {
-      await _dio.post('/auth/request-otp', data: {'phone': phone});
+      final res = await _dio.post('/auth/enroll/start', data: {});
+      return (
+        token: res.data['token'] as String,
+        botDeepLink: res.data['botDeepLink'] as String,
+      );
     } on DioException catch (e) {
       throw _wrap(e);
     }
   }
 
+  /// Sign-up: verify the enrollment code (+ both consents) → 30-day JWT.
   Future<({String token, Map<String, dynamic> user, Map<String, dynamic>? business})>
-      verifyOtp(
-    String phone,
-    String code, {
-    bool? generalConsent,
-    bool? crossBorderConsent,
+      enrollVerify({
+    required String token,
+    required String code,
+    required bool generalConsent,
+    required bool crossBorderConsent,
   }) async {
     try {
-      final res = await _dio.post(
-        '/auth/verify-otp',
-        data: {
-          'phone': phone,
-          'code': code,
-          if (generalConsent != null) 'generalConsent': generalConsent,
-          if (crossBorderConsent != null) 'crossBorderConsent': crossBorderConsent,
-        },
+      final res = await _dio.post('/auth/enroll/verify', data: {
+        'token': token,
+        'code': code,
+        'generalConsent': generalConsent,
+        'crossBorderConsent': crossBorderConsent,
+      });
+      return (
+        token: res.data['token'] as String,
+        user: res.data['user'] as Map<String, dynamic>,
+        business: res.data['business'] as Map<String, dynamic>?,
       );
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  /// Returning login: request a code to the user's bound Telegram chat.
+  /// Always succeeds (the backend returns a generic 200 — no enumeration).
+  Future<void> loginRequest(String phone) async {
+    try {
+      await _dio.post('/auth/login/request', data: {'phone': phone});
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  /// Returning login: verify the code → 30-day JWT. No consent re-ask.
+  Future<({String token, Map<String, dynamic> user, Map<String, dynamic>? business})>
+      loginVerify(String phone, String code) async {
+    try {
+      final res = await _dio.post('/auth/login/verify', data: {
+        'phone': phone,
+        'code': code,
+      });
       return (
         token: res.data['token'] as String,
         user: res.data['user'] as Map<String, dynamic>,

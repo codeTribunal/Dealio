@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,6 +8,31 @@ import '../models/business.dart';
 import '../models/user.dart';
 
 const _kTokenKey = 'auth_token';
+
+/// Decode the `exp` (seconds since epoch) from a JWT payload, or null.
+int? _jwtExp(String token) {
+  try {
+    final parts = token.split('.');
+    if (parts.length != 3) return null;
+    var payload = parts[1].replaceAll('-', '+').replaceAll('_', '/');
+    // base64 requires length to be a multiple of 4 — pad it.
+    payload = payload.padRight((payload.length + 3) ~/ 4 * 4, '=');
+    final json = jsonDecode(utf8.decode(base64.decode(payload)))
+        as Map<String, dynamic>;
+    final exp = json['exp'];
+    return exp is int ? exp : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// True if the token is present but past its `exp`. Unknown/undecodable tokens
+/// are treated as NOT expired (the server will reject them with a 401).
+bool _isExpired(String token) {
+  final exp = _jwtExp(token);
+  if (exp == null) return false;
+  return exp * 1000 <= DateTime.now().millisecondsSinceEpoch;
+}
 
 class AuthState {
   final String token;
@@ -40,10 +67,13 @@ class AuthNotifier extends ChangeNotifier {
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_kTokenKey);
-    if (token != null) {
+    if (token != null && !_isExpired(token)) {
+      // Valid (present + unexpired) token → restore the session so a returning
+      // user goes straight to the app on cold start.
       _state = AuthState(token: token);
     } else {
-      // Not authenticated — no business check needed, mark startup complete.
+      // No token, or an expired one → clear it and show the arrival screen.
+      if (token != null) await prefs.remove(_kTokenKey);
       _startupComplete = true;
     }
     _initialized = true;

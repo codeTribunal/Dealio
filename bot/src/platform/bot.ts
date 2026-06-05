@@ -1,4 +1,4 @@
-import { Bot, Context, session, SessionFlavor, Keyboard } from 'grammy';
+import { Bot, Context, session, SessionFlavor, Keyboard, InlineKeyboard } from 'grammy';
 import { platformStart, platformContact } from './api.js';
 import { pt, platformLang } from './i18n.js';
 
@@ -107,9 +107,12 @@ export function createPlatformBot(token: string): Bot<PlatformContext> {
       // Single-use: clear so a second contact share can't re-issue against it.
       ctx.session.enrollToken = undefined;
 
+      // Code blurred via spoiler in the text; a copy_text button gives one-tap
+      // copy (the spoiler hides it from notification previews). The contact
+      // keyboard was one-time, so it has already collapsed by now.
       await ctx.reply(pt(lang, 'codeMessage', { code: res.code }), {
         parse_mode: 'HTML',
-        reply_markup: REMOVE_KEYBOARD,
+        reply_markup: new InlineKeyboard().copyText(pt(lang, 'copyButton'), res.code),
       });
     } catch (err) {
       console.error('[platform-bot] contact failed:', err);

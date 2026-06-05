@@ -74,11 +74,16 @@ const messages: Record<string, Entry> = {
   // Success — show the 6-digit code. {code} is substituted.
   codeMessage: {
     UZBEK:
-      "✅ Rahmat!\n\nKodingiz: <b>{code}</b>\n\nYakunlash uchun ushbu kodni ilovaga kiriting. Kod 5 daqiqa amal qiladi.",
+      "✅ Rahmat!\n\nKodingiz: <tg-spoiler>{code}</tg-spoiler>\n\nYakunlash uchun ushbu kodni ilovaga kiriting. Kod 5 daqiqa amal qiladi.",
     RUSSIAN:
-      '✅ Спасибо!\n\nВаш код: <b>{code}</b>\n\nВведите этот код в приложении, чтобы завершить. Код действителен 5 минут.',
+      '✅ Спасибо!\n\nВаш код: <tg-spoiler>{code}</tg-spoiler>\n\nВведите этот код в приложении, чтобы завершить. Код действителен 5 минут.',
     ENGLISH:
-      '✅ Thank you!\n\nYour code is: <b>{code}</b>\n\nEnter this code in the app to finish. The code is valid for 5 minutes.',
+      '✅ Thank you!\n\nYour code is: <tg-spoiler>{code}</tg-spoiler>\n\nEnter this code in the app to finish. The code is valid for 5 minutes.',
+  },
+  copyButton: {
+    UZBEK: '📋 Kodni nusxalash',
+    RUSSIAN: '📋 Скопировать код',
+    ENGLISH: '📋 Copy code',
   },
   genericError: {
     UZBEK: "Nimadir xato ketdi. Iltimos, birozdan so'ng qayta urinib ko'ring.",

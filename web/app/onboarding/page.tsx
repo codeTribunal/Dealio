@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { verifyBotToken, completeOnboarding } from '@/lib/api'
+import { verifyBotToken, completeOnboarding, enrollStart, enrollVerify } from '@/lib/api'
+import { setToken } from '@/lib/auth'
 
 type Mode = 'SERVICES' | 'FREELANCE'
 type Language = 'UZBEK' | 'RUSSIAN'
@@ -38,7 +38,6 @@ const botInstructions = [
 ]
 
 export default function OnboardingPage() {
-  const router = useRouter()
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormState>({
     businessName: '',
@@ -57,6 +56,17 @@ export default function OnboardingPage() {
   const [completing, setCompleting] = useState(false)
   const [completionError, setCompletionError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+
+  // Step 5 — Telegram verification (owner auth). enrollToken + botDeepLink come
+  // from /auth/enroll/start; the code + consents complete /auth/enroll/verify.
+  const [enrollToken, setEnrollToken] = useState('')
+  const [botDeepLink, setBotDeepLink] = useState('')
+  const [enrollLoading, setEnrollLoading] = useState(false)
+  const [enrollError, setEnrollError] = useState<string | null>(null)
+  const [linkExpired, setLinkExpired] = useState(false)
+  const [code, setCode] = useState('')
+  const [generalConsent, setGeneralConsent] = useState(false)
+  const [crossBorderConsent, setCrossBorderConsent] = useState(false)
 
   // Single-select: a business is created with exactly one mode (SERVICES or
   // FREELANCE), stored and sent as a single scalar value.
@@ -79,10 +89,60 @@ export default function OnboardingPage() {
     }
   }
 
-  async function handleComplete() {
+  // Track whether the Telegram enrollment already succeeded, so a later failure
+  // in business creation can be retried WITHOUT re-verifying (code is single-use).
+  const [enrolled, setEnrolled] = useState(false)
+
+  // Review → final step: move to the Telegram verification step and request a
+  // fresh enrollment deep link.
+  function goToVerify() {
+    setStep(5)
+    startEnrollment()
+  }
+
+  async function startEnrollment() {
+    setEnrollLoading(true)
+    setEnrollError(null)
+    setLinkExpired(false)
+    try {
+      const res = await enrollStart()
+      setEnrollToken(res.token)
+      setBotDeepLink(res.botDeepLink)
+    } catch {
+      setEnrollError('Could not start Telegram verification. Please try again.')
+    } finally {
+      setEnrollLoading(false)
+    }
+  }
+
+  function openTelegram() {
+    if (linkExpired || !botDeepLink) {
+      // Regenerate an expired/missing link first, then the user taps again.
+      startEnrollment()
+      return
+    }
+    window.open(botDeepLink, '_blank', 'noopener,noreferrer')
+  }
+
+  // Verify the Telegram code (+ consents) → store the 30-day JWT → create the
+  // business bound to the now-authenticated user → done.
+  async function handleVerifyAndLaunch() {
+    if (!enrolled && (code.length < 6 || !generalConsent || !crossBorderConsent)) return
     setCompleting(true)
+    setEnrollError(null)
     setCompletionError(null)
     try {
+      if (!enrolled) {
+        const auth = await enrollVerify({
+          token: enrollToken,
+          code,
+          generalConsent,
+          crossBorderConsent,
+        })
+        setToken(auth.token)
+        setEnrolled(true)
+      }
+
       const result = await completeOnboarding({
         businessName: form.businessName,
         mode: form.mode,
@@ -92,10 +152,18 @@ export default function OnboardingPage() {
         cardBank: form.cardNumber ? form.cardBank : undefined,
       })
       setForm((f) => ({ ...f, botLink: result.botLink, botUsername: result.botUsername }))
-      setStep(5)
+      setStep(6)
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
-      setCompletionError(msg ?? 'Something went wrong. Please try again.')
+      const status = (e as { response?: { status?: number } })?.response?.status
+      const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? ''
+      if (!enrolled && /link|expired/i.test(msg)) {
+        setLinkExpired(true)
+        setEnrollError('Your verification link expired. Tap "Connect Telegram" to get a new one.')
+      } else if (!enrolled && (status === 401 || /code/i.test(msg))) {
+        setEnrollError('Invalid or expired code. Please check and try again.')
+      } else {
+        setEnrollError(msg || 'Something went wrong. Please try again.')
+      }
     } finally {
       setCompleting(false)
     }
@@ -110,10 +178,10 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 w-full max-w-lg p-8">
 
-        {/* Progress bar (steps 1-4) */}
-        {step < 5 && (
+        {/* Progress bar (steps 1-5) */}
+        {step < 6 && (
           <div className="flex gap-1.5 mb-8">
-            {[1, 2, 3, 4].map((n) => (
+            {[1, 2, 3, 4, 5].map((n) => (
               <div
                 key={n}
                 className={`h-1 flex-1 rounded-full ${
@@ -353,17 +421,112 @@ export default function OnboardingPage() {
               <p className="text-red-600 text-sm mb-3">{completionError}</p>
             )}
             <button
-              onClick={handleComplete}
-              disabled={completing}
+              onClick={goToVerify}
               className="w-full bg-blue-600 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
-              {completing ? 'Launching...' : 'Launch my CRM'}
+              Continue
             </button>
           </div>
         )}
 
-        {/* ── Step 5: Done ── */}
+        {/* ── Step 5: Verify via Telegram (owner auth) ── */}
         {step === 5 && (
+          <div>
+            <button onClick={() => setStep(4)} className="text-sm text-blue-600 mb-4">
+              ← Back
+            </button>
+            <h1 className="text-2xl font-bold text-gray-900">Verify via Telegram</h1>
+            <p className="text-sm text-gray-500 mt-1 mb-6">
+              One last step to secure your account
+            </p>
+
+            <ol className="space-y-3 mb-5">
+              {[
+                'Tap "Connect Telegram" below to open our bot',
+                'Tap "Share my phone number" in the chat',
+                'The bot sends you a 6-digit code — enter it here',
+              ].map((text, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">
+                    {i + 1}
+                  </span>
+                  <p className="text-sm text-gray-700">{text}</p>
+                </li>
+              ))}
+            </ol>
+
+            <button
+              onClick={openTelegram}
+              disabled={enrollLoading}
+              className="w-full mb-5 border-2 border-blue-200 text-blue-700 py-3 rounded-xl text-sm font-semibold hover:bg-blue-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.93 7.2l-1.68 7.93c-.12.56-.44.7-.9.43l-2.5-1.84-1.2 1.16c-.13.13-.25.25-.51.25l.18-2.56 4.64-4.19c.2-.18-.05-.28-.31-.1L7.92 14.36l-2.47-.77c-.54-.17-.55-.54.11-.8l9.63-3.72c.46-.17.86.11.7.79l.01.34z" />
+              </svg>
+              {enrollLoading ? 'Preparing…' : linkExpired ? 'Get a new link' : 'Connect Telegram'}
+            </button>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              6-digit code
+            </label>
+            <input
+              className={`${inputClass} tracking-[0.4em] text-center font-semibold`}
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="123456"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            />
+
+            {/* Consent — captured once, here at enrollment. */}
+            <label className="flex items-start gap-2.5 mt-5 text-sm text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={generalConsent}
+                onChange={(e) => setGeneralConsent(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0"
+                style={{ accentColor: '#2563eb' }}
+              />
+              <span>
+                I have read the{' '}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-medium">
+                  Privacy Policy
+                </a>{' '}
+                and consent to the processing of my personal data in accordance with the Law of
+                the Republic of Uzbekistan &quot;On Personal Data&quot;.
+              </span>
+            </label>
+            <label className="flex items-start gap-2.5 mt-3 text-sm text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={crossBorderConsent}
+                onChange={(e) => setCrossBorderConsent(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0"
+                style={{ accentColor: '#2563eb' }}
+              />
+              <span>
+                I consent to the storage and transfer of my personal data on servers located
+                outside Uzbekistan (Railway, Cloudflare).
+              </span>
+            </label>
+
+            {enrollError && <p className="text-red-600 text-sm mt-3">{enrollError}</p>}
+
+            <button
+              onClick={handleVerifyAndLaunch}
+              disabled={
+                completing ||
+                (!enrolled && (code.length < 6 || !generalConsent || !crossBorderConsent))
+              }
+              className="w-full mt-5 bg-blue-600 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {completing ? 'Verifying…' : 'Verify & launch'}
+            </button>
+          </div>
+        )}
+
+        {/* ── Step 6: Done ── */}
+        {step === 6 && (
           <div className="text-center">
             <div className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-6">
               <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -391,7 +554,11 @@ export default function OnboardingPage() {
               </button>
             </div>
             <button
-              onClick={() => router.replace('/')}
+              onClick={() => {
+                // Hard nav so the BusinessProvider re-initializes with the new
+                // session and the dashboard loads the freshly-created business.
+                window.location.href = '/'
+              }}
               className="w-full bg-blue-600 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors"
             >
               Go to dashboard

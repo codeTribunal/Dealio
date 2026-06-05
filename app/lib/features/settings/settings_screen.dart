@@ -1184,7 +1184,7 @@ class _AccountSection extends ConsumerWidget {
         fullWidth: true,
         onPressed: () async {
           await ref.read(authNotifierProvider).logout();
-          if (context.mounted) context.go('/login');
+          if (context.mounted) context.go('/welcome');
         },
       ),
     );

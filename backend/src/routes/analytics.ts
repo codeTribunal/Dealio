@@ -91,8 +91,8 @@ export default async function analyticsRoutes(app: FastifyInstance) {
     // Resolve customer names for top customers
     const topCustomers = await Promise.all(
       topCustomerRows.map(async (row) => {
-        const customer = await prisma.customer.findUnique({
-          where: { id: row.customerId },
+        const customer = await prisma.customer.findFirst({
+          where: { id: row.customerId, businessId: business.id },
           select: { id: true, name: true },
         });
         return {
@@ -108,8 +108,8 @@ export default async function analyticsRoutes(app: FastifyInstance) {
     let bestSellingProduct = null;
     if (bestItemRows.length > 0) {
       const row = bestItemRows[0];
-      const product = await prisma.product.findUnique({
-        where: { id: row.productId },
+      const product = await prisma.product.findFirst({
+        where: { id: row.productId, businessId: business.id },
         select: { id: true, name: true },
       });
       if (product) {

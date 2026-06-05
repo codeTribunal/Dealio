@@ -280,6 +280,91 @@ class AppLocalizationsUz extends AppLocalizations {
       'Shaxsiy ma\'lumotlarim O\'zbekistondan tashqarida joylashgan serverlarda (Railway, Cloudflare) saqlanishiga va uzatilishiga roziman.';
 
   @override
+  String get arrivalTitle => 'CRM tizimiga xush kelibsiz';
+
+  @override
+  String get arrivalSubtitle => 'Biznesingizni bitta joydan boshqaring.';
+
+  @override
+  String get arrivalLogIn => 'Kirish';
+
+  @override
+  String get arrivalSignUp => 'Ro\'yxatdan o\'tish';
+
+  @override
+  String get loginReturningTitle => 'Xush kelibsiz';
+
+  @override
+  String get loginPhoneSubtitle =>
+      'Telefon raqamingizni kiriting — kodni Telegram orqali yuboramiz.';
+
+  @override
+  String get loginSendCodeButton => 'Kod yuborish';
+
+  @override
+  String get loginCodeSentNotice =>
+      'Agar hisob mavjud bo\'lsa, Telegramingizga 6 xonali kod yubordik.';
+
+  @override
+  String get loginTooManyAttempts =>
+      'Juda ko\'p urinish. Bir necha daqiqadan so\'ng qayta urinib ko\'ring.';
+
+  @override
+  String get loginSendFailed =>
+      'Kodni yuborib bo\'lmadi. Raqamingizni tekshiring.';
+
+  @override
+  String get loginChangeNumber => 'Raqamni o\'zgartirish';
+
+  @override
+  String get onboardingVerifyHeader => 'Telegram orqali tasdiqlash';
+
+  @override
+  String get onboardingVerifyTitle =>
+      'Hisobingizni himoyalash uchun oxirgi qadam';
+
+  @override
+  String get onboardingVerifyStep1 =>
+      'Botimizni ochish uchun \"Telegramga ulanish\"ni bosing';
+
+  @override
+  String get onboardingVerifyStep2 =>
+      'Chatda \"Telefon raqamni ulashish\"ni bosing';
+
+  @override
+  String get onboardingVerifyStep3 => 'Bot yuborgan 6 xonali kodni kiriting';
+
+  @override
+  String get onboardingConnectTelegram => 'Telegramga ulanish';
+
+  @override
+  String get onboardingConnectPreparing => 'Tayyorlanmoqda…';
+
+  @override
+  String get onboardingGetNewLink => 'Yangi havola olish';
+
+  @override
+  String get onboardingCodeLabel => '6 xonali kod';
+
+  @override
+  String get onboardingVerifyLaunch => 'Tasdiqlash va ishga tushirish';
+
+  @override
+  String get onboardingVerifyingLabel => 'Tekshirilmoqda…';
+
+  @override
+  String get onboardingLinkExpiredError =>
+      'Tasdiqlash havolasi muddati tugadi. Yangisi uchun \"Telegramga ulanish\"ni bosing.';
+
+  @override
+  String get onboardingInvalidCodeError =>
+      'Noto\'g\'ri yoki muddati o\'tgan kod. Tekshirib qayta urinib ko\'ring.';
+
+  @override
+  String get onboardingEnrollStartError =>
+      'Telegram tasdiqlashni boshlab bo\'lmadi. Qayta urinib ko\'ring.';
+
+  @override
   String get onboardingBusinessStepTitle =>
       'Biznesingiz haqida ma\'lumot bering';
 

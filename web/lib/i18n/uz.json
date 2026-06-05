@@ -106,9 +106,18 @@
     "PICKUP": "Olib ketish",
     "DELIVERY": "Yetkazib berish"
   },
+  "welcome": {
+    "title": "CRM tizimiga xush kelibsiz",
+    "subtitle": "Biznesingizni bitta joydan boshqaring.",
+    "logIn": "Kirish",
+    "signUp": "Ro'yxatdan o'tish"
+  },
   "login": {
     "title": "Xush kelibsiz",
     "subtitle": "Davom etish uchun telefon raqamingizni kiriting",
+    "telegramSubtitle": "Telefon raqamingizni kiriting — kodni Telegram orqali yuboramiz.",
+    "codeSent": "Agar hisob mavjud bo'lsa, Telegramingizga 6 xonali kod yubordik.",
+    "tooManyAttempts": "Juda ko'p urinish. Bir necha daqiqadan so'ng qayta urinib ko'ring.",
     "phoneLabel": "Telefon raqami",
     "phonePlaceholder": "+998901234567",
     "sendCode": "Kod yuborish",

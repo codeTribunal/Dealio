@@ -757,10 +757,11 @@ export default async function botRoutes(app: FastifyInstance) {
       });
     }
 
-    await prisma.appointment.update({
-      where: { id: parsed.data.appointmentId },
+    const result = await prisma.appointment.updateMany({
+      where: { id: parsed.data.appointmentId, businessId: business.id },
       data: { reminderSent: true },
     });
+    if (result.count === 0) return sendError(reply, 404, 'Appointment not found');
     return reply.send({ ok: true });
   });
 

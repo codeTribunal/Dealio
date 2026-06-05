@@ -279,6 +279,91 @@ class AppLocalizationsEn extends AppLocalizations {
       'I consent to the storage and transfer of my personal data on servers located outside Uzbekistan (Railway, Cloudflare).';
 
   @override
+  String get arrivalTitle => 'Welcome to your CRM';
+
+  @override
+  String get arrivalSubtitle => 'Manage your business — all in one place.';
+
+  @override
+  String get arrivalLogIn => 'Log in';
+
+  @override
+  String get arrivalSignUp => 'Sign up';
+
+  @override
+  String get loginReturningTitle => 'Welcome back';
+
+  @override
+  String get loginPhoneSubtitle =>
+      'Enter your phone number — we\'ll send a code to your Telegram.';
+
+  @override
+  String get loginSendCodeButton => 'Send code';
+
+  @override
+  String get loginCodeSentNotice =>
+      'If an account exists, we\'ve sent a 6-digit code to your Telegram.';
+
+  @override
+  String get loginTooManyAttempts =>
+      'Too many attempts. Please try again in a few minutes.';
+
+  @override
+  String get loginSendFailed =>
+      'Could not send the code. Check your number and try again.';
+
+  @override
+  String get loginChangeNumber => 'Change number';
+
+  @override
+  String get onboardingVerifyHeader => 'Verify via Telegram';
+
+  @override
+  String get onboardingVerifyTitle => 'One last step to secure your account';
+
+  @override
+  String get onboardingVerifyStep1 =>
+      'Tap \"Connect Telegram\" to open our bot';
+
+  @override
+  String get onboardingVerifyStep2 =>
+      'Tap \"Share my phone number\" in the chat';
+
+  @override
+  String get onboardingVerifyStep3 =>
+      'Enter the 6-digit code the bot sends you';
+
+  @override
+  String get onboardingConnectTelegram => 'Connect Telegram';
+
+  @override
+  String get onboardingConnectPreparing => 'Preparing…';
+
+  @override
+  String get onboardingGetNewLink => 'Get a new link';
+
+  @override
+  String get onboardingCodeLabel => '6-digit code';
+
+  @override
+  String get onboardingVerifyLaunch => 'Verify & launch';
+
+  @override
+  String get onboardingVerifyingLabel => 'Verifying…';
+
+  @override
+  String get onboardingLinkExpiredError =>
+      'Your verification link expired. Tap \"Connect Telegram\" to get a new one.';
+
+  @override
+  String get onboardingInvalidCodeError =>
+      'Invalid or expired code. Please check and try again.';
+
+  @override
+  String get onboardingEnrollStartError =>
+      'Could not start Telegram verification. Please try again.';
+
+  @override
   String get onboardingBusinessStepTitle => 'Tell us about your business';
 
   @override

@@ -19,7 +19,13 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (err.response?.statusCode == 401) {
+    // A 401 from a protected resource means the session expired/was revoked →
+    // clear and the router sends the user to the arrival screen. Auth endpoints
+    // (login/enroll verify) return 401 for a bad code and are handled by the
+    // caller, so they must NOT clear the session.
+    final path = err.requestOptions.path;
+    final isAuthEndpoint = path.contains('/auth/');
+    if (err.response?.statusCode == 401 && !isAuthEndpoint) {
       _ref.read(authNotifierProvider).logout();
     }
     handler.next(err);

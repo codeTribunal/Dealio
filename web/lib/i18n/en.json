@@ -106,9 +106,18 @@
     "PICKUP": "Pickup",
     "DELIVERY": "Delivery"
   },
+  "welcome": {
+    "title": "Welcome to your CRM",
+    "subtitle": "Manage your business — all in one place.",
+    "logIn": "Log in",
+    "signUp": "Sign up"
+  },
   "login": {
     "title": "Welcome back",
     "subtitle": "Enter your phone number to continue",
+    "telegramSubtitle": "Enter your phone number — we'll send a code to your Telegram.",
+    "codeSent": "If an account exists, we've sent a 6-digit code to your Telegram.",
+    "tooManyAttempts": "Too many attempts. Please try again in a few minutes.",
     "phoneLabel": "Phone number",
     "phonePlaceholder": "+998901234567",
     "sendCode": "Send code",

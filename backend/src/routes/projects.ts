@@ -255,7 +255,7 @@ export default async function projectRoutes(app: FastifyInstance) {
       // Notify the client via Telegram when the owner submits a milestone for review
       if (parsed.data.status === 'SUBMITTED_FOR_REVIEW' && hasBotToken(business)) {
         const customer = await prisma.customer.findFirst({
-          where: { id: project.customerId, deletedAt: null },
+          where: { id: project.customerId, businessId: business.id, deletedAt: null },
           select: { telegramUserId: true },
         });
 

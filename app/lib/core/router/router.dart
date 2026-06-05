@@ -7,8 +7,8 @@ import '../auth/auth_notifier.dart';
 import '../api/api_service.dart';
 import '../locale/locale_provider.dart';
 import '../services/fcm_service.dart';
+import '../../features/auth/arrival_screen.dart';
 import '../../features/auth/login_screen.dart';
-import '../../features/auth/otp_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/orders/order_list_screen.dart';
@@ -63,19 +63,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       final hasBusiness = authNotifier.hasBusiness;
       final loc = state.matchedLocation;
 
-      // Leave splash: send to login, onboarding, or home
+      // Leave splash: arrival (no token), onboarding (token, no business), or home
       if (loc == '/splash') {
-        if (!loggedIn) return '/login';
+        if (!loggedIn) return '/welcome';
         return hasBusiness ? '/home' : '/onboarding';
       }
 
-      // Unauthenticated users can only access login/otp
-      const publicRoutes = {'/login', '/otp'};
-      if (!loggedIn && !publicRoutes.contains(loc)) return '/login';
+      // Unauthenticated users may only see the arrival, login, or sign-up
+      // (onboarding) screens. Onboarding is public because it ends with the
+      // Telegram enrollment that authenticates the user.
+      const publicRoutes = {'/welcome', '/login', '/onboarding'};
+      if (!loggedIn && !publicRoutes.contains(loc)) return '/welcome';
 
       if (loggedIn) {
-        // Bounce away from auth screens
-        if (loc == '/login' || loc == '/otp') {
+        // Bounce away from the arrival/login screens once authenticated.
+        if (loc == '/welcome' || loc == '/login') {
           return hasBusiness ? '/home' : '/onboarding';
         }
         // Prevent re-entering onboarding once business is set
@@ -93,15 +95,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (ctx, state) => const SplashScreen(),
       ),
       GoRoute(
-        path: '/login',
-        builder: (ctx, state) => const LoginScreen(),
+        path: '/welcome',
+        builder: (ctx, state) => const ArrivalScreen(),
       ),
       GoRoute(
-        path: '/otp',
-        builder: (ctx, state) {
-          final phone = state.extra as String? ?? '';
-          return OtpScreen(phone: phone);
-        },
+        path: '/login',
+        builder: (ctx, state) => const LoginScreen(),
       ),
       GoRoute(
         path: '/onboarding',

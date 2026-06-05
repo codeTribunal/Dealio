@@ -1,17 +1,19 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/auth/auth_notifier.dart';
 import '../../core/api/api_service.dart';
+import '../../core/config/app_config.dart';
 import '../../core/icons/app_icon.dart';
 import '../../core/locale/locale_provider.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
-import '../../shared/widgets/app_spinner.dart';
 import 'onboarding_provider.dart';
 
 class OnboardingScreen extends ConsumerWidget {
@@ -52,7 +54,7 @@ class OnboardingScreen extends ConsumerWidget {
         body: SafeArea(
           child: Column(
             children: [
-              if (state.step < 5) _ProgressBar(step: state.step),
+              if (state.step < 6) _ProgressBar(step: state.step),
               Expanded(
                 child: AnimatedSwitcher(
                   duration: AppMotion.durSlow,
@@ -79,6 +81,8 @@ class OnboardingScreen extends ConsumerWidget {
         return const _Step3Payment();
       case 4:
         return const _Step4Review();
+      case 5:
+        return const _Step5Verify();
       default:
         return const SizedBox.shrink();
     }
@@ -98,12 +102,12 @@ class _ProgressBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.s5, AppSpacing.s4, AppSpacing.s5, 0),
       child: Row(
-        children: List.generate(4, (i) {
+        children: List.generate(5, (i) {
           final active = i < step;
           return Expanded(
             child: Container(
               height: 4,
-              margin: EdgeInsets.only(right: i < 3 ? AppSpacing.s1 : 0),
+              margin: EdgeInsets.only(right: i < 4 ? AppSpacing.s1 : 0),
               decoration: BoxDecoration(
                 color: active ? t.accent : t.border,
                 borderRadius: AppRadii.pill,
@@ -719,25 +723,277 @@ class _Step4Review extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.s6),
-          if (state.completing) ...[
-            const Center(child: AppSpinner(size: 28)),
-          ] else ...[
-            AppButton(
-              label: l.onboardingLaunchCrm,
-              size: AppButtonSize.lg,
-              fullWidth: true,
-              onPressed: notifier.complete,
-            ),
-          ],
-          if (state.completionError != null) ...[
-            const SizedBox(height: AppSpacing.s3),
-            Text(state.completionError!,
-                style: TextStyle(
-                    color: t.errorStrong, fontSize: AppTextSizes.sm),
-                textAlign: TextAlign.center),
-          ],
+          AppButton(
+            label: l.buttonContinue,
+            size: AppButtonSize.lg,
+            fullWidth: true,
+            onPressed: () => notifier.goToVerify(),
+          ),
         ],
       ),
+    );
+  }
+}
+
+// ── Step 5 — Verify via Telegram (owner auth) ─────────────────────────────────
+
+class _Step5Verify extends ConsumerStatefulWidget {
+  const _Step5Verify();
+
+  @override
+  ConsumerState<_Step5Verify> createState() => _Step5VerifyState();
+}
+
+class _Step5VerifyState extends ConsumerState<_Step5Verify> {
+  final _codeController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _codeController.text = ref.read(onboardingProvider).code;
+  }
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  void _connectTelegram(OnboardingState state, OnboardingNotifier notifier) {
+    if (state.linkExpired || state.botDeepLink.isEmpty) {
+      // Regenerate an expired/missing link; the user taps again to open it.
+      notifier.startEnrollment();
+      return;
+    }
+    _openUrl(state.botDeepLink);
+  }
+
+  String? _errorText(AppLocalizations l, String? code) {
+    switch (code) {
+      case null:
+        return null;
+      case 'ENROLL_START_FAILED':
+        return l.onboardingEnrollStartError;
+      case 'LINK_EXPIRED':
+        return l.onboardingLinkExpiredError;
+      case 'INVALID_CODE':
+        return l.onboardingInvalidCodeError;
+      default:
+        return code;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    final state = ref.watch(onboardingProvider);
+    final notifier = ref.read(onboardingProvider.notifier);
+
+    final canVerify = state.code.length == 6 &&
+        state.generalConsent &&
+        state.crossBorderConsent;
+    final error = _errorText(l, state.enrollError);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.s5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: AppIcon(name: AppIconName.menu, color: t.text1),
+                onPressed: () => notifier.setStep(4),
+              ),
+              const SizedBox(width: AppSpacing.s1),
+              Text(l.onboardingVerifyHeader,
+                  style: TextStyle(
+                      fontSize: AppTextSizes.lg,
+                      fontWeight: AppFontWeights.bold,
+                      color: t.text1)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s4),
+          Text(l.onboardingVerifyTitle,
+              style: TextStyle(fontSize: AppTextSizes.base, color: t.text2)),
+          const SizedBox(height: AppSpacing.s5),
+          AppCard(
+            child: Column(
+              children: [
+                _verifyStepRow(t, 1, l.onboardingVerifyStep1),
+                const SizedBox(height: AppSpacing.s3),
+                _verifyStepRow(t, 2, l.onboardingVerifyStep2),
+                const SizedBox(height: AppSpacing.s3),
+                _verifyStepRow(t, 3, l.onboardingVerifyStep3),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s5),
+          AppButton(
+            label: state.enrollLoading
+                ? l.onboardingConnectPreparing
+                : state.linkExpired
+                    ? l.onboardingGetNewLink
+                    : l.onboardingConnectTelegram,
+            variant: AppButtonVariant.secondary,
+            fullWidth: true,
+            leftIcon: AppIconName.inbox,
+            loading: state.enrollLoading,
+            onPressed: () => _connectTelegram(state, notifier),
+          ),
+          const SizedBox(height: AppSpacing.s5),
+          _FieldLabel(l.onboardingCodeLabel),
+          const SizedBox(height: AppSpacing.s2),
+          TextField(
+            controller: _codeController,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            maxLength: 6,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            style: TextStyle(
+              color: t.text1,
+              fontSize: AppTextSizes.h3,
+              fontWeight: AppFontWeights.bold,
+              letterSpacing: 8,
+            ),
+            decoration: _decoration(context, hint: '123456').copyWith(counterText: ''),
+            onChanged: notifier.setCode,
+          ),
+          const SizedBox(height: AppSpacing.s4),
+          _ConsentCheckbox(
+            value: state.generalConsent,
+            onChanged: (v) => notifier.setGeneralConsent(v ?? false),
+            text: l.consentGeneral,
+            linkText: l.consentGeneralLink,
+            onLinkTap: () => _openUrl(AppConfig.privacyPolicyUrl),
+          ),
+          const SizedBox(height: AppSpacing.s2),
+          _ConsentCheckbox(
+            value: state.crossBorderConsent,
+            onChanged: (v) => notifier.setCrossBorderConsent(v ?? false),
+            text: l.consentCrossBorder,
+          ),
+          if (error != null) ...[
+            const SizedBox(height: AppSpacing.s3),
+            Text(error,
+                style: TextStyle(color: t.errorStrong, fontSize: AppTextSizes.sm)),
+          ],
+          const SizedBox(height: AppSpacing.s5),
+          AppButton(
+            label: state.completing
+                ? l.onboardingVerifyingLabel
+                : l.onboardingVerifyLaunch,
+            size: AppButtonSize.lg,
+            fullWidth: true,
+            loading: state.completing,
+            onPressed: (canVerify || state.enrolled) && !state.completing
+                ? notifier.verifyAndComplete
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _verifyStepRow(AppTokens t, int n, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: t.accent, shape: BoxShape.circle),
+          child: Text('$n',
+              style: TextStyle(
+                  color: t.accentOn,
+                  fontSize: AppTextSizes.caption,
+                  fontWeight: AppFontWeights.bold)),
+        ),
+        const SizedBox(width: AppSpacing.s3),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.s1),
+            child: Text(text,
+                style: TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Consent checkbox with an optional inline privacy-policy link.
+class _ConsentCheckbox extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool?> onChanged;
+  final String text;
+  final String? linkText;
+  final VoidCallback? onLinkTap;
+
+  const _ConsentCheckbox({
+    required this.value,
+    required this.onChanged,
+    required this.text,
+    this.linkText,
+    this.onLinkTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
+    final baseStyle =
+        TextStyle(fontSize: AppTextSizes.caption, color: t.text2, height: 1.3);
+    final linkStyle = baseStyle.copyWith(
+      color: t.accent,
+      decoration: TextDecoration.underline,
+      fontWeight: AppFontWeights.semibold,
+    );
+
+    Widget label;
+    if (linkText != null && text.contains(linkText!)) {
+      final parts = text.split(linkText!);
+      label = Text.rich(TextSpan(style: baseStyle, children: [
+        TextSpan(text: parts[0]),
+        TextSpan(
+          text: linkText,
+          style: linkStyle,
+          recognizer: TapGestureRecognizer()..onTap = onLinkTap,
+        ),
+        TextSpan(text: parts.length > 1 ? parts.sublist(1).join(linkText!) : ''),
+      ]));
+    } else {
+      label = Text(text, style: baseStyle);
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 24,
+          height: 24,
+          child: Checkbox(
+            value: value,
+            onChanged: onChanged,
+            activeColor: t.accent,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.s2),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: label,
+          ),
+        ),
+      ],
     );
   }
 }

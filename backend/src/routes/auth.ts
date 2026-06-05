@@ -6,7 +6,7 @@ import { CURRENT_POLICY_VERSION } from '../lib/policyVersion.js';
 import { issueAuthCode, verifyAuthCode } from '../services/otp.js';
 import { createLinkToken } from '../services/platformAuth.js';
 import { sendTelegramMessage } from '../lib/telegram.js';
-import { loginCodeMessage, resolveAuthLang } from '../lib/authMessages.js';
+import { loginCodeMessage, copyCodeLabel, resolveAuthLang } from '../lib/authMessages.js';
 import { MAX_CODE_REQUESTS, RATE_WINDOW_MS } from '../lib/authCodes.js';
 
 // ── Shared helpers ───────────────────────────────────────────────────────────
@@ -240,7 +240,14 @@ export default async function authRoutes(app: FastifyInstance) {
               chatId: user.telegramChatId,
             });
             const lang = resolveAuthLang(user.business?.language ?? null);
-            await sendTelegramMessage(platformToken, user.telegramChatId, loginCodeMessage(lang, code));
+            // Code blurred via spoiler in the text; a copy_text button gives the
+            // user one-tap copy without exposing the digits in notifications.
+            await sendTelegramMessage(
+              platformToken,
+              user.telegramChatId,
+              loginCodeMessage(lang, code),
+              { inline_keyboard: [[{ text: copyCodeLabel(lang), copy_text: { text: code } }]] },
+            );
           } catch (err) {
             // Never surface delivery failures to the caller (no enumeration).
             app.log.error({ err }, 'login code delivery failed');
