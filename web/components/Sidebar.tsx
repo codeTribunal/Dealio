@@ -29,8 +29,8 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   const navItems: NavItem[] = [
     { icon: 'home', label: t('nav.home'), href: '/' },
     { icon: 'customers', label: t('nav.customers'), href: '/customers' },
-    { icon: 'orders', label: t('nav.orders'), href: '/orders', modes: ['PRODUCTS'] },
-    { icon: 'catalog', label: t('nav.catalog'), href: '/catalog', modes: ['PRODUCTS'] },
+    // Product-seller mode disabled — Orders & Catalog are not linked in nav.
+    // Their routes still exist but are unreachable through the UI.
     { icon: 'calendar', label: t('nav.appointments'), href: '/appointments', modes: ['SERVICES'] },
     { icon: 'staff', label: t('nav.staff'), href: '/staff', modes: ['SERVICES'] },
     { icon: 'projects', label: t('nav.projects'), href: '/projects', modes: ['FREELANCE'] },
@@ -41,7 +41,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   const visibleItems = navItems.filter((item) => {
     if (!item.modes) return true
     if (!business) return true
-    return item.modes.some((mode) => business.mode.includes(mode))
+    return item.modes.includes(business.mode)
   })
 
   function handleSignOut() {

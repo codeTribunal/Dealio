@@ -91,7 +91,10 @@ export default function SettingsPage() {
   const [cardNumber, setCardNumber] = useState('')
   const [cardBank, setCardBank] = useState('UZCARD')
 
-  const [modes, setModes] = useState<string[]>([])
+  const [mode, setMode] = useState<string>('SERVICES')
+  // Pending mode the owner picked, awaiting confirmation in the warning dialog.
+  const [modeSwitchTarget, setModeSwitchTarget] = useState<string | null>(null)
+  const [modeSwitching, setModeSwitching] = useState(false)
 
   const [calendarToken, setCalendarToken] = useState<string | null>(null)
   const [calendarLoading, setCalendarLoading] = useState(false)
@@ -114,7 +117,7 @@ export default function SettingsPage() {
         setLanguage(data.language)
         setCardNumber(data.cardNumber || '')
         setCardBank(data.cardBank || 'UZCARD')
-        setModes(data.mode)
+        setMode(data.mode)
         setCalendarToken(data.calendarToken || null)
       })
       .catch(() => setError(t('settings.failedLoad')))
@@ -209,18 +212,35 @@ export default function SettingsPage() {
     showSaved(t('settings.calendarCopied'))
   }
 
-  async function toggleMode(mode: string) {
-    if (!business) return
-    const isActive = modes.includes(mode)
-    if (isActive && modes.length === 1) return
-    const newModes = isActive
-      ? modes.filter((m) => m !== mode)
-      : [...modes, mode]
-    setModes(newModes)
-    const updated = await updateBusiness({ mode: newModes })
-    setBusiness(updated)
-    await refetchContext()
+  // Picking the other mode does NOT save immediately — it opens a hard warning
+  // dialog. The save happens only on confirm (confirmModeSwitch).
+  function requestModeSwitch(value: string) {
+    if (!business || value === mode) return
+    setModeSwitchTarget(value)
   }
+
+  async function confirmModeSwitch() {
+    const value = modeSwitchTarget
+    if (!value || !business) return
+    setModeSwitching(true)
+    try {
+      const updated = await updateBusiness({ mode: value })
+      setMode(value)
+      setBusiness(updated)
+      await refetchContext()
+      setModeSwitchTarget(null)
+    } catch {
+      showSaved(t('common.errorGeneric'))
+    } finally {
+      setModeSwitching(false)
+    }
+  }
+
+  // Localized mode display name + data noun, for the warning copy.
+  const modeDisplayName = (m: string) =>
+    m === 'SERVICES' ? t('settings.modeNameServices') : t('settings.modeNameFreelance')
+  const modeDataNoun = (m: string) =>
+    m === 'SERVICES' ? t('settings.modeDataServices') : t('settings.modeDataFreelance')
 
   if (loading) {
     return (
@@ -359,41 +379,24 @@ export default function SettingsPage() {
             {t('settings.businessModeHint')}
           </p>
 
-          {[
-            {
-              value: 'PRODUCTS',
-              title: t('settings.modeProductsTitle'),
-              subtitle: t('settings.modeProductsSubtitle'),
-            },
-            {
-              value: 'SERVICES',
-              title: t('settings.modeServicesTitle'),
-              subtitle: t('settings.modeServicesSubtitle'),
-            },
-            {
-              value: 'FREELANCE',
-              title: t('settings.modeFreelanceTitle'),
-              subtitle: t('settings.modeFreelanceSubtitle'),
-            },
-          ].map(({ value, title, subtitle }) => (
-            <div
-              key={value}
-              className="flex items-center justify-between py-3 border-b border-border last:border-b-0"
-            >
-              <div>
-                <p className="text-sm font-medium text-text-1">{title}</p>
-                <p className="text-xs text-text-2 mt-0.5">{subtitle}</p>
-              </div>
-              <Toggle
-                active={modes.includes(value)}
-                onClick={() => toggleMode(value)}
-              />
-            </div>
-          ))}
+          {/* Single-select business type — a dropdown styled like the page's
+              other selects. PRODUCTS is disabled (not offered). Picking the
+              OTHER mode opens the hard-warning modal (requestModeSwitch); it
+              does NOT save until the owner confirms. value={mode} keeps the
+              control bound to the current scalar mode, so Cancel reverts it. */}
+          <select
+            value={mode}
+            onChange={(e) => requestModeSwitch(e.target.value)}
+            aria-label={t('settings.businessMode')}
+            className={`w-full ${SELECT_CLASS}`}
+          >
+            <option value="SERVICES">{t('settings.modeNameServices')}</option>
+            <option value="FREELANCE">{t('settings.modeNameFreelance')}</option>
+          </select>
         </Card>
 
         {/* ── Scheduling (SERVICES mode only) ──────────────────── */}
-        {business.mode.includes('SERVICES') && (
+        {business.mode === 'SERVICES' && (
           <>
             <WorkingHoursCard
               business={business}
@@ -585,7 +588,7 @@ export default function SettingsPage() {
           {reminderSettings && (
             <div className="divide-y divide-border">
               {/* SERVICES → appointment reminders */}
-              {business.mode.includes('SERVICES') && (
+              {business.mode === 'SERVICES' && (
                 <ReminderRow
                   t={t}
                   title={t('settings.reminderApptTitle')}
@@ -598,7 +601,7 @@ export default function SettingsPage() {
                 />
               )}
 
-              {business.mode.includes('SERVICES') &&
+              {business.mode === 'SERVICES' &&
                 reminderSettings.appointmentEnabled && (
                   <ReminderRow
                     t={t}
@@ -614,22 +617,12 @@ export default function SettingsPage() {
                   />
                 )}
 
-              {/* PRODUCTS → delivery reminders */}
-              {business.mode.includes('PRODUCTS') && (
-                <ReminderRow
-                  t={t}
-                  title={t('settings.reminderDeliveryTitle')}
-                  subtitle={t('settings.reminderDeliverySubtitle')}
-                  enabled={reminderSettings.deliveryEnabled}
-                  hoursBefore={reminderSettings.deliveryHoursBefore}
-                  onToggle={(v) => updateReminder('deliveryEnabled', v)}
-                  onTiming={(h) => updateReminder('deliveryHoursBefore', h)}
-                  options={[3, 6, 12, 24, 48]}
-                />
-              )}
+              {/* PRODUCTS → delivery reminders: removed — PRODUCTS mode is
+                  disabled and mode is now a SERVICES|FREELANCE scalar, so this
+                  block can never render. Reminder settings keys remain in the API. */}
 
               {/* FREELANCE → deadline reminders */}
-              {business.mode.includes('FREELANCE') && (
+              {business.mode === 'FREELANCE' && (
                 <ReminderRow
                   t={t}
                   title={t('settings.reminderDeadlineTitle')}
@@ -695,6 +688,40 @@ export default function SettingsPage() {
             <Icon name="paid" size={16} />
           </span>
           <span>{savedMessage}</span>
+        </div>
+      )}
+
+      {/* Mode-switch hard warning */}
+      {modeSwitchTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-text-1/30"
+            onClick={() => (modeSwitching ? null : setModeSwitchTarget(null))}
+          />
+          <Card className="relative z-10 w-full max-w-md">
+            <p className="text-base font-bold text-text-1 mb-2">
+              {t('settings.modeSwitchTitle')}
+            </p>
+            <p className="text-sm text-text-2 mb-5">
+              {t('settings.modeSwitchBody', {
+                from: modeDisplayName(mode),
+                to: modeDisplayName(modeSwitchTarget),
+                data: modeDataNoun(mode),
+              })}
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="secondary"
+                disabled={modeSwitching}
+                onClick={() => setModeSwitchTarget(null)}
+              >
+                {t('common.cancel')}
+              </Button>
+              <Button variant="danger" loading={modeSwitching} onClick={confirmModeSwitch}>
+                {t('settings.modeSwitchConfirm', { to: modeDisplayName(modeSwitchTarget) })}
+              </Button>
+            </div>
+          </Card>
         </div>
       )}
     </AuthLayout>

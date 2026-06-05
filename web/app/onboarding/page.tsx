@@ -3,13 +3,13 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { verifyBotToken, completeOnboarding } from '@/lib/api'
 
-type Mode = 'PRODUCTS' | 'SERVICES' | 'FREELANCE'
+type Mode = 'SERVICES' | 'FREELANCE'
 type Language = 'UZBEK' | 'RUSSIAN'
 type Bank = 'UZCARD' | 'HUMO'
 
 interface FormState {
   businessName: string
-  modes: Mode[]
+  mode: Mode
   language: Language
   botToken: string
   botUsername: string
@@ -22,10 +22,11 @@ interface FormState {
 const inputClass =
   'w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
 
+// Product-seller mode is disabled — onboarding offers only appointment-based
+// (SERVICES) and project-based (FREELANCE) businesses.
 const modeOptions: { value: Mode; title: string; subtitle: string }[] = [
-  { value: 'PRODUCTS', title: 'Product selling', subtitle: 'Sell via Telegram bot' },
-  { value: 'SERVICES', title: 'Services & appointments', subtitle: 'Accept bookings' },
-  { value: 'FREELANCE', title: 'Freelance projects', subtitle: 'Track projects & invoices' },
+  { value: 'SERVICES', title: 'Appointments', subtitle: 'For salons, barbers, doctors, tutors' },
+  { value: 'FREELANCE', title: 'Projects', subtitle: 'For freelancers, designers, influencers' },
 ]
 
 const botInstructions = [
@@ -41,7 +42,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormState>({
     businessName: '',
-    modes: ['PRODUCTS'],
+    mode: 'SERVICES',
     language: 'UZBEK',
     botToken: '',
     botUsername: '',
@@ -57,13 +58,10 @@ export default function OnboardingPage() {
   const [completionError, setCompletionError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  function toggleMode(mode: Mode) {
-    setForm((f) => {
-      const next = f.modes.includes(mode)
-        ? f.modes.filter((m) => m !== mode)
-        : [...f.modes, mode]
-      return { ...f, modes: next.length === 0 ? f.modes : next }
-    })
+  // Single-select: a business is created with exactly one mode (SERVICES or
+  // FREELANCE), stored and sent as a single scalar value.
+  function toggleMode(value: Mode) {
+    setForm((f) => ({ ...f, mode: value }))
   }
 
   async function handleVerify() {
@@ -87,7 +85,7 @@ export default function OnboardingPage() {
     try {
       const result = await completeOnboarding({
         businessName: form.businessName,
-        mode: form.modes,
+        mode: form.mode,
         language: form.language,
         botToken: form.botToken,
         cardNumber: form.cardNumber || undefined,
@@ -150,12 +148,12 @@ export default function OnboardingPage() {
                   type="button"
                   onClick={() => toggleMode(opt.value)}
                   className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-colors ${
-                    form.modes.includes(opt.value)
+                    form.mode === opt.value
                       ? 'border-blue-600 bg-blue-50'
                       : 'border-gray-200 bg-white hover:border-gray-300'
                   }`}
                 >
-                  <span className={`font-semibold text-sm ${form.modes.includes(opt.value) ? 'text-blue-700' : 'text-gray-800'}`}>
+                  <span className={`font-semibold text-sm ${form.mode === opt.value ? 'text-blue-700' : 'text-gray-800'}`}>
                     {opt.title}
                   </span>
                   <p className="text-xs text-gray-500 mt-0.5">{opt.subtitle}</p>
@@ -183,7 +181,7 @@ export default function OnboardingPage() {
 
             <button
               onClick={() => setStep(2)}
-              disabled={!form.businessName.trim() || form.modes.length === 0}
+              disabled={!form.businessName.trim()}
               className="w-full mt-8 bg-blue-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
               Continue
@@ -199,7 +197,7 @@ export default function OnboardingPage() {
             </button>
             <h1 className="text-2xl font-bold text-gray-900">Create your Telegram bot</h1>
             <p className="text-sm text-gray-500 mt-1 mb-6">
-              Your customers will use this bot to place orders and book appointments
+              Your customers will use this bot to book appointments and track projects
             </p>
 
             <div className="space-y-3 mb-6">
@@ -328,9 +326,7 @@ export default function OnboardingPage() {
                 { label: 'Business name', value: form.businessName },
                 {
                   label: 'Type',
-                  value: form.modes
-                    .map((m) => ({ PRODUCTS: 'Products', SERVICES: 'Services', FREELANCE: 'Freelance' }[m]))
-                    .join(', '),
+                  value: { SERVICES: 'Services', FREELANCE: 'Freelance' }[form.mode],
                 },
                 { label: 'Language', value: form.language === 'UZBEK' ? "O'zbek" : 'Русский' },
                 { label: 'Bot', value: `@${form.botUsername}` },

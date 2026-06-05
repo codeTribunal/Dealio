@@ -39,26 +39,30 @@ const APPT_STATUS_EMOJI: Record<string, string> = {
 async function showWelcomeMenu(ctx: MyContext, lang: Lang) {
   const name = ctx.from?.first_name ?? 'there';
 
-  let mode: string[] = ['PRODUCTS'];
+  // mode is a single scalar value now ('SERVICES' | 'FREELANCE'; 'PRODUCTS' dormant).
+  let mode = 'SERVICES';
   try {
     const data = await getCatalog(ctx.botUsername);
-    if (data.business.mode.length > 0) mode = data.business.mode;
+    if (data.business.mode) mode = data.business.mode;
   } catch {
-    // fallback to PRODUCTS
+    // fallback to SERVICES
   }
 
-  const hasProducts = mode.includes('PRODUCTS');
-  const hasServices = mode.includes('SERVICES');
-  const hasFreelance = mode.includes('FREELANCE');
+  const hasProducts = mode === 'PRODUCTS';
+  const hasServices = mode === 'SERVICES';
+  const hasFreelance = mode === 'FREELANCE';
 
   const kb = new InlineKeyboard();
+  // Product-seller mode is disabled: catalog/orders are gated behind hasProducts,
+  // which is never true now (no business has PRODUCTS), so the product flow is
+  // unreachable. The scenes remain in the codebase but dormant.
   if (hasProducts) kb.text(t(lang, 'browseCatalog'), 'catalog').row();
   if (hasServices) {
     kb.text(t(lang, 'bookAppointment'), 'book_appointment').row();
     kb.text(t(lang, 'myAppointments'), 'show_appointments').row();
   }
   if (hasFreelance) kb.text(t(lang, 'myProjects'), 'show_projects').row();
-  if (hasProducts || hasServices) kb.text(t(lang, 'myOrders'), 'show_orders').row();
+  if (hasProducts) kb.text(t(lang, 'myOrders'), 'show_orders').row();
   kb.text(t(lang, 'languageMenu'), 'change_language').row();
 
   await ctx.reply(t(lang, 'welcome', { name }), { reply_markup: kb });
@@ -126,10 +130,10 @@ export function registerCommandHandlers(bot: import('grammy').Bot<MyContext>) {
   });
 
   bot.command('cart', async (ctx) => {
+    // Product-seller mode disabled — the cart/catalog/checkout flow is
+    // unreachable. Reply without the 'cart' button so it can't be entered.
     const lang = await getLang(ctx);
-    await ctx.reply(t(lang, 'loading'), {
-      reply_markup: new InlineKeyboard().text(t(lang, 'viewCart'), 'cart'),
-    });
+    await ctx.reply(t(lang, 'cartEmpty'));
   });
 
   bot.callbackQuery('show_orders', async (ctx) => {
@@ -178,9 +182,8 @@ async function showOrders(ctx: MyContext) {
   }
 
   if (orders.length === 0) {
-    await ctx.reply(t(lang, 'noOrders'), {
-      reply_markup: new InlineKeyboard().text(t(lang, 'browseCatalog'), 'catalog'),
-    });
+    // Product-seller mode disabled — no 'browse catalog' CTA into the product flow.
+    await ctx.reply(t(lang, 'noOrders'));
     return;
   }
 
@@ -197,7 +200,6 @@ async function showOrders(ctx: MyContext) {
 
   await ctx.reply(`${t(lang, 'yourOrders')}\n\n` + lines.join('\n\n'), {
     parse_mode: 'HTML',
-    reply_markup: new InlineKeyboard().text(t(lang, 'browseCatalog'), 'catalog'),
   });
   void tOrderStatus;
 }

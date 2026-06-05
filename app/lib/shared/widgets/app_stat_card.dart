@@ -44,13 +44,21 @@ class AppStatCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.s2),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: AppTextSizes.h2,
-              fontWeight: AppFontWeights.extra,
-              color: money ? t.successStrong : t.text1,
-              fontFeatures: const [FontFeature.tabularFigures()],
+          // Scale the value down to fit the (often half-width) card on one line,
+          // so long currency values never wrap mid-number.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              maxLines: 1,
+              softWrap: false,
+              style: TextStyle(
+                fontSize: AppTextSizes.h2,
+                fontWeight: AppFontWeights.extra,
+                color: money ? t.successStrong : t.text1,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
           ),
           if (delta != null) ...[

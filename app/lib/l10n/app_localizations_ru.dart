@@ -353,17 +353,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get onboardingModeProductsSubtitle => 'Продажа через Telegram-бот';
 
   @override
-  String get onboardingModeServicesTitle => 'Услуги и записи';
+  String get onboardingModeServicesTitle => 'Записи';
 
   @override
-  String get onboardingModeServicesSubtitle => 'Приём бронирований';
+  String get onboardingModeServicesSubtitle =>
+      'Для салонов, барберов, врачей, репетиторов';
 
   @override
-  String get onboardingModeFreelanceTitle => 'Фриланс-проекты';
+  String get onboardingModeFreelanceTitle => 'Проекты';
 
   @override
   String get onboardingModeFreelanceSubtitle =>
-      'Отслеживание проектов и счетов';
+      'Для фрилансеров, дизайнеров, блогеров';
 
   @override
   String get onboardingModeFreelanceShort => 'Фриланс';
@@ -1612,4 +1613,29 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get staffFormAddDayOff => 'Добавить выходной';
+
+  @override
+  String get settingsModeSwitchTitle => 'Сменить тип бизнеса?';
+
+  @override
+  String settingsModeSwitchBody(String from, String to, String data) {
+    return 'Переход с «$from» на «$to» изменит всё рабочее пространство. Ваши текущие $data больше не будут отображаться и управляться, но они не удаляются. Клиенты останутся. Это нельзя отменить частично — чтобы снова их увидеть, придётся вернуться обратно. Вы уверены?';
+  }
+
+  @override
+  String settingsModeSwitchConfirm(String to) {
+    return 'Перейти на «$to»';
+  }
+
+  @override
+  String get settingsModeNameServices => 'Записи';
+
+  @override
+  String get settingsModeNameFreelance => 'Проекты';
+
+  @override
+  String get settingsModeDataServices => 'записи';
+
+  @override
+  String get settingsModeDataFreelance => 'проекты';
 }

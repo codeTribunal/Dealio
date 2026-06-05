@@ -155,8 +155,8 @@ class _Step1BusinessState extends ConsumerState<_Step1Business> {
     final state = ref.watch(onboardingProvider);
     final notifier = ref.read(onboardingProvider.notifier);
 
-    final canContinue =
-        state.businessName.trim().isNotEmpty && state.modes.isNotEmpty;
+    // mode is always set (scalar, defaults to SERVICES), so only the name gates.
+    final canContinue = state.businessName.trim().isNotEmpty;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.s5),
@@ -189,19 +189,12 @@ class _Step1BusinessState extends ConsumerState<_Step1Business> {
           const SizedBox(height: AppSpacing.s5),
           _FieldLabel(l.onboardingBusinessType),
           const SizedBox(height: AppSpacing.s2),
-          _ModeCard(
-            icon: AppIconName.orders,
-            title: l.onboardingModeProductsTitle,
-            subtitle: l.onboardingModeProductsSubtitle,
-            selected: state.modes.contains('PRODUCTS'),
-            onTap: () => notifier.toggleMode('PRODUCTS'),
-          ),
-          const SizedBox(height: AppSpacing.s2),
+          // Product-seller mode disabled — only SERVICES/FREELANCE are offered.
           _ModeCard(
             icon: AppIconName.calendar,
             title: l.onboardingModeServicesTitle,
             subtitle: l.onboardingModeServicesSubtitle,
-            selected: state.modes.contains('SERVICES'),
+            selected: state.mode == 'SERVICES',
             onTap: () => notifier.toggleMode('SERVICES'),
           ),
           const SizedBox(height: AppSpacing.s2),
@@ -209,7 +202,7 @@ class _Step1BusinessState extends ConsumerState<_Step1Business> {
             icon: AppIconName.projects,
             title: l.onboardingModeFreelanceTitle,
             subtitle: l.onboardingModeFreelanceSubtitle,
-            selected: state.modes.contains('FREELANCE'),
+            selected: state.mode == 'FREELANCE',
             onTap: () => notifier.toggleMode('FREELANCE'),
           ),
           const SizedBox(height: AppSpacing.s5),
@@ -712,8 +705,7 @@ class _Step4Review extends ConsumerWidget {
             child: Column(
               children: [
                 _SummaryRow(l.onboardingBusinessNameLabel, state.businessName),
-                _SummaryRow(l.onboardingSummaryType,
-                    state.modes.map((m) => _modeName(l, m)).join(', ')),
+                _SummaryRow(l.onboardingSummaryType, _modeName(l, state.mode)),
                 _SummaryRow(
                     l.onboardingLanguageLabel, _languageName(state.language)),
                 _SummaryRow(l.onboardingSummaryBot, '@${state.botUsername}'),

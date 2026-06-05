@@ -175,7 +175,14 @@
     "telegramBot": "Telegram-бот",
     "botUsername": "Имя бота",
     "botLink": "Ссылка на бота",
-    "notConfigured": "Не настроено"
+    "notConfigured": "Не настроено",
+    "modeSwitchTitle": "Сменить тип бизнеса?",
+    "modeSwitchBody": "Переход с «{from}» на «{to}» изменит всё рабочее пространство. Ваши текущие {data} больше не будут отображаться и управляться, но они не удаляются. Клиенты останутся. Это нельзя отменить частично — чтобы снова их увидеть, придётся вернуться обратно. Вы уверены?",
+    "modeSwitchConfirm": "Перейти на «{to}»",
+    "modeNameServices": "Записи",
+    "modeNameFreelance": "Проекты",
+    "modeDataServices": "записи",
+    "modeDataFreelance": "проекты"
   },
   "scheduling": {
     "workingHours": "Часы работы",

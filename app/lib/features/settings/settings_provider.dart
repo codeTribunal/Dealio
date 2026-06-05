@@ -100,7 +100,7 @@ class SettingsNotifier extends AsyncNotifier<SettingsState> {
     ref.invalidate(businessProvider);
   }
 
-  Future<void> saveMode(List<String> mode) async {
+  Future<void> saveMode(String mode) async {
     final current = state.valueOrNull;
     if (current == null) return;
     final updated = await ref.read(apiServiceProvider).updateBusiness({'mode': mode});

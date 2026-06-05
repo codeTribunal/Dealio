@@ -100,7 +100,8 @@ export interface ApiProduct {
 export interface ApiBusiness {
   name: string;
   language: 'UZBEK' | 'RUSSIAN' | 'ENGLISH';
-  mode: string[];
+  // Single business mode (scalar). 'SERVICES' | 'FREELANCE' ('PRODUCTS' dormant).
+  mode: string;
 }
 
 export interface ApiCustomer {

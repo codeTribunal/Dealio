@@ -61,14 +61,21 @@ class HeroCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.s2),
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 34,
-                      fontWeight: AppFontWeights.extra,
-                      color: onAccent,
-                      height: 1.1,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                  // Scale down so long currency values stay on one line.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: TextStyle(
+                        fontSize: AppTextSizes.h1,
+                        fontWeight: AppFontWeights.extra,
+                        color: onAccent,
+                        height: 1.1,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ),
                   if (sub != null) ...[

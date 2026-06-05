@@ -3,11 +3,15 @@
 export type WorkingDay = { start: string; end: string }
 export type WorkingHours = Record<string, WorkingDay | null>
 
+// Single business mode (was string[] — migrated to a scalar in Step 2).
+// PRODUCTS is dormant and no longer assignable.
+export type Mode = 'SERVICES' | 'FREELANCE'
+
 export interface Business {
   id: string
   name: string
   description: string | null
-  mode: string[]
+  mode: Mode
   language: string
   cardNumber: string | null
   cardBank: string | null

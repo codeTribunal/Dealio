@@ -126,10 +126,10 @@
   "onboardingLanguageLabel": "Language",
   "onboardingModeProductsTitle": "Product selling",
   "onboardingModeProductsSubtitle": "Sell via Telegram bot",
-  "onboardingModeServicesTitle": "Services & appointments",
-  "onboardingModeServicesSubtitle": "Accept bookings",
-  "onboardingModeFreelanceTitle": "Freelance projects",
-  "onboardingModeFreelanceSubtitle": "Track projects & invoices",
+  "onboardingModeServicesTitle": "Appointments",
+  "onboardingModeServicesSubtitle": "For salons, barbers, doctors, tutors",
+  "onboardingModeFreelanceTitle": "Projects",
+  "onboardingModeFreelanceSubtitle": "For freelancers, designers, influencers",
   "onboardingModeFreelanceShort": "Freelance",
   "onboardingBotHeader": "Telegram Bot",
   "onboardingBotCreateTitle": "Create your Telegram bot",
@@ -683,5 +683,32 @@
   "schedulingDeleteBlockedConfirm": "This time will become bookable again.",
   "staffFormDaysOffLabel": "Days off",
   "staffFormDaysOffHint": "Specific dates this staff member is unavailable.",
-  "staffFormAddDayOff": "Add day off"
+  "staffFormAddDayOff": "Add day off",
+  "settingsModeSwitchTitle": "Switch business type?",
+  "settingsModeSwitchBody": "Switching from {from} to {to} will change your whole workspace. Your existing {data} will no longer be shown or managed, though they are not deleted. Your customers stay. This cannot be partially undone — you’d have to switch back to see them again. Are you sure?",
+  "settingsModeSwitchConfirm": "Switch to {to}",
+  "settingsModeNameServices": "Appointments",
+  "settingsModeNameFreelance": "Projects",
+  "settingsModeDataServices": "appointments",
+  "settingsModeDataFreelance": "projects",
+  "@settingsModeSwitchBody": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      },
+      "data": {
+        "type": "String"
+      }
+    }
+  },
+  "@settingsModeSwitchConfirm": {
+    "placeholders": {
+      "to": {
+        "type": "String"
+      }
+    }
+  }
 }

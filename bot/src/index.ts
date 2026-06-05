@@ -13,6 +13,7 @@ import { registerOwnerHandlers } from './handlers/owner.js';
 import { registerProjectHandlers } from './scenes/project.js';
 import { runReminderJob } from './jobs/reminders.js';
 import { saveCustomerMessage, SuspendedError, SUSPENSION_MESSAGE } from './lib/api.js';
+import { createPlatformBot } from './platform/bot.js';
 
 interface BusinessRecord {
   id: string;
@@ -31,6 +32,44 @@ const backendClient = axios.create({
 
 // Map of businessId → running Bot instance
 const activeBots = new Map<string, Bot<MyContext>>();
+
+// The central platform (owner-auth) bot — separate from the per-business bots.
+let platformBot: ReturnType<typeof createPlatformBot> | null = null;
+
+/**
+ * Start the central PLATFORM bot for owner authentication, if PLATFORM_BOT_TOKEN
+ * is configured. It is independent of (and additive to) the per-business bots —
+ * it is never added to activeBots and only handles enrollment.
+ */
+async function startPlatformBot(): Promise<void> {
+  const token = process.env.PLATFORM_BOT_TOKEN;
+  if (!token) {
+    console.log('[platform-bot] PLATFORM_BOT_TOKEN not set — owner-auth bot disabled');
+    return;
+  }
+
+  try {
+    const bot = createPlatformBot(token);
+    platformBot = bot;
+    await bot.init();
+    bot
+      .start({
+        drop_pending_updates: false,
+        onStart: (info) => console.log(`[platform-bot] live @${info.username}`),
+      })
+      .catch((err) => {
+        console.error('[platform-bot] crashed:', err);
+        platformBot = null;
+        setTimeout(() => {
+          console.log('[platform-bot] retrying...');
+          startPlatformBot().catch(console.error);
+        }, 30_000);
+      });
+  } catch (err) {
+    console.error('[platform-bot] failed to start:', err);
+    platformBot = null;
+  }
+}
 
 /**
  * Register all handlers on a bot instance.
@@ -291,6 +330,10 @@ async function main(): Promise<void> {
   //    initial bot loading is slow or the backend is briefly unavailable.
   startManagerServer();
 
+  // 1b. Start the central platform (owner-auth) bot, independent of the
+  //     per-business bots so an empty business list doesn't keep it offline.
+  await startPlatformBot();
+
   // 2. Fetch all active businesses from the backend.
   console.log('[bot-manager] Loading active businesses...');
   let businesses: BusinessRecord[];
@@ -323,6 +366,15 @@ async function main(): Promise<void> {
 
 async function shutdown(): Promise<void> {
   console.log('[bot-manager] Shutting down gracefully...');
+
+  if (platformBot) {
+    try {
+      await platformBot.stop();
+      console.log('[platform-bot] Stopped');
+    } catch (err) {
+      console.error('[platform-bot] Error stopping:', err);
+    }
+  }
 
   const stopPromises = Array.from(activeBots.entries()).map(
     async ([businessId, bot]) => {

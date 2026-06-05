@@ -353,16 +353,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingModeProductsSubtitle => 'Sell via Telegram bot';
 
   @override
-  String get onboardingModeServicesTitle => 'Services & appointments';
+  String get onboardingModeServicesTitle => 'Appointments';
 
   @override
-  String get onboardingModeServicesSubtitle => 'Accept bookings';
+  String get onboardingModeServicesSubtitle =>
+      'For salons, barbers, doctors, tutors';
 
   @override
-  String get onboardingModeFreelanceTitle => 'Freelance projects';
+  String get onboardingModeFreelanceTitle => 'Projects';
 
   @override
-  String get onboardingModeFreelanceSubtitle => 'Track projects & invoices';
+  String get onboardingModeFreelanceSubtitle =>
+      'For freelancers, designers, influencers';
 
   @override
   String get onboardingModeFreelanceShort => 'Freelance';
@@ -1601,4 +1603,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get staffFormAddDayOff => 'Add day off';
+
+  @override
+  String get settingsModeSwitchTitle => 'Switch business type?';
+
+  @override
+  String settingsModeSwitchBody(String from, String to, String data) {
+    return 'Switching from $from to $to will change your whole workspace. Your existing $data will no longer be shown or managed, though they are not deleted. Your customers stay. This cannot be partially undone — you’d have to switch back to see them again. Are you sure?';
+  }
+
+  @override
+  String settingsModeSwitchConfirm(String to) {
+    return 'Switch to $to';
+  }
+
+  @override
+  String get settingsModeNameServices => 'Appointments';
+
+  @override
+  String get settingsModeNameFreelance => 'Projects';
+
+  @override
+  String get settingsModeDataServices => 'appointments';
+
+  @override
+  String get settingsModeDataFreelance => 'projects';
 }

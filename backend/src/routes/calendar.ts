@@ -35,7 +35,7 @@ export async function calendarRoutes(fastify: FastifyInstance) {
     rangeEnd.setDate(rangeEnd.getDate() + 90);
 
     // 1. APPOINTMENTS (if business has SERVICES mode)
-    if (business.mode.includes('SERVICES')) {
+    if (business.mode === 'SERVICES') {
       const appointments = await prisma.appointment.findMany({
         where: {
           businessId: business.id,
@@ -71,8 +71,8 @@ export async function calendarRoutes(fastify: FastifyInstance) {
       }
     }
 
-    // 2. ORDER DELIVERY DATES (if business has PRODUCTS mode)
-    if (business.mode.includes('PRODUCTS')) {
+    // 2. ORDER DELIVERY DATES (PRODUCTS dormant — never true now)
+    if (business.mode === 'PRODUCTS') {
       const orders = await prisma.order.findMany({
         where: {
           businessId: business.id,
@@ -108,7 +108,7 @@ export async function calendarRoutes(fastify: FastifyInstance) {
     }
 
     // 3. MILESTONE DUE DATES + PROJECT DEADLINES (if business has FREELANCE mode)
-    if (business.mode.includes('FREELANCE')) {
+    if (business.mode === 'FREELANCE') {
       const projects = await prisma.project.findMany({
         where: {
           businessId: business.id,

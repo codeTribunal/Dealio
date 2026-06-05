@@ -38,13 +38,13 @@ class AnalyticsScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(AppSpacing.s4),
             children: [
               _RevenueCard(data: data),
-              const SizedBox(height: AppSpacing.s3),
+              const SizedBox(height: AppSpacing.s4),
               _QuickStatsRow(data: data),
-              const SizedBox(height: AppSpacing.s3),
+              const SizedBox(height: AppSpacing.s4),
               _PendingPaymentsCard(data: data),
-              const SizedBox(height: AppSpacing.s3),
+              const SizedBox(height: AppSpacing.s4),
               _TopCustomersCard(data: data),
-              const SizedBox(height: AppSpacing.s3),
+              const SizedBox(height: AppSpacing.s4),
               _BestSellingCard(data: data),
               const SizedBox(height: AppSpacing.s6),
             ],
@@ -215,7 +215,6 @@ class _PendingPaymentsCard extends StatelessWidget {
     final hasPending = data.pendingPaymentsTotal > 0;
 
     return AppCard(
-      padding: const EdgeInsets.all(AppSpacing.s4),
       child: Row(
         children: [
           Container(
@@ -243,15 +242,21 @@ class _PendingPaymentsCard extends StatelessWidget {
                       color: t.text2, fontSize: AppTextSizes.caption),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  hasPending
-                      ? formatUZS(data.pendingPaymentsTotal)
-                      : l.analyticsAllReceived,
-                  style: TextStyle(
-                    fontWeight: AppFontWeights.bold,
-                    fontSize: AppTextSizes.base,
-                    color: hasPending ? t.warningStrong : t.text3,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    hasPending
+                        ? formatUZS(data.pendingPaymentsTotal)
+                        : l.analyticsAllReceived,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: TextStyle(
+                      fontWeight: AppFontWeights.bold,
+                      fontSize: AppTextSizes.base,
+                      color: hasPending ? t.warningStrong : t.text3,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
                 ),
               ],

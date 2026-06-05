@@ -126,10 +126,10 @@
   "onboardingLanguageLabel": "Язык",
   "onboardingModeProductsTitle": "Продажа товаров",
   "onboardingModeProductsSubtitle": "Продажа через Telegram-бот",
-  "onboardingModeServicesTitle": "Услуги и записи",
-  "onboardingModeServicesSubtitle": "Приём бронирований",
-  "onboardingModeFreelanceTitle": "Фриланс-проекты",
-  "onboardingModeFreelanceSubtitle": "Отслеживание проектов и счетов",
+  "onboardingModeServicesTitle": "Записи",
+  "onboardingModeServicesSubtitle": "Для салонов, барберов, врачей, репетиторов",
+  "onboardingModeFreelanceTitle": "Проекты",
+  "onboardingModeFreelanceSubtitle": "Для фрилансеров, дизайнеров, блогеров",
   "onboardingModeFreelanceShort": "Фриланс",
   "onboardingBotHeader": "Telegram-бот",
   "onboardingBotCreateTitle": "Создайте свой Telegram-бот",
@@ -676,5 +676,12 @@
   "schedulingDeleteBlockedConfirm": "Это время снова станет доступным для записи.",
   "staffFormDaysOffLabel": "Выходные",
   "staffFormDaysOffHint": "Конкретные даты, когда этот сотрудник недоступен.",
-  "staffFormAddDayOff": "Добавить выходной"
+  "staffFormAddDayOff": "Добавить выходной",
+  "settingsModeSwitchTitle": "Сменить тип бизнеса?",
+  "settingsModeSwitchBody": "Переход с «{from}» на «{to}» изменит всё рабочее пространство. Ваши текущие {data} больше не будут отображаться и управляться, но они не удаляются. Клиенты останутся. Это нельзя отменить частично — чтобы снова их увидеть, придётся вернуться обратно. Вы уверены?",
+  "settingsModeSwitchConfirm": "Перейти на «{to}»",
+  "settingsModeNameServices": "Записи",
+  "settingsModeNameFreelance": "Проекты",
+  "settingsModeDataServices": "записи",
+  "settingsModeDataFreelance": "проекты"
 }

@@ -126,10 +126,10 @@
   "onboardingLanguageLabel": "Til",
   "onboardingModeProductsTitle": "Mahsulot sotish",
   "onboardingModeProductsSubtitle": "Telegram bot orqali sotish",
-  "onboardingModeServicesTitle": "Xizmatlar va navbatlar",
-  "onboardingModeServicesSubtitle": "Bronlarni qabul qilish",
-  "onboardingModeFreelanceTitle": "Frilans loyihalar",
-  "onboardingModeFreelanceSubtitle": "Loyihalar va hisob-fakturalarni kuzatish",
+  "onboardingModeServicesTitle": "Navbatlar",
+  "onboardingModeServicesSubtitle": "Salonlar, sartaroshlar, shifokorlar, repetitorlar uchun",
+  "onboardingModeFreelanceTitle": "Loyihalar",
+  "onboardingModeFreelanceSubtitle": "Frilanserlar, dizaynerlar, bloggerlar uchun",
   "onboardingModeFreelanceShort": "Frilans",
   "onboardingBotHeader": "Telegram bot",
   "onboardingBotCreateTitle": "Telegram botingizni yarating",
@@ -676,5 +676,12 @@
   "schedulingDeleteBlockedConfirm": "Bu vaqt yana band qilish uchun ochiq bo‘ladi.",
   "staffFormDaysOffLabel": "Dam olish kunlari",
   "staffFormDaysOffHint": "Bu xodim ishlamaydigan aniq sanalar.",
-  "staffFormAddDayOff": "Dam olish kuni qo‘shish"
+  "staffFormAddDayOff": "Dam olish kuni qo‘shish",
+  "settingsModeSwitchTitle": "Biznes turini o‘zgartirasizmi?",
+  "settingsModeSwitchBody": "«{from}» dan «{to}» ga o‘tish butun ish maydoningizni o‘zgartiradi. Mavjud {data} endi ko‘rsatilmaydi va boshqarilmaydi, lekin ular o‘chirilmaydi. Mijozlaringiz qoladi. Buni qisman bekor qilib bo‘lmaydi — ularni qayta ko‘rish uchun orqaga qaytishingiz kerak bo‘ladi. Ishonchingiz komilmi?",
+  "settingsModeSwitchConfirm": "«{to}» ga o‘tish",
+  "settingsModeNameServices": "Navbatlar",
+  "settingsModeNameFreelance": "Loyihalar",
+  "settingsModeDataServices": "navbatlar",
+  "settingsModeDataFreelance": "loyihalar"
 }

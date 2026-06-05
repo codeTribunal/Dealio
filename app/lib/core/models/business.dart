@@ -3,7 +3,9 @@ class Business {
   final String name;
   final String? description;
   final String? photoUrl;
-  final List<String> mode;
+  // Single business mode (was List<String> — migrated to a scalar in Step 2).
+  // Values: 'SERVICES' | 'FREELANCE' ('PRODUCTS' dormant, no longer assigned).
+  final String mode;
   final String language;
   final String? cardNumber;
   final String? cardBank;
@@ -38,7 +40,7 @@ class Business {
         name: json['name'] as String,
         description: json['description'] as String?,
         photoUrl: json['photoUrl'] as String?,
-        mode: List<String>.from(json['mode'] as List? ?? []),
+        mode: json['mode'] as String? ?? 'SERVICES',
         language: json['language'] as String? ?? 'UZBEK',
         cardNumber: json['cardNumber'] as String?,
         cardBank: json['cardBank'] as String?,
@@ -56,7 +58,7 @@ class Business {
     String? name,
     String? description,
     String? photoUrl,
-    List<String>? mode,
+    String? mode,
     String? language,
     String? cardNumber,
     String? cardBank,

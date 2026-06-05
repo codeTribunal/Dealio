@@ -1,35 +1,99 @@
 import { prisma } from '../lib/prisma.js';
+import {
+  generateCode,
+  hashCode,
+  verifyCode,
+  CODE_TTL_MS,
+  MAX_VERIFY_ATTEMPTS,
+} from '../lib/authCodes.js';
 
-const DEV_OTP = '1234';
-const OTP_TTL_MINUTES = 10;
+export type OtpPurpose = 'ENROLL' | 'LOGIN';
 
-export async function createOtp(phone: string): Promise<string> {
-  // In production, generate a random 6-digit code and send via SMS.
-  // In development, always use 1234.
-  const code = process.env.NODE_ENV === 'production'
-    ? String(Math.floor(100000 + Math.random() * 900000))
-    : DEV_OTP;
+export interface IssueCodeParams {
+  phone: string;
+  purpose: OtpPurpose;
+  userId?: string | null;
+  chatId?: string | null;
+}
 
-  const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
+/**
+ * Issue a fresh one-time code for (phone, purpose). Any previous unconsumed
+ * codes for the same phone+purpose are invalidated first, so only the newest
+ * code is ever valid. Returns the PLAINTEXT code (for delivery via Telegram);
+ * only the hash is persisted.
+ */
+export async function issueAuthCode(params: IssueCodeParams): Promise<string> {
+  const { phone, purpose, userId, chatId } = params;
 
-  await prisma.otpCode.create({ data: { phone, code, expiresAt } });
+  // Invalidate older live codes for this phone+purpose.
+  await prisma.otpCode.updateMany({
+    where: { phone, purpose, consumedAt: null },
+    data: { consumedAt: new Date() },
+  });
+
+  const code = generateCode();
+  await prisma.otpCode.create({
+    data: {
+      phone,
+      purpose,
+      userId: userId ?? null,
+      chatId: chatId ?? null,
+      codeHash: hashCode(code),
+      expiresAt: new Date(Date.now() + CODE_TTL_MS),
+    },
+  });
 
   return code;
 }
 
-export async function verifyOtp(phone: string, code: string): Promise<boolean> {
+export type VerifyFailure = 'no_code' | 'expired' | 'locked' | 'invalid';
+
+export interface VerifyResult {
+  ok: boolean;
+  reason?: VerifyFailure;
+  /** The matched code row id (only on success), so callers can read chatId etc. */
+  codeId?: string;
+}
+
+/**
+ * Verify a code for (phone, purpose) and, on success, consume it (single-use).
+ * Enforces expiry and a max attempt count: after MAX_VERIFY_ATTEMPTS failed
+ * tries the code is locked and no longer accepts any code (even the correct one).
+ */
+export async function verifyAuthCode(
+  phone: string,
+  code: string,
+  purpose: OtpPurpose,
+): Promise<VerifyResult> {
   const record = await prisma.otpCode.findFirst({
-    where: {
-      phone,
-      code,
-      used: false,
-      expiresAt: { gt: new Date() },
-    },
+    where: { phone, purpose, consumedAt: null },
     orderBy: { createdAt: 'desc' },
   });
 
-  if (!record) return false;
+  if (!record) return { ok: false, reason: 'no_code' };
 
-  await prisma.otpCode.update({ where: { id: record.id }, data: { used: true } });
-  return true;
+  if (record.expiresAt.getTime() < Date.now()) {
+    return { ok: false, reason: 'expired' };
+  }
+
+  // Already exhausted its attempts → locked (this is the 6th+ try).
+  if (record.attempts >= MAX_VERIFY_ATTEMPTS) {
+    return { ok: false, reason: 'locked' };
+  }
+
+  if (!verifyCode(code, record.codeHash)) {
+    await prisma.otpCode.update({
+      where: { id: record.id },
+      data: { attempts: { increment: 1 } },
+    });
+    return { ok: false, reason: 'invalid' };
+  }
+
+  // Success — consume so it cannot be reused.
+  await prisma.otpCode.update({
+    where: { id: record.id },
+    data: { consumedAt: new Date() },
+  });
+
+  return { ok: true, codeId: record.id };
 }

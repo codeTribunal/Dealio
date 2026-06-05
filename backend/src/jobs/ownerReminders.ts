@@ -12,7 +12,7 @@ const WINDOW_MS = 15 * 60_000;
 // required to send the owner a Telegram message directly from the backend.
 interface BusinessForReminder {
   id: string;
-  mode: ('PRODUCTS' | 'SERVICES' | 'FREELANCE')[];
+  mode: 'PRODUCTS' | 'SERVICES' | 'FREELANCE';
   reminderSettings: unknown;
   suspendedAt: Date | null;
   ownerTelegramChatId: string | null;
@@ -112,15 +112,16 @@ export async function runOwnerReminders(): Promise<void> {
 
     const settings = mergeReminderSettings(business.reminderSettings);
 
-    if (business.mode.includes('SERVICES') && settings.appointmentEnabled) {
+    if (business.mode === 'SERVICES' && settings.appointmentEnabled) {
       await processAppointmentReminders(business, settings, now);
     }
 
-    if (business.mode.includes('PRODUCTS') && settings.deliveryEnabled) {
+    // PRODUCTS is dormant (no business has it); branch kept but never true now.
+    if (business.mode === 'PRODUCTS' && settings.deliveryEnabled) {
       await processDeliveryReminders(business, settings, now);
     }
 
-    if (business.mode.includes('FREELANCE') && settings.deadlineEnabled) {
+    if (business.mode === 'FREELANCE' && settings.deadlineEnabled) {
       await processDeadlineReminders(business, settings, now);
     }
   }

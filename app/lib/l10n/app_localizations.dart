@@ -775,25 +775,25 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingModeServicesTitle.
   ///
   /// In en, this message translates to:
-  /// **'Services & appointments'**
+  /// **'Appointments'**
   String get onboardingModeServicesTitle;
 
   /// No description provided for @onboardingModeServicesSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Accept bookings'**
+  /// **'For salons, barbers, doctors, tutors'**
   String get onboardingModeServicesSubtitle;
 
   /// No description provided for @onboardingModeFreelanceTitle.
   ///
   /// In en, this message translates to:
-  /// **'Freelance projects'**
+  /// **'Projects'**
   String get onboardingModeFreelanceTitle;
 
   /// No description provided for @onboardingModeFreelanceSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Track projects & invoices'**
+  /// **'For freelancers, designers, influencers'**
   String get onboardingModeFreelanceSubtitle;
 
   /// No description provided for @onboardingModeFreelanceShort.
@@ -3051,6 +3051,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add day off'**
   String get staffFormAddDayOff;
+
+  /// No description provided for @settingsModeSwitchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch business type?'**
+  String get settingsModeSwitchTitle;
+
+  /// No description provided for @settingsModeSwitchBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Switching from {from} to {to} will change your whole workspace. Your existing {data} will no longer be shown or managed, though they are not deleted. Your customers stay. This cannot be partially undone — you’d have to switch back to see them again. Are you sure?'**
+  String settingsModeSwitchBody(String from, String to, String data);
+
+  /// No description provided for @settingsModeSwitchConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to {to}'**
+  String settingsModeSwitchConfirm(String to);
+
+  /// No description provided for @settingsModeNameServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Appointments'**
+  String get settingsModeNameServices;
+
+  /// No description provided for @settingsModeNameFreelance.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get settingsModeNameFreelance;
+
+  /// No description provided for @settingsModeDataServices.
+  ///
+  /// In en, this message translates to:
+  /// **'appointments'**
+  String get settingsModeDataServices;
+
+  /// No description provided for @settingsModeDataFreelance.
+  ///
+  /// In en, this message translates to:
+  /// **'projects'**
+  String get settingsModeDataFreelance;
 }
 
 class _AppLocalizationsDelegate

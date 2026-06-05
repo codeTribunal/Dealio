@@ -175,7 +175,14 @@
     "telegramBot": "Telegram bot",
     "botUsername": "Bot username",
     "botLink": "Bot link",
-    "notConfigured": "Not configured"
+    "notConfigured": "Not configured",
+    "modeSwitchTitle": "Switch business type?",
+    "modeSwitchBody": "Switching from {from} to {to} will change your whole workspace. Your existing {data} will no longer be shown or managed, though they are not deleted. Your customers stay. This cannot be partially undone — you’d have to switch back to see them again. Are you sure?",
+    "modeSwitchConfirm": "Switch to {to}",
+    "modeNameServices": "Appointments",
+    "modeNameFreelance": "Projects",
+    "modeDataServices": "appointments",
+    "modeDataFreelance": "projects"
   },
   "scheduling": {
     "workingHours": "Working hours",

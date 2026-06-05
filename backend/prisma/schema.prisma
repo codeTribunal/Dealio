@@ -12,7 +12,9 @@ model Business {
   name         String
   description  String?
   photoUrl     String?
-  mode         Mode[]
+  // Single business mode (was Mode[] — migrated to a scalar in Step 2).
+  // PRODUCTS remains in the enum but is no longer selectable (dormant).
+  mode         Mode      @default(SERVICES)
   language     Language  @default(UZBEK)
   cardNumber   String?
   cardBank     CardBank?
@@ -94,6 +96,11 @@ model DeviceToken {
 model User {
   id             String          @id @default(cuid())
   phone          String          @unique
+  // Telegram binding for owner auth. telegramChatId is the platform-bot chat
+  // we send LOGIN codes to; telegramVerifiedAt is set when the user first
+  // completes enrollment (shares contact + enters the ENROLL code).
+  telegramChatId     String?
+  telegramVerifiedAt DateTime?
   business       Business?
   consentRecords ConsentRecord[]
   createdAt      DateTime        @default(now())
@@ -368,16 +375,35 @@ model Reminder {
   createdAt  DateTime @default(now())
 }
 
+// Short-lived one-time codes for owner auth via the platform bot.
+// Only a HASH of the code is stored (codeHash) — never the plaintext.
+// purpose: "ENROLL" (first-time binding) | "LOGIN" (returning login).
 model OtpCode {
-  id        String   @id @default(cuid())
-  phone     String
-  code      String
-  expiresAt DateTime
-  used      Boolean  @default(false)
+  id         String    @id @default(cuid())
+  userId     String? // null during enrollment before the User exists, else the User
+  phone      String
+  chatId     String? // where the code was sent (returning login) / bound (enroll)
+  codeHash   String // HASH of the code, never plaintext
+  purpose    String // "ENROLL" | "LOGIN"
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
 
-  createdAt DateTime @default(now())
+  @@index([phone, purpose])
+}
 
-  @@index([phone])
+// One-time deep-link token for first-time enrollment. The token rides in the
+// platform-bot deep link (t.me/<bot>?start=<token>). chatId is filled when the
+// user opens the bot; phone is filled once they share their contact.
+model LinkToken {
+  id         String    @id @default(cuid())
+  token      String    @unique // random hex, in the deep link
+  phone      String? // filled once contact is shared
+  chatId     String? // filled when user starts the bot
+  consumedAt DateTime?
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
 }
 
 model BusinessCustomField {

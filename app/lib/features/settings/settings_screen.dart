@@ -48,7 +48,7 @@ class SettingsScreen extends ConsumerWidget {
               _ProfileSection(data: data),
               const SizedBox(height: AppSpacing.s3),
               _BusinessModeSection(data: data),
-              if (data.business.mode.contains('SERVICES')) ...[
+              if (data.business.mode == 'SERVICES') ...[
                 const SizedBox(height: AppSpacing.s3),
                 const _ServicesSection(),
                 const SizedBox(height: AppSpacing.s3),
@@ -346,20 +346,50 @@ class _BusinessModeSection extends ConsumerWidget {
   final SettingsState data;
   const _BusinessModeSection({required this.data});
 
-  Future<void> _toggle(BuildContext context, WidgetRef ref, String mode,
-      List<String> current) async {
+  String _modeName(AppLocalizations l, String m) =>
+      m == 'SERVICES' ? l.settingsModeNameServices : l.settingsModeNameFreelance;
+  String _modeData(AppLocalizations l, String m) =>
+      m == 'SERVICES' ? l.settingsModeDataServices : l.settingsModeDataFreelance;
+
+  // Single-select with a HARD WARNING: picking the other mode opens a
+  // confirmation dialog. Only on confirm do we save the new scalar mode;
+  // on cancel nothing changes (no API call). No data is deleted on switch.
+  Future<void> _select(BuildContext context, WidgetRef ref, String mode,
+      String current) async {
+    if (mode == current) return;
     final l = AppLocalizations.of(context)!;
-    final isOn = current.contains(mode);
-    if (isOn && current.length == 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.settingsModeAtLeastOne)),
-      );
-      return;
-    }
-    final updated =
-        isOn ? current.where((m) => m != mode).toList() : [...current, mode];
+    final t = AppTokens.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: t.surface,
+        title: Text(l.settingsModeSwitchTitle, style: TextStyle(color: t.text1)),
+        content: Text(
+          l.settingsModeSwitchBody(
+              _modeName(l, current), _modeName(l, mode), _modeData(l, current)),
+          style: TextStyle(color: t.text2),
+        ),
+        actions: [
+          AppButton(
+            label: l.buttonCancel,
+            variant: AppButtonVariant.ghost,
+            size: AppButtonSize.sm,
+            onPressed: () => Navigator.pop(ctx, false),
+          ),
+          AppButton(
+            label: l.settingsModeSwitchConfirm(_modeName(l, mode)),
+            variant: AppButtonVariant.danger,
+            size: AppButtonSize.sm,
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
     try {
-      await ref.read(settingsProvider.notifier).saveMode(updated);
+      await ref.read(settingsProvider.notifier).saveMode(mode);
     } catch (e) {
       if (context.mounted) _snackErr(context, e);
     }
@@ -370,31 +400,48 @@ class _BusinessModeSection extends ConsumerWidget {
     final l = AppLocalizations.of(context)!;
     final t = AppTokens.of(context);
     final current = data.business.mode;
-    final modes = [
-      ('PRODUCTS', l.settingsModeProductsLabel, l.settingsModeProductsDesc),
-      ('SERVICES', l.settingsModeServicesLabel, l.settingsModeServicesDesc),
-      ('FREELANCE', l.settingsModeFreelanceLabel, l.settingsModeFreelanceDesc),
-    ];
 
+    // Single-select dropdown (PRODUCTS disabled — only SERVICES/FREELANCE).
+    // Picking the other mode opens the hard-warning dialog via _select; it does
+    // NOT save until confirmed. The dropdown is bound to `current` (the saved
+    // mode) and a plain DropdownButton holds no internal selection state, so on
+    // Cancel it reverts to the current mode with no API call.
     return _SectionCard(
       icon: AppIconName.catalog,
       title: l.settingsBusinessMode,
-      child: Column(
-        children: [
-          for (final (value, label, subtitle) in modes)
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(label,
-                  style: TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
-              subtitle: Text(subtitle,
-                  style:
-                      TextStyle(fontSize: AppTextSizes.caption, color: t.text2)),
-              value: current.contains(value),
-              activeThumbColor: t.accent,
-              onChanged: (_) => _toggle(context, ref, value, current),
-              dense: true,
-            ),
-        ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
+        decoration: BoxDecoration(
+          color: t.surface,
+          borderRadius: AppRadii.md,
+          border: Border.all(color: t.border),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            // ignore: deprecated_member_use
+            value: current,
+            isExpanded: true,
+            dropdownColor: t.surface,
+            borderRadius: AppRadii.md,
+            iconEnabledColor: t.text3,
+            style: TextStyle(fontSize: AppTextSizes.sm, color: t.text1),
+            items: [
+              DropdownMenuItem(
+                value: 'SERVICES',
+                child: Text(l.settingsModeNameServices,
+                    style: TextStyle(color: t.text1)),
+              ),
+              DropdownMenuItem(
+                value: 'FREELANCE',
+                child: Text(l.settingsModeNameFreelance,
+                    style: TextStyle(color: t.text1)),
+              ),
+            ],
+            onChanged: (v) {
+              if (v != null && v != current) _select(context, ref, v, current);
+            },
+          ),
+        ),
       ),
     );
   }
@@ -803,7 +850,7 @@ class _RemindersSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
     final t = AppTokens.of(context);
-    final modes = data.business.mode;
+    final mode = data.business.mode;
     final settingsAsync = ref.watch(reminderSettingsProvider);
 
     return _SectionCard(
@@ -832,7 +879,7 @@ class _RemindersSection extends ConsumerWidget {
             data: (s) {
               final tiles = <Widget>[];
 
-              if (modes.contains('SERVICES')) {
+              if (mode == 'SERVICES') {
                 final apptEnabled = s['appointmentEnabled'] as bool? ?? true;
                 tiles.add(_ReminderToggle(
                   title: l.settingsReminderAppointmentTitle,
@@ -860,7 +907,8 @@ class _RemindersSection extends ConsumerWidget {
                 }
               }
 
-              if (modes.contains('PRODUCTS')) {
+              // PRODUCTS dormant — never true now (mode is a scalar).
+              if (mode == 'PRODUCTS') {
                 tiles.add(_ReminderToggle(
                   title: l.settingsReminderDeliveryTitle,
                   subtitle: l.settingsReminderDeliverySubtitle,
@@ -873,7 +921,7 @@ class _RemindersSection extends ConsumerWidget {
                 ));
               }
 
-              if (modes.contains('FREELANCE')) {
+              if (mode == 'FREELANCE') {
                 tiles.add(_ReminderToggle(
                   title: l.settingsReminderDeadlineTitle,
                   subtitle: l.settingsReminderDeadlineSubtitle,

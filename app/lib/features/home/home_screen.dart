@@ -205,11 +205,12 @@ class _StatRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
+          // Product-seller mode disabled — the Orders route is unreachable,
+          // so this metric is shown but no longer links there.
           child: AppStatCard(
             label: l.homeStatPending,
             value: formatUZS(pendingTotal),
             money: true,
-            onTap: () => context.push('/orders'),
           ),
         ),
         const SizedBox(width: AppSpacing.s3),
@@ -437,37 +438,27 @@ class _QuickActionsGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
     final business = ref.watch(businessProvider).valueOrNull;
-    final modes = business?.mode ?? [];
+    final mode = business?.mode ?? 'SERVICES';
 
+    // Product-seller mode disabled — Orders & Catalog quick actions removed.
+    // Their routes still exist but are unreachable from the home screen.
     final items = <QuickActionItem>[
       QuickActionItem(
         icon: AppIconName.customers,
         label: l.navCustomers,
         onTap: () => context.push('/customers'),
       ),
-      if (modes.contains('PRODUCTS'))
-        QuickActionItem(
-          icon: AppIconName.orders,
-          label: l.navOrders,
-          onTap: () => context.push('/orders'),
-        ),
-      if (modes.contains('SERVICES'))
+      if (mode == 'SERVICES')
         QuickActionItem(
           icon: AppIconName.calendar,
           label: l.navAppointments,
           onTap: () => context.push('/appointments'),
         ),
-      if (modes.contains('FREELANCE'))
+      if (mode == 'FREELANCE')
         QuickActionItem(
           icon: AppIconName.projects,
           label: l.navProjects,
           onTap: () => context.push('/projects'),
-        ),
-      if (modes.contains('PRODUCTS'))
-        QuickActionItem(
-          icon: AppIconName.catalog,
-          label: l.navCatalog,
-          onTap: () => context.push('/catalog'),
         ),
     ];
 

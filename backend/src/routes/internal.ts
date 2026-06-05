@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { sendError } from '../lib/errors.js';
 import { getBotToken } from '../lib/getBotToken.js';
+import { bindChatToLinkToken, bindPhoneAndIssueEnrollCode } from '../services/platformAuth.js';
 
 function verifyBotManagerSecret(request: FastifyRequest, reply: FastifyReply): boolean {
   const secret = request.headers['x-bot-secret'];
@@ -22,6 +23,21 @@ const getTokenBody = z.object({
 
 const startBotBody = z.object({
   businessId: z.string(),
+});
+
+// Platform-bot → backend (owner enrollment). Secured by BOT_MANAGER_SECRET.
+const platformStartBody = z.object({
+  token: z.string().min(1),
+  chatId: z.string().min(1),
+});
+
+const platformContactBody = z.object({
+  token: z.string().min(1),
+  chatId: z.string().min(1),
+  phone: z.string().min(5).max(20),
+  // Telegram identity check: the shared contact's user_id and the sender's id.
+  contactUserId: z.string().min(1),
+  fromId: z.string().min(1),
 });
 
 export default async function internalRoutes(app: FastifyInstance) {
@@ -131,5 +147,47 @@ export default async function internalRoutes(app: FastifyInstance) {
     });
 
     return reply.send(businesses);
+  });
+
+  /**
+   * POST /internal/platform/start
+   * Called by the platform bot when a user opens the enrollment deep link.
+   * Binds the user's Telegram chatId to the link token after validating it.
+   * Returns { ok, reason? } — the bot localizes the reply to the user.
+   */
+  app.post('/internal/platform/start', async (request, reply) => {
+    if (!verifyBotManagerSecret(request, reply)) return;
+
+    const parsed = platformStartBody.safeParse(request.body);
+    if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
+
+    const { token, chatId } = parsed.data;
+    const result = await bindChatToLinkToken(token, chatId);
+    return reply.send(result);
+  });
+
+  /**
+   * POST /internal/platform/contact
+   * Called by the platform bot when the user shares their contact. Enforces the
+   * Telegram identity check (contactUserId === fromId) server-side too, binds the
+   * phone to the link token, and issues an ENROLL code. Returns the plaintext
+   * code for the bot to display in-chat (never logged here).
+   */
+  app.post('/internal/platform/contact', async (request, reply) => {
+    if (!verifyBotManagerSecret(request, reply)) return;
+
+    const parsed = platformContactBody.safeParse(request.body);
+    if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
+
+    const { token, chatId, phone, contactUserId, fromId } = parsed.data;
+
+    // Defense-in-depth: reject forwarded/foreign contacts even if the bot's
+    // own check were bypassed. The shared contact must belong to the sender.
+    if (contactUserId !== fromId) {
+      return reply.send({ ok: false, reason: 'foreign_contact' });
+    }
+
+    const result = await bindPhoneAndIssueEnrollCode(token, chatId, phone);
+    return reply.send(result);
   });
 }

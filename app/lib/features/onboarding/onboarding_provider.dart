@@ -5,7 +5,8 @@ import '../../core/api/api_service.dart';
 class OnboardingState {
   final int step;
   final String businessName;
-  final List<String> modes;
+  // Single business mode (scalar). Only 'SERVICES' | 'FREELANCE' are selectable.
+  final String mode;
   final String language;
   final String botToken;
   final String botUsername;
@@ -23,7 +24,8 @@ class OnboardingState {
   const OnboardingState({
     this.step = 1,
     this.businessName = '',
-    this.modes = const ['PRODUCTS'],
+    // Product-seller mode disabled — default to SERVICES (only SERVICES/FREELANCE selectable).
+    this.mode = 'SERVICES',
     this.language = 'UZBEK',
     this.botToken = '',
     this.botUsername = '',
@@ -42,7 +44,7 @@ class OnboardingState {
   OnboardingState copyWith({
     int? step,
     String? businessName,
-    List<String>? modes,
+    String? mode,
     String? language,
     String? botToken,
     String? botUsername,
@@ -62,7 +64,7 @@ class OnboardingState {
     return OnboardingState(
       step: step ?? this.step,
       businessName: businessName ?? this.businessName,
-      modes: modes ?? this.modes,
+      mode: mode ?? this.mode,
       language: language ?? this.language,
       botToken: botToken ?? this.botToken,
       botUsername: botUsername ?? this.botUsername,
@@ -92,15 +94,10 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
   void setBusinessName(String name) =>
       state = state.copyWith(businessName: name);
 
+  // Single-select: a business is created with exactly one mode (SERVICES or
+  // FREELANCE). Kept as an array for the API contract (single-enum is a later step).
   void toggleMode(String mode) {
-    final current = List<String>.from(state.modes);
-    if (current.contains(mode)) {
-      if (current.length == 1) return; // prevent removing last mode
-      current.remove(mode);
-    } else {
-      current.add(mode);
-    }
-    state = state.copyWith(modes: current);
+    state = state.copyWith(mode: mode);
   }
 
   void setLanguage(String language) =>
@@ -143,7 +140,7 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
     try {
       final result = await _api.completeOnboarding(
         businessName: state.businessName,
-        modes: state.modes,
+        mode: state.mode,
         language: state.language,
         botToken: state.botToken,
         cardNumber: state.cardNumber.isNotEmpty ? state.cardNumber : null,

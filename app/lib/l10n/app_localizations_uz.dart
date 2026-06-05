@@ -357,17 +357,18 @@ class AppLocalizationsUz extends AppLocalizations {
   String get onboardingModeProductsSubtitle => 'Telegram bot orqali sotish';
 
   @override
-  String get onboardingModeServicesTitle => 'Xizmatlar va navbatlar';
+  String get onboardingModeServicesTitle => 'Navbatlar';
 
   @override
-  String get onboardingModeServicesSubtitle => 'Bronlarni qabul qilish';
+  String get onboardingModeServicesSubtitle =>
+      'Salonlar, sartaroshlar, shifokorlar, repetitorlar uchun';
 
   @override
-  String get onboardingModeFreelanceTitle => 'Frilans loyihalar';
+  String get onboardingModeFreelanceTitle => 'Loyihalar';
 
   @override
   String get onboardingModeFreelanceSubtitle =>
-      'Loyihalar va hisob-fakturalarni kuzatish';
+      'Frilanserlar, dizaynerlar, bloggerlar uchun';
 
   @override
   String get onboardingModeFreelanceShort => 'Frilans';
@@ -1622,4 +1623,29 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get staffFormAddDayOff => 'Dam olish kuni qo‘shish';
+
+  @override
+  String get settingsModeSwitchTitle => 'Biznes turini o‘zgartirasizmi?';
+
+  @override
+  String settingsModeSwitchBody(String from, String to, String data) {
+    return '«$from» dan «$to» ga o‘tish butun ish maydoningizni o‘zgartiradi. Mavjud $data endi ko‘rsatilmaydi va boshqarilmaydi, lekin ular o‘chirilmaydi. Mijozlaringiz qoladi. Buni qisman bekor qilib bo‘lmaydi — ularni qayta ko‘rish uchun orqaga qaytishingiz kerak bo‘ladi. Ishonchingiz komilmi?';
+  }
+
+  @override
+  String settingsModeSwitchConfirm(String to) {
+    return '«$to» ga o‘tish';
+  }
+
+  @override
+  String get settingsModeNameServices => 'Navbatlar';
+
+  @override
+  String get settingsModeNameFreelance => 'Loyihalar';
+
+  @override
+  String get settingsModeDataServices => 'navbatlar';
+
+  @override
+  String get settingsModeDataFreelance => 'loyihalar';
 }

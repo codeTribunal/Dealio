@@ -31,21 +31,12 @@ function buildQuickActions(
   router: ReturnType<typeof useRouter>,
   t: ReturnType<typeof useI18n>['t'],
 ): QuickActionItem[] {
-  // Default to PRODUCTS-style actions if business isn't loaded yet
-  const modes = business?.mode ?? ['PRODUCTS']
+  // Product-seller mode is disabled — never surface catalog/orders actions.
+  // Default to SERVICES-style actions until the business loads.
+  const mode = business?.mode ?? 'SERVICES'
 
-  // Each mode contributes a "create" action + 3 navigation tiles.
-  // We pick the first matching mode (a business may have multiple) to
-  // keep the QuickActions block to a clean 4-tile row.
-  if (modes.includes('PRODUCTS')) {
-    return [
-      { icon: 'orders', label: t('home.quickActionNewOrder'), onClick: () => router.push('/orders') },
-      { icon: 'customers', label: t('nav.customers'), onClick: () => router.push('/customers') },
-      { icon: 'catalog', label: t('nav.catalog'), onClick: () => router.push('/catalog') },
-      { icon: 'analytics', label: t('nav.analytics'), onClick: () => router.push('/analytics') },
-    ]
-  }
-  if (modes.includes('SERVICES')) {
+  // Single mode keys the quick-actions row.
+  if (mode === 'SERVICES') {
     return [
       { icon: 'calendar', label: t('home.quickActionNewAppointment'), onClick: () => router.push('/appointments') },
       { icon: 'customers', label: t('nav.customers'), onClick: () => router.push('/customers') },

@@ -113,7 +113,7 @@ class ApiService {
   Future<({String id, String name, String botUsername, String botLink})>
       completeOnboarding({
     required String businessName,
-    required List<String> modes,
+    required String mode,
     required String language,
     required String botToken,
     String? cardNumber,
@@ -122,7 +122,7 @@ class ApiService {
     try {
       final res = await _dio.post('/onboarding/complete', data: {
         'businessName': businessName,
-        'mode': modes,
+        'mode': mode,
         'language': language,
         'botToken': botToken,
         if (cardNumber != null && cardNumber.isNotEmpty) 'cardNumber': cardNumber,

@@ -58,7 +58,7 @@ export async function verifyBotToken(token: string): Promise<{
 
 export async function completeOnboarding(data: {
   businessName: string
-  mode: string[]
+  mode: string
   language: string
   botToken: string
   cardNumber?: string
@@ -236,7 +236,7 @@ export async function updateBusiness(data: {
   name?: string
   description?: string
   language?: string
-  mode?: string[]
+  mode?: string
   workingHours?: WorkingHours
   bufferMinutes?: number
 }): Promise<Business> {

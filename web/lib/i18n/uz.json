@@ -175,7 +175,14 @@
     "telegramBot": "Telegram bot",
     "botUsername": "Bot foydalanuvchi nomi",
     "botLink": "Bot havolasi",
-    "notConfigured": "Sozlanmagan"
+    "notConfigured": "Sozlanmagan",
+    "modeSwitchTitle": "Biznes turini o‘zgartirasizmi?",
+    "modeSwitchBody": "«{from}» dan «{to}» ga o‘tish butun ish maydoningizni o‘zgartiradi. Mavjud {data} endi ko‘rsatilmaydi va boshqarilmaydi, lekin ular o‘chirilmaydi. Mijozlaringiz qoladi. Buni qisman bekor qilib bo‘lmaydi — ularni qayta ko‘rish uchun orqaga qaytishingiz kerak bo‘ladi. Ishonchingiz komilmi?",
+    "modeSwitchConfirm": "«{to}» ga o‘tish",
+    "modeNameServices": "Navbatlar",
+    "modeNameFreelance": "Loyihalar",
+    "modeDataServices": "navbatlar",
+    "modeDataFreelance": "loyihalar"
   },
   "scheduling": {
     "workingHours": "Ish vaqti",

@@ -34,7 +34,8 @@ const SAFE_BUSINESS_SELECT = {
 const createBusinessBody = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
-  mode: z.array(z.enum(['PRODUCTS', 'SERVICES', 'FREELANCE'])).min(1),
+  // Single mode (scalar). PRODUCTS disabled — only SERVICES/FREELANCE accepted.
+  mode: z.enum(['SERVICES', 'FREELANCE']),
   language: z.enum(['UZBEK', 'RUSSIAN', 'ENGLISH']).optional(),
   cardNumber: z.string().min(16).max(20).optional(),
   cardBank: z.enum(['UZCARD', 'HUMO']).optional(),
@@ -65,7 +66,8 @@ const updateBusinessBody = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional(),
   photoUrl: z.string().url().optional(),
-  mode: z.array(z.enum(['PRODUCTS', 'SERVICES', 'FREELANCE'])).min(1).optional(),
+  // Single mode (scalar). PRODUCTS disabled — only SERVICES/FREELANCE accepted.
+  mode: z.enum(['SERVICES', 'FREELANCE']).optional(),
   language: z.enum(['UZBEK', 'RUSSIAN', 'ENGLISH']).optional(),
   workingHours: workingHoursSchema.optional(),
   bufferMinutes: z.number().int().min(0).max(120).optional(),

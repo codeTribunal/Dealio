@@ -59,7 +59,7 @@ export interface AdminBusiness {
   id: string
   name: string
   description: string | null
-  mode: string[]
+  mode: string
   language: string
   botUsername: string | null
   plan: string
