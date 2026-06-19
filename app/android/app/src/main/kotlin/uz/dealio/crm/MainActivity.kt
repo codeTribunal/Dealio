@@ -1,4 +1,4 @@
-package com.example.uzbek_crm
+package uz.dealio.crm
 
 import io.flutter.embedding.android.FlutterActivity
 

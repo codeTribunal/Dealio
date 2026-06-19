@@ -103,7 +103,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
-  /// **'Uzbek CRM'**
+  /// **'Dealio'**
   String get appTitle;
 
   /// No description provided for @buttonSave.

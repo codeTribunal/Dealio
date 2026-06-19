@@ -43,10 +43,10 @@ export function generateICS(businessName: string, events: CalendarEvent[]): stri
 
   lines.push('BEGIN:VCALENDAR');
   lines.push('VERSION:2.0');
-  lines.push('PRODID:-//Uzbek CRM//Calendar//EN');
+  lines.push('PRODID:-//Dealio//Calendar//EN');
   lines.push('CALSCALE:GREGORIAN');
   lines.push('METHOD:PUBLISH');
-  lines.push(foldLine(`X-WR-CALNAME:${escapeICSText(businessName)} — Uzbek CRM`));
+  lines.push(foldLine(`X-WR-CALNAME:${escapeICSText(businessName)} — Dealio`));
   lines.push('X-WR-TIMEZONE:Asia/Tashkent');
 
   for (const event of events) {

@@ -155,7 +155,7 @@ class _AppState extends ConsumerState<App> {
     setCurrencyLocale(locale.languageCode);
 
     return MaterialApp.router(
-      title: 'Uzbek CRM',
+      title: 'Dealio',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       // Default to light for now; a real light/dark toggle comes in a later phase.

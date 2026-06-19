@@ -9,7 +9,7 @@ class AppLocalizationsUz extends AppLocalizations {
   AppLocalizationsUz([String locale = 'uz']) : super(locale);
 
   @override
-  String get appTitle => 'Uzbek CRM';
+  String get appTitle => 'Dealio';
 
   @override
   String get buttonSave => 'Saqlash';

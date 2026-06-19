@@ -37,7 +37,7 @@ export default function AdminLoginPage() {
             <Shield size={20} className="text-white" />
           </div>
           <div>
-            <p className="text-base font-bold text-white">Uzbek CRM</p>
+            <p className="text-base font-bold text-white">Dealio</p>
             <p className="text-xs text-gray-500">Admin Panel</p>
           </div>
         </div>

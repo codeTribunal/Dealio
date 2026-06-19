@@ -1,7 +1,7 @@
 {
-  "name": "uzbek-crm-bot",
+  "name": "dealio-bot",
   "version": "1.0.0",
-  "description": "Uzbek CRM Telegram bot",
+  "description": "Dealio Telegram bot",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

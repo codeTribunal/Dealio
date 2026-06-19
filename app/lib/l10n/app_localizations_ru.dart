@@ -9,7 +9,7 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
-  String get appTitle => 'Uzbek CRM';
+  String get appTitle => 'Dealio';
 
   @override
   String get buttonSave => 'Сохранить';

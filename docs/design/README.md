@@ -1,4 +1,4 @@
-# Design Documentation — Uzbek SME CRM
+# Design Documentation — Dealio (CRM for Uzbek SMEs)
 
 This folder is the handoff package for the UI designer. It defines **what** to design and the
 **constraints** to design within, before any high-fidelity visual work begins.

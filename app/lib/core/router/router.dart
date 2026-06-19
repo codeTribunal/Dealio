@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -328,7 +327,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     const brandBlue = Color(0xFF3B82F6); // hsl(217,91%,60%) — matches the mark's wedge/dot
 
     final screenW = MediaQuery.of(context).size.width;
-    final markW = screenW * 0.28; // mark ~28% of screen width
+    final markW = screenW * 0.28; // lockup anchor — drives gap + wordmark (unchanged)
+    final markImageW = screenW * 0.24; // mark image ~24% (slightly smaller than the anchor)
     final gap = markW * 0.30; // 24:80 native ratio between mark and wordmark
     final wordSize = markW * 0.45; // sizes "Dealio." to ~40% width (the lockup)
 
@@ -340,10 +340,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Mark (unchanged geometry; slate D-stroke + blue wedge + dot)
-                SvgPicture.asset(
-                  'assets/branding/splash_mark.svg',
-                  width: markW,
+                // Mark — transparent PNG (slate D-stroke + blue wedge + dot), ~24%
+                Image.asset(
+                  'assets/branding/splash_mark.png',
+                  width: markImageW,
                 ),
                 SizedBox(height: gap),
                 // Wordmark "Dealio." — Inter Bold, slate with a brand-blue period

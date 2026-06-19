@@ -1,4 +1,4 @@
-name: uzbek_crm
+name: dealio
 description: CRM for Uzbekistan small businesses
 version: 1.0.0+1
 
@@ -68,14 +68,18 @@ flutter:
     - assets/branding/
 
 # Dealio launcher icon — Android only (launch is Android-only).
-# image_path: paper (#FAFAF8) tile with the navy "d" mark (legacy mipmaps).
-# adaptive: #FAFAF8 background layer + transparent "d" foreground layer.
+# Source: assets/branding/icon.png — a full-bleed paper (#FAFAF8) square with the
+# D mark padded inside the safe zone. The OS mask eats the outer ~33%; the mark's
+# internal padding keeps it visible. Adaptive background = same paper so the
+# masked bleed zone reads as continuous paper (foreground is the full square).
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/icon/dealio_icon.png"
+  image_path: "assets/branding/icon.png"
   adaptive_icon_background: "#FAFAF8"
-  adaptive_icon_foreground: "assets/icon/dealio_foreground.png"
+  adaptive_icon_foreground: "assets/branding/icon.png"
+  adaptive_icon_foreground_inset: 0
+  remove_alpha_ios: false
   min_sdk_android: 21
 
 # Dealio native splash — Android only. COLOR-ONLY cold-start bridge: blank paper

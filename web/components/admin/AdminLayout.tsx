@@ -55,7 +55,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
         <div className="flex items-center gap-2">
           <Shield size={18} className="text-blue-400 flex-shrink-0" />
           <div>
-            <p className="text-sm font-bold text-white">Uzbek CRM</p>
+            <p className="text-sm font-bold text-white">Dealio</p>
             <p className="text-xs text-gray-500">Admin Panel</p>
           </div>
         </div>

@@ -164,7 +164,7 @@ export async function calendarRoutes(fastify: FastifyInstance) {
 
     reply
       .header('Content-Type', 'text/calendar; charset=utf-8')
-      .header('Content-Disposition', 'inline; filename="uzbekcrm.ics"')
+      .header('Content-Disposition', 'inline; filename="dealio.ics"')
       .header('Cache-Control', 'no-cache, max-age=0')
       .send(ics);
   });

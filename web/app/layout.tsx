@@ -15,10 +15,13 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: 'CRM Dashboard',
   description: 'Business management platform',
-  // Root /favicon.ico (16/32/48) is auto-served from app/favicon.ico. These add
-  // the larger PNGs (PWA / high-DPI) and the iOS apple-touch icon.
+  // Static fallback only: /favicon.ico is the LIGHT (slate D) version, served
+  // from public/favicon.ico. The faviconThemeScript below overrides this at
+  // runtime with the dark/light PNG based on the browser/OS color scheme — the
+  // Next.js metadata API can't express prefers-color-scheme media on icons.
   icons: {
     icon: [
+      { url: '/favicon.ico', sizes: '16x16 32x32 48x48' },
       { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
       { url: '/icon-512.png', type: 'image/png', sizes: '512x512' },
     ],
@@ -30,6 +33,15 @@ export const metadata: Metadata = {
 // prevent a light→dark flash. Falls back silently to light if anything fails.
 const noFlashScript = `(function(){try{var m=document.cookie.match(/(?:^|;\\s*)crm_theme=(light|dark)/);if(m&&m[1]==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`
 
+// Swaps the favicon to match the BROWSER/OS color scheme (not the app theme).
+// prefers-color-scheme media on <link> is unreliable for raster favicons and
+// Next's metadata API can't express it, so we drive it from matchMedia here.
+// Creates a dedicated <link rel="icon" data-theme-favicon> (a PNG, which takes
+// precedence over the static .ico) and live-updates it when the OS theme flips.
+// Defaults to the light icon if matchMedia is unavailable. As a static-string
+// inline script it introduces no hydration mismatch (never reconciled by React).
+const faviconThemeScript = `(function(){try{var mq=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)');function set(d){var href=d?'/favicon-dark.png':'/favicon-light.png';var l=document.querySelector("link[rel='icon'][data-theme-favicon]");if(!l){l=document.createElement('link');l.rel='icon';l.type='image/png';l.setAttribute('data-theme-favicon','');document.head.appendChild(l);}if(l.getAttribute('href')!==href){l.setAttribute('href',href);}}set(mq?mq.matches:false);if(mq){var h=function(e){set(e.matches);};if(mq.addEventListener){mq.addEventListener('change',h);}else if(mq.addListener){mq.addListener(h);}}}catch(e){}})();`
+
 export default function RootLayout({
   children,
 }: {
@@ -39,6 +51,7 @@ export default function RootLayout({
     <html lang="en" className={manrope.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: noFlashScript }} />
+        <script dangerouslySetInnerHTML={{ __html: faviconThemeScript }} />
       </head>
       <body>
         <I18nProvider>
