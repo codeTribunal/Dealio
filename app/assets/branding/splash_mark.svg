@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="20 20 80 70" fill="none">
+  <!-- Mark only (for flutter_svg in the Dart splash). Hex equivalents of the
+       brand HSL: slate #0F172A = hsl(222,47%,11%); blue #3B82F6 = hsl(217,91%,60%).
+       Geometry unchanged from source. -->
+  <path d="M40 25V85H65C72.9565 85 80.5871 81.8393 86.2132 76.2132C91.8393 70.5871 95 62.9565 95 55C95 47.0435 91.8393 39.4129 86.2132 33.7868C80.5871 28.1607 72.9565 25 65 25H40Z"
+        stroke="#0F172A" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M65 55H95C95 62.9565 91.8393 70.5871 86.2132 76.2132C80.5871 81.8393 72.9565 85 65 85V55Z"
+        fill="#3B82F6"/>
+  <circle cx="25" cy="55" r="5" fill="#3B82F6"/>
+</svg>

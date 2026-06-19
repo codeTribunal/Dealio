@@ -55,6 +55,7 @@ class Order {
   final String? notes;
   final Map<String, String> customAnswers;
   final DateTime createdAt;
+  final bool deleted;
 
   const Order({
     required this.id,
@@ -70,6 +71,7 @@ class Order {
     this.notes,
     this.customAnswers = const {},
     required this.createdAt,
+    this.deleted = false,
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -99,6 +101,7 @@ class Order {
       notes: json['notes'] as String?,
       customAnswers: answers,
       createdAt: DateTime.parse(json['createdAt'] as String),
+      deleted: json['deleted'] as bool? ?? false,
     );
   }
 

@@ -261,18 +261,7 @@ export default async function botRoutes(app: FastifyInstance) {
       { type: 'order', orderId: order.id },
     ).catch((err: unknown) => console.error('[push] new order notify failed:', err));
 
-    return reply.status(201).send({
-      order,
-      paymentInstructions: business.cardNumber
-        ? {
-            cardNumber: business.cardNumber,
-            cardBank: business.cardBank,
-            amount: total,
-            orderNumber,
-            reference: `#${orderNumber}`,
-          }
-        : null,
-    });
+    return reply.status(201).send({ order });
   });
 
   // POST /bot/payment-received
@@ -433,8 +422,6 @@ export default async function botRoutes(app: FastifyInstance) {
       business: {
         name: business.name,
         language: business.language,
-        cardNumber: business.cardNumber,
-        cardBank: business.cardBank,
       },
       services,
     });
@@ -540,9 +527,12 @@ export default async function botRoutes(app: FastifyInstance) {
     // Write-time conflict guard — re-validate the requested slot is still free
     // (working hours, day off, blocked time, buffer, overlap). Closes the
     // double-booking TOCTOU gap between availability display and creation.
-    const bookable = await isSlotBookable({ business, service, staff, startTime: start });
-    if (!bookable) {
-      console.log('[bot/appointments] rejected: slot unavailable', startTime);
+    // Bot/customer booking stays STRICT: reject on ANY reason — past,
+    // out-of-hours, or overlap. The "free hand" (past/out-of-hours allowed,
+    // overlap overridable) is an OWNER-only privilege and must never leak here.
+    const slotCheck = await isSlotBookable({ business, service, staff, startTime: start });
+    if (!slotCheck.ok) {
+      console.log('[bot/appointments] rejected: slot unavailable', startTime, slotCheck.reason);
       return reply.status(409).send({
         error: 'SLOT_UNAVAILABLE',
         message: 'The requested time is no longer available.',
@@ -585,10 +575,6 @@ export default async function botRoutes(app: FastifyInstance) {
 
     return reply.status(201).send({
       appointment,
-      paymentInstructions:
-        paymentType === 'IN_ADVANCE' && business.cardNumber
-          ? { cardNumber: business.cardNumber, cardBank: business.cardBank, amount: service.price }
-          : null,
       ownerTelegramChatId: business.ownerTelegramChatId,
     });
   });

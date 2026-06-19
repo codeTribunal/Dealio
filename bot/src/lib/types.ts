@@ -70,11 +70,6 @@ export interface ApiAppointmentResult {
     staff: { id: string; name: string } | null;
     customer: { id: string; name: string; telegramUserId?: string };
   };
-  paymentInstructions: {
-    cardNumber: string;
-    cardBank: string;
-    amount: number;
-  } | null;
   ownerTelegramChatId: string | null;
 }
 
@@ -152,11 +147,4 @@ export interface ApiOrderResult {
     customer: { id: string; name: string; telegramUserId?: string };
     items: Array<{ product: { name: string }; quantity: number; price: number }>;
   };
-  paymentInstructions: {
-    cardNumber: string;
-    cardBank: string;
-    amount: number;
-    orderNumber: number;
-    reference: string;
-  } | null;
 }

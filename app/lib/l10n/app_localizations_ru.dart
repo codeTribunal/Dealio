@@ -140,6 +140,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get navSettings => 'Настройки';
 
   @override
+  String get profileTitle => 'Профиль';
+
+  @override
+  String get profilePhoneLabel => 'Телефон';
+
+  @override
+  String get profilePlanLabel => 'Тариф';
+
+  @override
+  String get profileBusinessSettings => 'Настройки бизнеса';
+
+  @override
   String get navMessages => 'Сообщения';
 
   @override
@@ -677,6 +689,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTelegramBot => 'TELEGRAM-БОТ';
 
   @override
+  String get settingsChangeBot => 'Сменить бота';
+
+  @override
+  String get settingsBotTokenHint =>
+      'Вставьте новый токен от @BotFather, если вы отозвали или заменили бота.';
+
+  @override
+  String get settingsBotTokenUpdated => 'Бот обновлён';
+
+  @override
   String get settingsNoBotConfigured =>
       'Бот не настроен. Обратитесь в поддержку, чтобы настроить бот.';
 
@@ -854,6 +876,12 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get homeHeroTodayOrders => 'Заказы сегодня';
+
+  @override
+  String get homeHeroTodayAppointments => 'Записи сегодня';
+
+  @override
+  String get homeHeroTodayProjects => 'Новые проекты сегодня';
 
   @override
   String get homeStatPending => 'Ожидают оплаты';
@@ -1337,6 +1365,25 @@ class AppLocalizationsRu extends AppLocalizations {
   String get apptFormCreate => 'Создать запись';
 
   @override
+  String get apptEditTitle => 'Изменить запись';
+
+  @override
+  String get apptEdit => 'Изменить';
+
+  @override
+  String get apptStatusLabel => 'Статус';
+
+  @override
+  String get apptConflictTitle => 'Пересекается с существующей записью';
+
+  @override
+  String get apptConflictBody =>
+      'Это время пересекается с другой записью. Всё равно добавить?';
+
+  @override
+  String get apptConflictConfirm => 'Всё равно добавить';
+
+  @override
   String get apptErrSelectCustomer => 'Выберите клиента';
 
   @override
@@ -1554,6 +1601,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get analyticsRevenueThisMonth => 'Выручка за этот месяц';
 
   @override
+  String get analyticsThisMonthShort => 'Этот месяц';
+
+  @override
+  String get analyticsLastMonthShort => 'Прошлый месяц';
+
+  @override
   String analyticsLastMonth(String amount) {
     return 'Прошлый месяц: $amount';
   }
@@ -1565,20 +1618,35 @@ class AppLocalizationsRu extends AppLocalizations {
   String get analyticsAvgOrderValue => 'Средний\nзаказ';
 
   @override
+  String get analyticsAppointmentsThisMonth => 'Записи\nза месяц';
+
+  @override
+  String analyticsApptCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count записей',
+      few: '$count записи',
+      one: '1 запись',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get analyticsPendingPayments => 'Ожидающие оплаты';
 
   @override
   String get analyticsAllReceived => 'Все платежи получены';
 
   @override
-  String get analyticsTopCustomers => 'ЛУЧШИЕ КЛИЕНТЫ — ПОСЛЕДНИЕ 90 ДНЕЙ';
+  String get analyticsTopCustomers => 'Лучшие клиенты — последние 90 дней';
 
   @override
   String get analyticsNoConfirmedOrders =>
-      'Нет подтверждённых заказов за последние 90 дней';
+      'Нет завершённых записей за последние 90 дней';
 
   @override
-  String get analyticsBestSelling => 'САМЫЙ ПРОДАВАЕМЫЙ ТОВАР';
+  String get analyticsBestSelling => 'Самый продаваемый товар';
 
   @override
   String analyticsUnitsSold(int count) {
@@ -1648,6 +1716,24 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get schedulingWorkingHoursSaved => 'Часы работы сохранены';
+
+  @override
+  String get schedulingCopyToWeekdays => 'Скопировать на будни';
+
+  @override
+  String get schedulingCopiedToWeekdays => 'Скопировано на Пн–Пт';
+
+  @override
+  String get schedulingUnavailable => 'Недоступно';
+
+  @override
+  String get schedulingAddHours => 'Добавить часы';
+
+  @override
+  String get schedulingRemoveSlot => 'Удалить';
+
+  @override
+  String get schedulingOverlap => 'Часы работы не должны пересекаться.';
 
   @override
   String get schedulingBlockedTime => 'Заблокированное время';
@@ -1721,4 +1807,43 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsModeDataFreelance => 'проекты';
+
+  @override
+  String get buttonRestore => 'Восстановить';
+
+  @override
+  String get buttonYesDelete => 'Да, удалить';
+
+  @override
+  String get commonShowDeleted => 'Показать удалённые';
+
+  @override
+  String get commonDeletedBadge => 'Удалён';
+
+  @override
+  String get deleteCustomerTitle => 'Удалить этого клиента?';
+
+  @override
+  String get deleteCustomerBody =>
+      'Он будет скрыт из списков вместе с его заказами и записями. Позже можно восстановить.';
+
+  @override
+  String get deleteOrderTitle => 'Удалить этот заказ?';
+
+  @override
+  String get deleteOrderBody =>
+      'Он будет скрыт из списка заказов. Позже можно восстановить.';
+
+  @override
+  String get deleteAppointmentTitle => 'Удалить эту запись?';
+
+  @override
+  String get deleteAppointmentBody =>
+      'Она будет скрыта из списка записей. Позже можно восстановить.';
+
+  @override
+  String get notificationView => 'Открыть';
+
+  @override
+  String get notificationDismiss => 'Скрыть';
 }

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Icon } from '@/components/icons/Icon'
 import { useI18n } from '@/lib/i18n/i18nContext'
 import { updateBusiness } from '@/lib/api'
 import type { Business, WorkingDay, WorkingHours } from '@/types'
@@ -21,18 +22,20 @@ const DAY_ROWS: { key: string; labelKey: string }[] = [
   { key: '0', labelKey: 'daySun' },
 ]
 
-// Weekday keys (Mon–Fri) for "Copy to weekdays".
-const WEEKDAY_KEYS = ['1', '2', '3', '4', '5']
+const DEFAULT_INTERVAL: WorkingDay = { start: '09:00', end: '18:00' }
 
-const DEFAULT_DAY: WorkingDay = { start: '09:00', end: '18:00' }
+function minToHHMM(min: number): string {
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
 
-// Quick presets (24h). Labels are numeric so they need no translation.
-const PRESETS: { label: string; start: string; end: string }[] = [
-  { label: '9–17', start: '09:00', end: '17:00' },
-  { label: '9–18', start: '09:00', end: '18:00' },
-  { label: '10–18', start: '10:00', end: '18:00' },
-  { label: '10–19', start: '10:00', end: '19:00' },
-]
+// Normalize any stored day value (array | legacy single | null) into an array.
+function toIntervals(v: WorkingDay | WorkingDay[] | null | undefined): WorkingDay[] {
+  if (!v) return []
+  if (Array.isArray(v)) return v.map((i) => ({ start: i.start, end: i.end }))
+  return [{ start: v.start, end: v.end }]
+}
 
 function Toggle({ active, onClick }: { active: boolean; onClick: () => void }) {
   return (
@@ -53,17 +56,13 @@ function Toggle({ active, onClick }: { active: boolean; onClick: () => void }) {
   )
 }
 
-function initDays(wh: WorkingHours | null | undefined): Record<string, WorkingDay | null> {
+function initDays(wh: WorkingHours | null | undefined): Record<string, WorkingDay[]> {
   const configured = wh && typeof wh === 'object' && Object.keys(wh).length > 0
-  const result: Record<string, WorkingDay | null> = {}
+  const result: Record<string, WorkingDay[]> = {}
   for (const { key } of DAY_ROWS) {
-    if (!configured) {
-      // Never configured → start the UI all-open 09:00–18:00 (not saved yet).
-      result[key] = { ...DEFAULT_DAY }
-    } else {
-      // Configured: respect the value; a missing day means closed.
-      result[key] = wh![key] ?? null
-    }
+    // Never configured → start open 09:00–18:00 (not saved yet). Otherwise
+    // respect the stored value (array, legacy single, or null = closed).
+    result[key] = configured ? toIntervals(wh![key]) : [{ ...DEFAULT_INTERVAL }]
   }
   return result
 }
@@ -78,7 +77,7 @@ export function WorkingHoursCard({
   notify: (msg: string) => void
 }) {
   const { t } = useI18n()
-  const [days, setDays] = useState<Record<string, WorkingDay | null>>(() =>
+  const [days, setDays] = useState<Record<string, WorkingDay[]>>(() =>
     initDays(business.workingHours)
   )
   const [buffer, setBuffer] = useState<string>(String(business.bufferMinutes ?? 0))
@@ -87,47 +86,63 @@ export function WorkingHoursCard({
 
   function setDayOpen(key: string, open: boolean) {
     setError(null)
-    setDays((prev) => ({ ...prev, [key]: open ? prev[key] ?? { ...DEFAULT_DAY } : null }))
+    setDays((prev) => ({
+      ...prev,
+      [key]: open ? (prev[key].length ? prev[key] : [{ ...DEFAULT_INTERVAL }]) : [],
+    }))
   }
 
-  function setDayTime(key: string, field: 'start' | 'end', val: string) {
+  function setIntervalTime(key: string, idx: number, field: 'start' | 'end', val: string) {
+    setError(null)
+    setDays((prev) => ({
+      ...prev,
+      [key]: prev[key].map((iv, i) => (i === idx ? { ...iv, [field]: val } : iv)),
+    }))
+  }
+
+  function addInterval(key: string) {
     setError(null)
     setDays((prev) => {
-      const cur = prev[key] ?? { ...DEFAULT_DAY }
-      return { ...prev, [key]: { ...cur, [field]: val } }
+      const list = prev[key]
+      const last = list[list.length - 1]
+      // New interval starts where the last ends (a 1h block) — the owner then
+      // pushes its start later to create the break between them.
+      const startMin = last ? Math.min(hhmmToMinutes(last.end), 23 * 60) : 9 * 60
+      const endMin = Math.min(startMin + 60, 23 * 60 + 59)
+      return { ...prev, [key]: [...list, { start: minToHHMM(startMin), end: minToHHMM(endMin) }] }
     })
   }
 
-  function applyPreset(key: string, start: string, end: string) {
+  function removeInterval(key: string, idx: number) {
     setError(null)
-    setDays((prev) => ({ ...prev, [key]: { start, end } }))
-  }
-
-  function copyToWeekdays(key: string) {
-    const source = days[key]
-    if (!source) return
-    setDays((prev) => {
-      const next = { ...prev }
-      for (const wk of WEEKDAY_KEYS) next[wk] = { ...source }
-      return next
-    })
-    notify(t('scheduling.copiedToWeekdays'))
+    setDays((prev) => ({ ...prev, [key]: prev[key].filter((_, i) => i !== idx) }))
   }
 
   async function handleSave() {
-    // Validate: every open day must have start < end.
+    // Validate: every interval start < end, and a day's intervals don't overlap.
     for (const { key } of DAY_ROWS) {
-      const d = days[key]
-      if (d && hhmmToMinutes(d.start) >= hhmmToMinutes(d.end)) {
-        setError(t('scheduling.timeInvalid'))
-        return
+      const list = days[key]
+      for (const iv of list) {
+        if (hhmmToMinutes(iv.start) >= hhmmToMinutes(iv.end)) {
+          setError(t('scheduling.timeInvalid'))
+          return
+        }
+      }
+      const sorted = [...list].sort((a, b) => a.start.localeCompare(b.start))
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i].start < sorted[i - 1].end) {
+          setError(t('scheduling.overlap'))
+          return
+        }
       }
     }
 
-    // Assemble the backend object keyed "0".."6" (0=Sunday). Closed = null.
+    // Assemble the backend object keyed "0".."6". Closed = null; open = intervals.
     const workingHours: WorkingHours = {}
     for (const { key } of DAY_ROWS) {
-      workingHours[key] = days[key] ? { start: days[key]!.start, end: days[key]!.end } : null
+      workingHours[key] = days[key].length
+        ? days[key].map((iv) => ({ start: iv.start, end: iv.end }))
+        : null
     }
     const bufferMinutes = Math.max(0, Math.min(120, Number(buffer) || 0))
 
@@ -151,67 +166,71 @@ export function WorkingHoursCard({
 
       <div className="space-y-2">
         {DAY_ROWS.map(({ key, labelKey }) => {
-          const day = days[key]
-          const open = day !== null
-          const isWeekday = WEEKDAY_KEYS.includes(key)
+          const list = days[key]
+          const open = list.length > 0
           return (
             <div
               key={key}
-              className={`rounded-lg border px-3.5 py-3 transition-colors ${
-                open ? 'border-border bg-surface' : 'border-border bg-surface-2'
+              className={`rounded-lg border border-border px-3.5 py-3 transition-colors ${
+                open ? 'bg-surface' : 'bg-surface-2'
               }`}
             >
-              {/* Row 1: toggle + day + time range (+ copy on the right) */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <Toggle active={open} onClick={() => setDayOpen(key, !open)} />
-                <span className="text-sm font-bold text-text-1 w-24">
-                  {t(`scheduling.${labelKey}`)}
-                </span>
-
-                {open && day ? (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <TimeSelect value={day.start} onChange={(v) => setDayTime(key, 'start', v)} />
-                      <span className="text-text-3">–</span>
-                      <TimeSelect value={day.end} onChange={(v) => setDayTime(key, 'end', v)} />
-                    </div>
-                    {isWeekday && (
-                      <button
-                        type="button"
-                        onClick={() => copyToWeekdays(key)}
-                        className="ml-auto text-xs font-semibold text-accent hover:text-accent-hover transition-colors"
-                      >
-                        {t('scheduling.copyToWeekdays')}
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <span className="text-sm italic text-text-3">
+              {/* Header: toggle + day; "Unavailable" when closed */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Toggle active={open} onClick={() => setDayOpen(key, !open)} />
+                  <span className="text-sm font-bold text-text-1">
+                    {t(`scheduling.${labelKey}`)}
+                  </span>
+                </div>
+                {!open && (
+                  <span className="text-sm italic text-text-3 flex-shrink-0">
                     {t('scheduling.unavailable')}
                   </span>
                 )}
               </div>
 
-              {/* Row 2: quick presets */}
-              {open && day && (
-                <div className="flex flex-wrap gap-1.5 mt-2.5 pl-[3.5rem]">
-                  {PRESETS.map((p) => {
-                    const active = day.start === p.start && day.end === p.end
-                    return (
-                      <button
-                        key={p.label}
-                        type="button"
-                        onClick={() => applyPreset(key, p.start, p.end)}
-                        className={`px-2.5 py-1 rounded-pill text-xs font-semibold tabular-nums transition-colors ${
-                          active
-                            ? 'bg-accent-soft text-accent'
-                            : 'bg-surface border border-border text-text-2 hover:bg-surface-2'
-                        }`}
-                      >
-                        {p.label}
-                      </button>
-                    )
-                  })}
+              {open && (
+                <div className="mt-3 space-y-2">
+                  {/* One row per open interval; the gaps between them are breaks */}
+                  {list.map((iv, idx) => (
+                    <div key={idx} className="flex items-center gap-2.5">
+                      <div className="flex-1">
+                        <TimeSelect
+                          fullWidth
+                          value={iv.start}
+                          onChange={(v) => setIntervalTime(key, idx, 'start', v)}
+                        />
+                      </div>
+                      <span className="text-text-3 flex-shrink-0">–</span>
+                      <div className="flex-1">
+                        <TimeSelect
+                          fullWidth
+                          value={iv.end}
+                          onChange={(v) => setIntervalTime(key, idx, 'end', v)}
+                        />
+                      </div>
+                      {list.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={() => removeInterval(key, idx)}
+                          aria-label={t('scheduling.removeSlot')}
+                          className="flex-shrink-0 p-2 text-text-3 hover:text-error-strong transition-colors"
+                        >
+                          <Icon name="close" size={18} />
+                        </button>
+                      ) : (
+                        <span className="w-[34px] flex-shrink-0" aria-hidden />
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => addInterval(key)}
+                    className="text-xs font-semibold text-accent hover:text-accent-hover transition-colors"
+                  >
+                    + {t('scheduling.addHours')}
+                  </button>
                 </div>
               )}
             </div>

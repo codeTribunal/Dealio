@@ -1,22 +1,39 @@
 import 'package:flutter/material.dart';
 
-/// Design tokens for the "Practical Soft Depth" system on a Cobalt accent.
+/// Design tokens for the "Practical Soft Depth" system on the Dealio blue accent.
 ///
 /// These values are kept IDENTICAL to the web app (`web/app/tokens.css`) so the
 /// Flutter app and the Next.js web app render the same visual language.
 ///
-/// Usage:
+/// ── HSL authoring ──────────────────────────────────────────────────────────
+/// Colors are authored in HSL via [_hsl] (the same clean H S% L% values used in
+/// `web/app/tokens.css`) so shades are easy to make/tweak:
+///   • adjust L (lightness) for lighter/darker shades (hover / active / soft),
+///   • adjust S (saturation) for more/less intensity,
+///   • keep H (hue) constant to stay in the same family.
+/// Because `HSLColor.toColor()` isn't a const expression, the [light]/[dark]
+/// token sets are `static final` (built once at startup). Rendered output is
+/// within ≤1/255 per channel of the prior hex palette — the tiny rounding is
+/// intentional; readable, adjustable HSL is the point.
+///
+/// Usage (unchanged):
 ///   final t = AppTokens.of(context); // picks light/dark by Theme brightness
 ///   Container(color: t.surface, boxShadow: t.shadowMd, ...)
 ///
 /// Color-bearing tokens (which differ between light/dark) live on [AppTokens].
 /// Brightness-independent tokens (radii, spacing, type scale, weights, motion)
 /// live on the small static helper classes below.
+
+/// Authors a [Color] from HSL. [h] in degrees [0,360); [s]/[l] as PERCENTAGES
+/// (0–100) to read exactly like the CSS `hsl(H S% L%)` tokens; [a] is 0–1.
+Color _hsl(double h, double s, double l, [double a = 1.0]) =>
+    HSLColor.fromAHSL(a, h, s / 100.0, l / 100.0).toColor();
+
 @immutable
 class AppTokens {
   final Brightness brightness;
 
-  // ── Accent — Cobalt ──────────────────────────────────────────────────────
+  // ── Accent — Dealio blue ───────────────────────────────────────────────────
   final Color accent;
   final Color accentHover;
   final Color accentActive;
@@ -53,7 +70,7 @@ class AppTokens {
   final List<BoxShadow> shadowMd;
   final List<BoxShadow> shadowLg;
 
-  /// Cobalt-tinted glow for accent/primary affordances (`--shadow-accent`).
+  /// Accent-tinted glow for accent/primary affordances (`--shadow-accent`).
   final List<BoxShadow> shadowAccent;
 
   /// Neumorphic raised pair — RESERVED for quick-action tiles only
@@ -105,167 +122,169 @@ class AppTokens {
       Theme.of(context).brightness == Brightness.dark ? dark : light;
 
   // ───────────────────────────── LIGHT ────────────────────────────────────
-  static const AppTokens light = AppTokens._(
+  // `final` (not `const`): _hsl() / HSLColor.toColor() are not const.
+  static final AppTokens light = AppTokens._(
     brightness: Brightness.light,
 
-    accent: Color(0xFF2563EB),
-    accentHover: Color(0xFF1D4ED8),
-    accentActive: Color(0xFF1E40AF),
-    accentSoft: Color(0xFFEAF0FF),
-    accentOn: Color(0xFFFFFFFF),
+    // Brand blue (Dealio). Darker shades drop L (60 → 53 → 48); soft = high L.
+    accent: _hsl(217, 91, 60),
+    accentHover: _hsl(221, 83, 53),
+    accentActive: _hsl(224, 76, 48),
+    accentSoft: _hsl(223, 100, 96),
+    accentOn: _hsl(0, 0, 100),
 
-    success: Color(0xFF16A34A),
-    successSoft: Color(0xFFDCFCE7),
-    successStrong: Color(0xFF15803D),
-    warning: Color(0xFFD97706),
-    warningSoft: Color(0xFFFEF3C7),
-    warningStrong: Color(0xFFB45309),
-    error: Color(0xFFDC2626),
-    errorSoft: Color(0xFFFEE2E2),
-    errorStrong: Color(0xFFB91C1C),
+    success: _hsl(142, 76, 36),
+    successSoft: _hsl(140.6, 84.2, 92.5),
+    successStrong: _hsl(142, 72, 29),
+    warning: _hsl(32.1, 94.6, 43.7),
+    warningSoft: _hsl(48, 96, 89),
+    warningStrong: _hsl(26, 90, 37),
+    error: _hsl(0, 72.2, 50.6),
+    errorSoft: _hsl(0, 93, 94),
+    errorStrong: _hsl(0, 74, 42),
 
-    bg: Color(0xFFEEF2FB),
-    surface: Color(0xFFFFFFFF),
-    surface2: Color(0xFFF7F9FE),
-    border: Color(0xFFE3EAFA),
-    borderStrong: Color(0xFFD4DDEE),
+    bg: _hsl(222, 62, 96),
+    surface: _hsl(0, 0, 100),
+    surface2: _hsl(223, 78, 98),
+    border: _hsl(221.7, 69.7, 93.5),
+    borderStrong: _hsl(219, 43, 88),
 
-    text1: Color(0xFF1A2540),
-    text2: Color(0xFF6B7A9C),
-    text3: Color(0xFF97A3BC),
+    text1: _hsl(223, 42, 18),
+    text2: _hsl(222, 20, 52),
+    text3: _hsl(220.5, 21.6, 66.5),
 
-    // --shadow-sm: 0 1px 2px rgba(26,37,64,.05),
-    //             0 4px 12px -8px rgba(26,37,64,.12)
+    // --shadow-sm: 0 1px 2px hsla(223 42% 18% / .05),
+    //             0 4px 12px -8px hsla(223 42% 18% / .12)
     shadowSm: [
       BoxShadow(
-        color: Color(0x0D1A2540), // .05
-        offset: Offset(0, 1),
+        color: _hsl(223, 42, 18, .05),
+        offset: const Offset(0, 1),
         blurRadius: 2,
       ),
       BoxShadow(
-        color: Color(0x1F1A2540), // .12
-        offset: Offset(0, 4),
+        color: _hsl(223, 42, 18, .12),
+        offset: const Offset(0, 4),
         blurRadius: 12,
         spreadRadius: -8,
       ),
     ],
-    // --shadow-md: 0 8px 20px -12px rgba(26,37,64,.18)
+    // --shadow-md: 0 8px 20px -12px hsla(223 42% 18% / .18)
     shadowMd: [
       BoxShadow(
-        color: Color(0x2E1A2540), // .18
-        offset: Offset(0, 8),
+        color: _hsl(223, 42, 18, .18),
+        offset: const Offset(0, 8),
         blurRadius: 20,
         spreadRadius: -12,
       ),
     ],
-    // --shadow-lg: 0 16px 40px -20px rgba(26,37,64,.28)
+    // --shadow-lg: 0 16px 40px -20px hsla(223 42% 18% / .28)
     shadowLg: [
       BoxShadow(
-        color: Color(0x471A2540), // .28
-        offset: Offset(0, 16),
+        color: _hsl(223, 42, 18, .28),
+        offset: const Offset(0, 16),
         blurRadius: 40,
         spreadRadius: -20,
       ),
     ],
-    // --shadow-accent: 0 12px 26px -10px rgba(37,99,235,.45)
+    // --shadow-accent: 0 12px 26px -10px hsla(217 91% 60% / .45)
     shadowAccent: [
       BoxShadow(
-        color: Color(0x732563EB), // .45
-        offset: Offset(0, 12),
+        color: _hsl(217, 91, 60, .45),
+        offset: const Offset(0, 12),
         blurRadius: 26,
         spreadRadius: -10,
       ),
     ],
-    // --shadow-neu: 5px 5px 12px #d2dbef, -5px -5px 12px #ffffff
+    // --shadow-neu: 5px 5px 12px hsl(221 48% 88%), -5px -5px 12px hsl(0 0% 100%)
     neuRaised: [
       BoxShadow(
-        color: Color(0xFFFFFFFF),
-        offset: Offset(-5, -5),
+        color: _hsl(0, 0, 100),
+        offset: const Offset(-5, -5),
         blurRadius: 12,
       ),
       BoxShadow(
-        color: Color(0xFFD2DBEF),
-        offset: Offset(5, 5),
+        color: _hsl(221, 48, 88),
+        offset: const Offset(5, 5),
         blurRadius: 12,
       ),
     ],
     // Pressed residual approximating --shadow-neu-inset.
     neuPressed: [
       BoxShadow(
-        color: Color(0x141A2540), // ~.08
-        offset: Offset(0, 1),
+        color: _hsl(223, 42, 18, .08),
+        offset: const Offset(0, 1),
         blurRadius: 3,
       ),
     ],
   );
 
   // ───────────────────────────── DARK ─────────────────────────────────────
-  static const AppTokens dark = AppTokens._(
+  static final AppTokens dark = AppTokens._(
     brightness: Brightness.dark,
 
-    accent: Color(0xFF3B82F6),
-    accentHover: Color(0xFF60A5FA),
-    accentActive: Color(0xFF93C5FD),
-    accentSoft: Color(0x293B82F6), // rgba(59,130,246,.16)
-    accentOn: Color(0xFF0B1322),
+    accent: _hsl(217, 91, 60),
+    accentHover: _hsl(213, 94, 68),
+    accentActive: _hsl(211.7, 96.4, 78.4),
+    accentSoft: _hsl(217, 91, 60, .16),
+    accentOn: _hsl(219, 51, 9),
 
-    success: Color(0xFF22C55E),
-    successSoft: Color(0x2922C55E), // .16
-    successStrong: Color(0xFF4ADE80),
-    warning: Color(0xFFF59E0B),
-    warningSoft: Color(0x29F59E0B), // .16
-    warningStrong: Color(0xFFFBBF24),
-    error: Color(0xFFF87171),
-    errorSoft: Color(0x29F87171), // .16
-    errorStrong: Color(0xFFFCA5A5),
+    success: _hsl(142, 71, 45),
+    successSoft: _hsl(142, 71, 45, .16),
+    successStrong: _hsl(142, 69, 58),
+    warning: _hsl(38, 92, 50),
+    warningSoft: _hsl(38, 92, 50, .16),
+    warningStrong: _hsl(43.3, 96.4, 56.3),
+    error: _hsl(0, 91, 71),
+    errorSoft: _hsl(0, 91, 71, .16),
+    errorStrong: _hsl(0, 94, 82),
 
-    bg: Color(0xFF0B1322),
-    surface: Color(0xFF111B2E),
-    surface2: Color(0xFF0E1626),
-    border: Color(0xFF22324D),
-    borderStrong: Color(0xFF2C3E5C),
+    bg: _hsl(219, 51, 9),
+    surface: _hsl(219, 46, 12),
+    surface2: _hsl(220, 46, 10),
+    border: _hsl(218, 39, 22),
+    borderStrong: _hsl(218, 35, 27),
 
-    text1: Color(0xFFEEF3FB),
-    text2: Color(0xFF8DA0C0),
-    text3: Color(0xFF5D7299),
+    text1: _hsl(217, 62, 96),
+    text2: _hsl(218, 29, 65),
+    text3: _hsl(219, 24, 48),
 
-    // --shadow-sm: 0 1px 2px rgba(0,0,0,.3), 0 6px 16px -10px rgba(0,0,0,.5)
+    // --shadow-sm: 0 1px 2px hsla(0 0% 0% / .3), 0 6px 16px -10px hsla(0 0% 0% / .5)
     shadowSm: [
       BoxShadow(
-        color: Color(0x4D000000), // .30
-        offset: Offset(0, 1),
+        color: _hsl(0, 0, 0, .30),
+        offset: const Offset(0, 1),
         blurRadius: 2,
       ),
       BoxShadow(
-        color: Color(0x80000000), // .50
-        offset: Offset(0, 6),
+        color: _hsl(0, 0, 0, .50),
+        offset: const Offset(0, 6),
         blurRadius: 16,
         spreadRadius: -10,
       ),
     ],
-    // --shadow-md: 0 8px 24px -12px rgba(0,0,0,.55)
+    // --shadow-md: 0 8px 24px -12px hsla(0 0% 0% / .55)
     shadowMd: [
       BoxShadow(
-        color: Color(0x8C000000), // .55
-        offset: Offset(0, 8),
+        color: _hsl(0, 0, 0, .55),
+        offset: const Offset(0, 8),
         blurRadius: 24,
         spreadRadius: -12,
       ),
     ],
-    // --shadow-lg: 0 16px 40px -18px rgba(0,0,0,.65)
+    // --shadow-lg: 0 16px 40px -18px hsla(0 0% 0% / .65)
     shadowLg: [
       BoxShadow(
-        color: Color(0xA6000000), // .65
-        offset: Offset(0, 16),
+        color: _hsl(0, 0, 0, .65),
+        offset: const Offset(0, 16),
         blurRadius: 40,
         spreadRadius: -18,
       ),
     ],
-    // --shadow-accent: 0 12px 26px -10px rgba(59,130,246,.5)
+    // --shadow-accent: 0 12px 26px -10px hsla(217 91% 60% / .5)
     shadowAccent: [
       BoxShadow(
-        color: Color(0x803B82F6), // .50
-        offset: Offset(0, 12),
+        color: _hsl(217, 91, 60, .50),
+        offset: const Offset(0, 12),
         blurRadius: 26,
         spreadRadius: -10,
       ),
@@ -274,22 +293,22 @@ class AppTokens {
     // falls back to --shadow-sm).
     neuRaised: [
       BoxShadow(
-        color: Color(0x4D000000),
-        offset: Offset(0, 1),
+        color: _hsl(0, 0, 0, .30),
+        offset: const Offset(0, 1),
         blurRadius: 2,
       ),
       BoxShadow(
-        color: Color(0x80000000),
-        offset: Offset(0, 6),
+        color: _hsl(0, 0, 0, .50),
+        offset: const Offset(0, 6),
         blurRadius: 16,
         spreadRadius: -10,
       ),
     ],
-    // --shadow-neu-inset (dark): inset 0 1px 2px rgba(0,0,0,.4)
+    // --shadow-neu-inset (dark): inset 0 1px 2px hsla(0 0% 0% / .4)
     neuPressed: [
       BoxShadow(
-        color: Color(0x66000000), // .40
-        offset: Offset(0, 1),
+        color: _hsl(0, 0, 0, .40),
+        offset: const Offset(0, 1),
         blurRadius: 2,
       ),
     ],

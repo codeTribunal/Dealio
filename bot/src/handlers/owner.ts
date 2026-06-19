@@ -1,58 +1,9 @@
 import { InlineKeyboard } from 'grammy';
 import { MyContext } from '../lib/types.js';
-import { notifyPaymentReceived, confirmPayment, SuspendedError, SUSPENSION_MESSAGE } from '../lib/api.js';
-import { formatUZS } from '../lib/format.js';
+import { confirmPayment, SuspendedError, SUSPENSION_MESSAGE } from '../lib/api.js';
 import { t, resolveLang } from '../lib/i18n.js';
-import { getLang } from '../lib/lang.js';
 
 export function registerOwnerHandlers(bot: import('grammy').Bot<MyContext>) {
-  // Customer taps "I have paid"
-  bot.callbackQuery(/^paid:(.+)$/, async (ctx) => {
-    await ctx.answerCallbackQuery('Processing...');
-    const lang = await getLang(ctx);
-
-    const orderId = ctx.match[1];
-
-    let result: Awaited<ReturnType<typeof notifyPaymentReceived>>;
-    try {
-      result = await notifyPaymentReceived(ctx.botUsername, orderId);
-    } catch (err: unknown) {
-      if (err instanceof SuspendedError) {
-        await ctx.reply(t(lang, 'suspended'));
-        return;
-      }
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      if (msg === 'Payment already confirmed') {
-        await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() });
-        await ctx.reply(t(lang, 'paymentAlreadyConfirmed'));
-      } else {
-        await ctx.reply(t(lang, 'genericError'));
-      }
-      return;
-    }
-
-    await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() });
-    await ctx.reply(t(lang, 'paymentNotificationReceived'));
-
-    const { notification } = result;
-    if (notification.ownerTelegramChatId) {
-      try {
-        await bot.api.sendMessage(
-          notification.ownerTelegramChatId,
-          `💰 <b>${notification.customerName}</b> has paid for order <b>#${notification.orderNumber}</b>\n\n` +
-            `Amount: <b>${formatUZS(notification.total)}</b>\n\n` +
-            `Tap below to confirm:`,
-          {
-            parse_mode: 'HTML',
-            reply_markup: new InlineKeyboard().text('✅ Mark as paid', `mark_paid:${notification.orderId}`),
-          },
-        );
-      } catch {
-        // Owner Telegram notification failed silently — payment was still recorded
-      }
-    }
-  });
-
   // Owner taps "Mark as paid" from Telegram notification
   bot.callbackQuery(/^mark_paid:(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery('Confirming...');

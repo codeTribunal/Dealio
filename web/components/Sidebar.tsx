@@ -1,9 +1,8 @@
 'use client'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { Icon, type IconName } from '@/components/icons/Icon'
-import { Button } from '@/components/ui/Button'
-import { clearToken } from '@/lib/auth'
+import { DealioMark } from '@/components/icons/DealioMark'
 import { useBusiness } from '@/lib/businessContext'
 import { useI18n } from '@/lib/i18n/i18nContext'
 
@@ -20,7 +19,6 @@ interface NavItem {
 
 export default function Sidebar({ onNavigate }: SidebarProps) {
   const pathname = usePathname()
-  const router = useRouter()
   const { business } = useBusiness()
   const { t } = useI18n()
 
@@ -44,20 +42,11 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
     return item.modes.includes(business.mode)
   })
 
-  function handleSignOut() {
-    clearToken()
-    router.replace('/welcome')
-  }
-
-  const brandInitial = business?.name?.[0]?.toUpperCase() ?? '·'
-
   return (
     <div className="w-60 h-screen bg-surface border-r border-border flex flex-col flex-shrink-0">
-      {/* Brand */}
+      {/* Brand — Dealio mark on the surface (transparent), business name beside it */}
       <div className="p-5 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-md bg-accent text-accent-on flex items-center justify-center font-extrabold text-sm shadow-accent">
-          {brandInitial}
-        </div>
+        <DealioMark size={36} className="flex-shrink-0" />
         <div className="min-w-0">
           <p className="text-sm font-bold text-text-1 truncate">
             {business ? business.name : t('common.loading')}
@@ -89,20 +78,6 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
           )
         })}
       </nav>
-
-      {/* Sign out */}
-      <div className="mt-auto border-t border-border p-3">
-        <Button
-          variant="ghost"
-          size="md"
-          fullWidth
-          leftIcon="logout"
-          onClick={handleSignOut}
-          className="justify-start"
-        >
-          {t('common.signOut')}
-        </Button>
-      </div>
     </div>
   )
 }

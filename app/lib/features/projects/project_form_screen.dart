@@ -105,6 +105,7 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                     DropdownButtonFormField<Customer>(
                       decoration: _decoration(context),
                       dropdownColor: t.surface,
+                      borderRadius: AppRadii.md,
                       style: TextStyle(color: t.text1),
                       // ignore: deprecated_member_use
                       value: _selectedCustomer,

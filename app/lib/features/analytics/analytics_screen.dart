@@ -44,8 +44,6 @@ class AnalyticsScreen extends ConsumerWidget {
               _PendingPaymentsCard(data: data),
               const SizedBox(height: AppSpacing.s4),
               _TopCustomersCard(data: data),
-              const SizedBox(height: AppSpacing.s4),
-              _BestSellingCard(data: data),
               const SizedBox(height: AppSpacing.s6),
             ],
           ),
@@ -79,33 +77,43 @@ class _RevenueCard extends StatelessWidget {
     double frac(int v) => maxRev <= 0 ? 0 : (v / maxRev).clamp(0.0, 1.0);
 
     return Column(
+      // Stretch so the hero (and comparison card) fill the width instead of
+      // shrinking to their content — no more lonely centred card.
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         HeroCard(
           label: l.analyticsRevenueThisMonth,
           value: formatUZS(data.revenueThisMonth),
           sub: changeText,
         ),
-        const SizedBox(height: AppSpacing.s3),
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _ComparisonBar(
-                label: l.analyticsRevenueThisMonth,
-                value: formatUZS(data.revenueThisMonth),
-                fraction: frac(data.revenueThisMonth),
-                color: t.accent,
-              ),
-              const SizedBox(height: AppSpacing.s3),
-              _ComparisonBar(
-                label: l.analyticsLastMonth(''),
-                value: formatUZS(data.revenueLastMonth),
-                fraction: frac(data.revenueLastMonth),
-                color: t.text3,
-              ),
-            ],
+        // Only show the this-vs-last comparison once there's revenue to compare.
+        // With both months at zero it would just repeat the hero's "0" beside
+        // two empty bars, so the hero alone says it more clearly. The bar labels
+        // are short periods ("This month" / "Last month") so the first bar isn't
+        // a verbatim echo of the hero.
+        if (maxRev > 0) ...[
+          const SizedBox(height: AppSpacing.s3),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ComparisonBar(
+                  label: l.analyticsThisMonthShort,
+                  value: formatUZS(data.revenueThisMonth),
+                  fraction: frac(data.revenueThisMonth),
+                  color: t.accent,
+                ),
+                const SizedBox(height: AppSpacing.s3),
+                _ComparisonBar(
+                  label: l.analyticsLastMonthShort,
+                  value: formatUZS(data.revenueLastMonth),
+                  fraction: frac(data.revenueLastMonth),
+                  color: t.text3,
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -186,15 +194,14 @@ class _QuickStatsRow extends StatelessWidget {
         Expanded(
           child: AppStatCard(
             label: l.analyticsCompletedThisMonth,
-            value: data.ordersCompletedThisMonth.toString(),
+            value: data.completedThisMonth.toString(),
           ),
         ),
         const SizedBox(width: AppSpacing.s3),
         Expanded(
           child: AppStatCard(
-            label: l.analyticsAvgOrderValue,
-            value: formatUZS(data.averageOrderValue),
-            money: true,
+            label: l.analyticsAppointmentsThisMonth,
+            value: data.appointmentsThisMonth.toString(),
           ),
         ),
       ],
@@ -357,7 +364,7 @@ class _TopCustomerRow extends StatelessWidget {
                         color: t.text1),
                   ),
                   Text(
-                    l.homeOrdersCount(customer.orderCount),
+                    l.analyticsApptCount(customer.appointmentCount),
                     style: TextStyle(
                         color: t.text3, fontSize: AppTextSizes.caption),
                   ),
@@ -375,71 +382,6 @@ class _TopCustomerRow extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ── Best selling product card ────────────────────────────────────────
-
-class _BestSellingCard extends StatelessWidget {
-  final AnalyticsData data;
-  const _BestSellingCard({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
-    final product = data.bestSellingProduct;
-
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppCardHeader(title: l.analyticsBestSelling),
-          const SizedBox(height: AppSpacing.s3),
-          if (product == null)
-            Text(
-              l.ordersEmpty,
-              style: TextStyle(color: t.text3, fontSize: AppTextSizes.sm),
-            )
-          else
-            Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: t.accentSoft,
-                    borderRadius: AppRadii.md,
-                  ),
-                  child: AppIcon(
-                      name: AppIconName.catalog, size: 20, color: t.accent),
-                ),
-                const SizedBox(width: AppSpacing.s3),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.name,
-                        style: TextStyle(
-                            fontWeight: AppFontWeights.bold,
-                            fontSize: AppTextSizes.base,
-                            color: t.text1),
-                      ),
-                      Text(
-                        l.analyticsUnitsSold(product.unitsSold),
-                        style: TextStyle(
-                            color: t.text3, fontSize: AppTextSizes.caption),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-        ],
       ),
     );
   }

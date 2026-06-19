@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { Icon } from '@/components/icons/Icon'
 import { useI18n } from '@/lib/i18n/i18nContext'
-import { formatUZS } from '@/lib/format'
+import { formatUZS, currencyWord } from '@/lib/format'
 import {
   getProducts,
   createProduct,
@@ -369,7 +369,7 @@ export default function CatalogPage() {
               {/* Price */}
               <div>
                 <label className="block text-sm font-medium text-text-1 mb-1.5">
-                  Price (UZS) *
+                  Price ({currencyWord()}) *
                 </label>
                 <Input
                   type="number"

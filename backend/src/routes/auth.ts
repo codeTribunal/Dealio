@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { sendError } from '../lib/errors.js';
+import { normalizePhone } from '../lib/phone.js';
 import { CURRENT_POLICY_VERSION } from '../lib/policyVersion.js';
 import { issueAuthCode, verifyAuthCode } from '../services/otp.js';
 import { createLinkToken } from '../services/platformAuth.js';
@@ -216,7 +217,9 @@ export default async function authRoutes(app: FastifyInstance) {
       const parsed = loginRequestBody.safeParse(request.body);
       if (!parsed.success) return sendError(reply, 400, 'Invalid phone number');
 
-      const { phone } = parsed.data;
+      // Canonicalize so a number typed in any format matches the stored E.164
+      // form (and the issued LOGIN code is keyed to the same canonical phone).
+      const phone = normalizePhone(parsed.data.phone);
 
       const user = await prisma.user.findUnique({
         where: { phone },
@@ -277,7 +280,10 @@ export default async function authRoutes(app: FastifyInstance) {
       const parsed = loginVerifyBody.safeParse(request.body);
       if (!parsed.success) return sendError(reply, 400, 'Invalid request body');
 
-      const { phone, code, generalConsent, crossBorderConsent } = parsed.data;
+      const { code, generalConsent, crossBorderConsent } = parsed.data;
+      // Same canonicalization as /login/request so the code (keyed by canonical
+      // phone) verifies and the user lookup below matches the stored form.
+      const phone = normalizePhone(parsed.data.phone);
 
       const result = await verifyAuthCode(phone, code, 'LOGIN');
       if (!result.ok) {

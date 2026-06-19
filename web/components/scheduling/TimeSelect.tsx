@@ -17,10 +17,12 @@ export function TimeSelect({
   value,
   onChange,
   disabled = false,
+  fullWidth = false,
 }: {
   value: string
   onChange: (next: string) => void
   disabled?: boolean
+  fullWidth?: boolean
 }) {
   // If the stored value isn't on the 30-min grid, keep it as a selectable option.
   const options = OPTIONS.includes(value) ? OPTIONS : [value, ...OPTIONS]
@@ -29,7 +31,9 @@ export function TimeSelect({
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
-      className="bg-surface-2 border border-border rounded-pill py-2 pl-4 pr-3 text-sm font-semibold text-text-1 tabular-nums cursor-pointer focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors disabled:opacity-50"
+      className={`${
+        fullWidth ? 'w-full ' : ''
+      }bg-surface-2 border border-border rounded-pill py-2 pl-4 pr-3 text-sm font-semibold text-text-1 tabular-nums cursor-pointer focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors disabled:opacity-50`}
     >
       {options.map((o) => (
         <option key={o} value={o}>

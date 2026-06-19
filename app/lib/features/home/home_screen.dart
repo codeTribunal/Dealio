@@ -9,7 +9,6 @@ import '../../core/auth/auth_notifier.dart';
 import '../../core/icons/app_icon.dart';
 import '../../core/models/customer.dart';
 import '../../core/models/order.dart';
-import '../../core/providers/business_provider.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
@@ -42,10 +41,21 @@ class HomeScreen extends ConsumerWidget {
             tooltip: l.navAnalytics,
             onPressed: () => context.push('/analytics'),
           ),
-          IconButton(
-            icon: AppIcon(name: AppIconName.settings, color: t.text1),
-            tooltip: l.navSettings,
-            onPressed: () => context.push('/settings'),
+          // Account/profile entry (replaces the old Settings gear, which just
+          // duplicated the bottom-nav Settings tab). Settings is still in the
+          // bottom bar; this opens the owner's profile/account.
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.s3),
+            child: Tooltip(
+              message: l.profileTitle,
+              child: GestureDetector(
+                onTap: () => context.push('/profile'),
+                child: AppAvatar(
+                  name: auth.state?.business?.name ?? 'CRM',
+                  size: AppAvatarSize.sm,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -83,12 +93,29 @@ class HomeScreen extends ConsumerWidget {
             ];
             activityItems.sort((a, b) => b.time.compareTo(a.time));
 
+            // Headline metric follows the business mode: appointments for a
+            // services business, projects for freelance, orders for products.
+            final mode = auth.state?.business?.mode ?? 'SERVICES';
+            final String heroLabel;
+            final int heroCount;
+            if (mode == 'FREELANCE') {
+              heroLabel = l.homeHeroTodayProjects;
+              heroCount = data.todayProjects.length;
+            } else if (mode == 'PRODUCTS') {
+              heroLabel = l.homeHeroTodayOrders;
+              heroCount = data.todayOrders.length;
+            } else {
+              heroLabel = l.homeHeroTodayAppointments;
+              heroCount = data.todayAppointments.length;
+            }
+
             return RefreshIndicator(
               color: t.accent,
               onRefresh: () => ref.read(homeProvider.notifier).refresh(),
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.s4, AppSpacing.s4, AppSpacing.s4, AppSpacing.s6),
+                padding: EdgeInsets.fromLTRB(AppSpacing.s4, AppSpacing.s4,
+                    AppSpacing.s4,
+                    AppSpacing.s6 + MediaQuery.of(context).padding.bottom),
                 children: [
                   // Greeting
                   _Greeting(businessName: data.businessName),
@@ -98,10 +125,10 @@ class HomeScreen extends ConsumerWidget {
                   const _SearchBar(),
                   const SizedBox(height: AppSpacing.s5),
 
-                  // Headline metric — today's orders
+                  // Headline metric — mode-aware (appointments / projects / orders)
                   HeroCard(
-                    label: l.homeHeroTodayOrders,
-                    value: '${data.todayOrders.length}',
+                    label: heroLabel,
+                    value: '$heroCount',
                     sub: l.homePendingPaymentsCount(data.pendingPayments.length),
                   ),
                   const SizedBox(height: AppSpacing.s4),
@@ -110,9 +137,8 @@ class HomeScreen extends ConsumerWidget {
                   _StatRow(data: data),
                   const SizedBox(height: AppSpacing.s5),
 
-                  // Quick nav grid (mode-filtered)
-                  const _QuickActionsGrid(),
-                  const SizedBox(height: AppSpacing.s6),
+                  // Quick actions — secondary tools that aren't in the bottom nav
+                  _QuickActionsGrid(mode: mode),
 
                   // Needs attention
                   if (data.hasAttentionItems) ...[
@@ -201,27 +227,31 @@ class _StatRow extends StatelessWidget {
     final l = AppLocalizations.of(context)!;
     final pendingTotal =
         data.pendingPayments.fold<int>(0, (sum, p) => sum + p.total);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          // Product-seller mode disabled — the Orders route is unreachable,
-          // so this metric is shown but no longer links there.
-          child: AppStatCard(
-            label: l.homeStatPending,
-            value: formatUZS(pendingTotal),
-            money: true,
+    // IntrinsicHeight + stretch keeps both cards the same height even when one
+    // label wraps to two lines and the other doesn't.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            // Product-seller mode disabled — the Orders route is unreachable,
+            // so this metric is shown but no longer links there.
+            child: AppStatCard(
+              label: l.homeStatPending,
+              value: formatUZS(pendingTotal),
+              money: pendingTotal > 0,
+            ),
           ),
-        ),
-        const SizedBox(width: AppSpacing.s3),
-        Expanded(
-          child: AppStatCard(
-            label: l.homeStatNewCustomers,
-            value: '${data.newCustomers.length}',
-            onTap: () => context.push('/customers'),
+          const SizedBox(width: AppSpacing.s3),
+          Expanded(
+            child: AppStatCard(
+              label: l.homeStatNewCustomers,
+              value: '${data.newCustomers.length}',
+              onTap: () => context.push('/customers'),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -431,38 +461,36 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
 
 // ── Quick actions ────────────────────────────────────────────────────
 
-class _QuickActionsGrid extends ConsumerWidget {
-  const _QuickActionsGrid();
+class _QuickActionsGrid extends StatelessWidget {
+  final String mode;
+  const _QuickActionsGrid({required this.mode});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final business = ref.watch(businessProvider).valueOrNull;
-    final mode = business?.mode ?? 'SERVICES';
-
-    // Product-seller mode disabled — Orders & Catalog quick actions removed.
-    // Their routes still exist but are unreachable from the home screen.
+    // Only secondary tools that have NO bottom-nav tab, so nothing here just
+    // mirrors the bar (Customers / Appointments / Projects / Settings live
+    // there; Analytics and the account avatar are in the app bar).
     final items = <QuickActionItem>[
-      QuickActionItem(
-        icon: AppIconName.customers,
-        label: l.navCustomers,
-        onTap: () => context.push('/customers'),
-      ),
-      if (mode == 'SERVICES')
+      if (mode == 'SERVICES') ...[
         QuickActionItem(
-          icon: AppIconName.calendar,
-          label: l.navAppointments,
-          onTap: () => context.push('/appointments'),
+          icon: AppIconName.catalog,
+          label: l.navServices,
+          onTap: () => context.push('/services'),
         ),
-      if (mode == 'FREELANCE')
         QuickActionItem(
-          icon: AppIconName.projects,
-          label: l.navProjects,
-          onTap: () => context.push('/projects'),
+          icon: AppIconName.staff,
+          label: l.navStaff,
+          onTap: () => context.push('/staff'),
         ),
+      ],
     ];
-
-    return QuickActions(items: items);
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.s6),
+      // columns == item count so the tiles always fill the row (no empty gap).
+      child: QuickActions(items: items, columns: items.length),
+    );
   }
 }
 

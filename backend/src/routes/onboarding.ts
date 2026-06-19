@@ -18,8 +18,6 @@ const completeBody = z.object({
   mode: z.enum(['SERVICES', 'FREELANCE']),
   language: z.enum(['UZBEK', 'RUSSIAN', 'ENGLISH']),
   botToken: z.string().regex(BOT_TOKEN_REGEX, 'Invalid bot token format'),
-  cardNumber: z.string().optional(),
-  cardBank: z.enum(['UZCARD', 'HUMO']).optional(),
 });
 
 interface TelegramBotInfo {
@@ -90,7 +88,7 @@ export default async function onboardingRoutes(app: FastifyInstance) {
       if (!parsed.success) {
         return sendError(reply, 400, parsed.error.issues[0].message);
       }
-      const { businessName, mode, language, botToken, cardNumber, cardBank } = parsed.data;
+      const { businessName, mode, language, botToken } = parsed.data;
 
       const existingBusiness = await prisma.business.findUnique({
         where: { ownerId: request.user.userId },
@@ -122,8 +120,6 @@ export default async function onboardingRoutes(app: FastifyInstance) {
           botTokenIv: encrypted.iv,
           botTokenTag: encrypted.tag,
           botUsername: tg.username,
-          cardNumber: cardNumber ?? null,
-          cardBank: cardBank ?? null,
           ownerId: request.user.userId,
           plan: 'FREE',
         },

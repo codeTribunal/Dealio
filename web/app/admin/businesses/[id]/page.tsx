@@ -11,8 +11,11 @@ import {
   suspendBusiness,
   unsuspendBusiness,
   impersonateBusiness,
+  eraseBusiness,
+  getAdminRole,
 } from '@/lib/adminApi'
-import { formatUZS, formatDate, formatRelativeTime, getInitials } from '@/lib/format'
+import { formatDate, getInitials } from '@/lib/format'
+import BusinessDataManager from '@/components/admin/BusinessDataManager'
 
 type RecentOrder = {
   id: string
@@ -62,6 +65,11 @@ export default function AdminBusinessDetailPage() {
   const [saving, setSaving] = useState(false)
   const [impersonating, setImpersonating] = useState(false)
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
+  const [showEraseModal, setShowEraseModal] = useState(false)
+  const [eraseConfirmText, setEraseConfirmText] = useState('')
+  const [erasing, setErasing] = useState(false)
+  const [eraseCounts, setEraseCounts] = useState<Record<string, number> | null>(null)
+  const role = getAdminRole()
 
   useEffect(() => {
     getAdminBusiness(id)
@@ -129,6 +137,18 @@ export default function AdminBusinessDetailPage() {
       showSaved('Plan updated')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleErase = async () => {
+    if (!business || eraseConfirmText !== business.name) return
+    setErasing(true)
+    try {
+      const res = await eraseBusiness(id)
+      setEraseCounts(res.tableCounts)
+    } catch {
+      showSaved('Erase failed')
+      setErasing(false)
     }
   }
 
@@ -280,66 +300,35 @@ export default function AdminBusinessDetailPage() {
                 )}
               </div>
             </div>
+
+            {/* Danger zone — irreversible erasure (super-admin only) */}
+            {role === 'SUPER_ADMIN' && (
+              <div className="bg-gray-900 rounded-2xl border border-red-900/60 p-5">
+                <p className="text-xs text-red-400 uppercase tracking-wider mb-2 font-semibold">
+                  Danger zone
+                </p>
+                <p className="text-xs text-gray-500 mb-3">
+                  Permanently erase this business and its owner account — all customers, orders,
+                  appointments and projects. Irreversible (not a recoverable delete). The audit
+                  record is kept.
+                </p>
+                <button
+                  onClick={() => {
+                    setEraseConfirmText('')
+                    setEraseCounts(null)
+                    setShowEraseModal(true)
+                  }}
+                  className="w-full py-2.5 bg-red-700 text-white rounded-xl text-xs font-bold hover:bg-red-800 transition-colors"
+                >
+                  Erase entire business
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Right column */}
           <div className="flex-1 min-w-0 space-y-4">
-            {/* Recent orders */}
-            <div className="bg-gray-900 rounded-2xl border border-gray-800 p-5">
-              <h3 className="text-sm font-semibold text-white mb-4">
-                Recent orders
-              </h3>
-              {business.recentOrders?.length === 0 ? (
-                <p className="text-sm text-gray-600">No orders yet</p>
-              ) : (
-                <div className="space-y-1">
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {business.recentOrders?.map((order: any) => (
-                    <div
-                      key={order.id}
-                      className="flex items-center justify-between py-2.5 border-b border-gray-800 last:border-b-0"
-                    >
-                      <p className="text-sm text-white font-medium">
-                        #{order.orderNumber}
-                      </p>
-                      <p className="text-sm text-gray-400">
-                        {formatUZS(order.total)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {formatRelativeTime(order.createdAt)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Recent customers */}
-            <div className="bg-gray-900 rounded-2xl border border-gray-800 p-5">
-              <h3 className="text-sm font-semibold text-white mb-4">
-                Recent customers
-              </h3>
-              {business.recentCustomers?.length === 0 ? (
-                <p className="text-sm text-gray-600">No customers yet</p>
-              ) : (
-                <div className="space-y-1">
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {business.recentCustomers?.map((customer: any) => (
-                    <div
-                      key={customer.id}
-                      className="flex items-center justify-between py-2.5 border-b border-gray-800 last:border-b-0"
-                    >
-                      <p className="text-sm text-white font-medium">
-                        {customer.name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {formatRelativeTime(customer.createdAt)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <BusinessDataManager businessId={id} />
           </div>
         </div>
       )}
@@ -434,6 +423,72 @@ export default function AdminBusinessDetailPage() {
                 {saving ? 'Saving...' : 'Save'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Erase (irreversible) modal */}
+      {showEraseModal && business && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-gray-900 rounded-2xl border border-red-800 p-6 w-full max-w-md">
+            {eraseCounts ? (
+              <>
+                <h3 className="text-base font-bold text-white mb-2">Business erased</h3>
+                <p className="text-sm text-gray-400 mb-3">Rows removed per table:</p>
+                <div className="max-h-60 overflow-y-auto text-xs text-gray-300 mb-4 border border-gray-800 rounded-xl">
+                  {Object.entries(eraseCounts).map(([k, v]) => (
+                    <div
+                      key={k}
+                      className="flex justify-between px-3 py-1.5 border-b border-gray-800 last:border-b-0"
+                    >
+                      <span className="text-gray-500">{k}</span>
+                      <span className="text-white font-medium">{v}</span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => router.replace('/admin/businesses')}
+                  className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  Back to businesses
+                </button>
+              </>
+            ) : (
+              <>
+                <h3 className="text-base font-bold text-red-400 mb-2">
+                  Erase entire business
+                </h3>
+                <p className="text-sm text-gray-400 mb-2">
+                  This permanently deletes{' '}
+                  <span className="text-white font-semibold">{business.name}</span>, its owner
+                  account, and ALL of its data (customers, orders, appointments, projects). This
+                  cannot be undone.
+                </p>
+                <p className="text-xs text-gray-500 mb-2">
+                  Type the business name to confirm:
+                </p>
+                <input
+                  value={eraseConfirmText}
+                  onChange={(e) => setEraseConfirmText(e.target.value)}
+                  placeholder={business.name}
+                  className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-600 mb-4 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowEraseModal(false)}
+                    className="px-4 py-2 bg-gray-700 text-white rounded-xl text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleErase}
+                    disabled={erasing || eraseConfirmText !== business.name}
+                    className="flex-1 px-4 py-2 bg-red-700 text-white rounded-xl text-sm font-bold hover:bg-red-800 disabled:opacity-40 transition-colors"
+                  >
+                    {erasing ? 'Erasing...' : 'Erase permanently'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

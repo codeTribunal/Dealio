@@ -1,6 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'core/locale/locale_provider.dart';
 import 'core/router/router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/app_tokens.dart';
 import 'l10n/app_localizations.dart';
 import 'shared/utils/format.dart';
 
@@ -54,9 +54,13 @@ void _showForegroundBanner(RemoteMessage message) {
   if (context == null) return;
 
   final route = _routeFromData(message.data);
+  final l = AppLocalizations.of(context);
+  final t = AppTokens.of(context);
 
   ScaffoldMessenger.of(context).showMaterialBanner(
     MaterialBanner(
+      backgroundColor: t.surface,
+      surfaceTintColor: Colors.transparent,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,10 +69,13 @@ void _showForegroundBanner(RemoteMessage message) {
           if (notification.title != null)
             Text(
               notification.title!,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: AppFontWeights.bold,
+                color: t.text1,
+              ),
             ),
           if (notification.body != null)
-            Text(notification.body!),
+            Text(notification.body!, style: TextStyle(color: t.text2)),
         ],
       ),
       actions: [
@@ -78,12 +85,14 @@ void _showForegroundBanner(RemoteMessage message) {
               ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
               GoRouter.of(context).go(route);
             },
-            child: const Text('VIEW'),
+            style: TextButton.styleFrom(foregroundColor: t.accent),
+            child: Text(l?.notificationView ?? 'View'),
           ),
         TextButton(
           onPressed: () =>
               ScaffoldMessenger.of(context).hideCurrentMaterialBanner(),
-          child: const Text('DISMISS'),
+          style: TextButton.styleFrom(foregroundColor: t.text2),
+          child: Text(l?.notificationDismiss ?? 'Dismiss'),
         ),
       ],
     ),
@@ -155,48 +164,10 @@ class _AppState extends ConsumerState<App> {
       debugShowCheckedModeBanner: false,
       locale: locale,
       builder: (context, child) {
-        Widget content = MediaQuery(
+        return MediaQuery(
           data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
           child: child!,
         );
-        // Debug-only shortcut to the design reference screen. Never ships in
-        // release builds (stripped by the kDebugMode constant).
-        if (kDebugMode) {
-          content = Stack(
-            textDirection: TextDirection.ltr,
-            children: [
-              content,
-              Positioned(
-                right: 8,
-                bottom: 80,
-                child: SafeArea(
-                  // Self-contained Material buttons — no Overlay/Tooltip
-                  // dependency, so they are safe to host above the Navigator.
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _DebugJumpButton(
-                        icon: Icons.widgets_outlined,
-                        onTap: () => router.go('/design-components'),
-                      ),
-                      const SizedBox(height: 10),
-                      _DebugJumpButton(
-                        icon: Icons.grid_view_outlined,
-                        onTap: () => router.go('/design-icons'),
-                      ),
-                      const SizedBox(height: 10),
-                      _DebugJumpButton(
-                        icon: Icons.palette_outlined,
-                        onTap: () => router.go('/design-tokens'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        }
-        return content;
       },
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -205,33 +176,6 @@ class _AppState extends ConsumerState<App> {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-    );
-  }
-}
-
-/// Small self-contained circular button used only for the debug design-screen
-/// shortcuts. Avoids Tooltip/FAB so it can live above the Navigator safely.
-class _DebugJumpButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _DebugJumpButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xFF2563EB),
-      shape: const CircleBorder(),
-      elevation: 3,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Icon(icon, color: Colors.white, size: 22),
-        ),
-      ),
     );
   }
 }

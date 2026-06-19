@@ -2,59 +2,38 @@ class TopCustomer {
   final String id;
   final String name;
   final int totalSpent;
-  final int orderCount;
+  final int appointmentCount;
 
   const TopCustomer({
     required this.id,
     required this.name,
     required this.totalSpent,
-    required this.orderCount,
+    required this.appointmentCount,
   });
 
   factory TopCustomer.fromJson(Map<String, dynamic> json) => TopCustomer(
         id: json['id'] as String,
         name: json['name'] as String,
         totalSpent: (json['totalSpent'] as num).toInt(),
-        orderCount: (json['orderCount'] as num).toInt(),
-      );
-}
-
-class BestSellingProduct {
-  final String id;
-  final String name;
-  final int unitsSold;
-
-  const BestSellingProduct({
-    required this.id,
-    required this.name,
-    required this.unitsSold,
-  });
-
-  factory BestSellingProduct.fromJson(Map<String, dynamic> json) =>
-      BestSellingProduct(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        unitsSold: (json['unitsSold'] as num).toInt(),
+        appointmentCount: (json['appointmentCount'] as num?)?.toInt() ?? 0,
       );
 }
 
 class AnalyticsData {
   final int revenueThisMonth;
   final int revenueLastMonth;
-  final int ordersCompletedThisMonth;
-  final List<TopCustomer> topCustomers;
-  final BestSellingProduct? bestSellingProduct;
-  final int averageOrderValue;
+  final int completedThisMonth;
+  final int appointmentsThisMonth;
   final int pendingPaymentsTotal;
+  final List<TopCustomer> topCustomers;
 
   const AnalyticsData({
     required this.revenueThisMonth,
     required this.revenueLastMonth,
-    required this.ordersCompletedThisMonth,
-    required this.topCustomers,
-    this.bestSellingProduct,
-    required this.averageOrderValue,
+    required this.completedThisMonth,
+    required this.appointmentsThisMonth,
     required this.pendingPaymentsTotal,
+    required this.topCustomers,
   });
 
   // Positive = growth, negative = decline, null = no last-month data
@@ -66,15 +45,12 @@ class AnalyticsData {
   factory AnalyticsData.fromJson(Map<String, dynamic> json) => AnalyticsData(
         revenueThisMonth: (json['revenueThisMonth'] as num).toInt(),
         revenueLastMonth: (json['revenueLastMonth'] as num).toInt(),
-        ordersCompletedThisMonth: (json['ordersCompletedThisMonth'] as num).toInt(),
+        completedThisMonth: (json['completedThisMonth'] as num?)?.toInt() ?? 0,
+        appointmentsThisMonth:
+            (json['appointmentsThisMonth'] as num?)?.toInt() ?? 0,
+        pendingPaymentsTotal: (json['pendingPaymentsTotal'] as num).toInt(),
         topCustomers: (json['topCustomers'] as List)
             .map((e) => TopCustomer.fromJson(e as Map<String, dynamic>))
             .toList(),
-        bestSellingProduct: json['bestSellingProduct'] != null
-            ? BestSellingProduct.fromJson(
-                json['bestSellingProduct'] as Map<String, dynamic>)
-            : null,
-        averageOrderValue: (json['averageOrderValue'] as num).toInt(),
-        pendingPaymentsTotal: (json['pendingPaymentsTotal'] as num).toInt(),
       );
 }

@@ -50,6 +50,10 @@
   "navProjects": "Loyihalar",
   "navAnalytics": "Tahlil",
   "navSettings": "Sozlamalar",
+  "profileTitle": "Profil",
+  "profilePhoneLabel": "Telefon",
+  "profilePlanLabel": "Tarif",
+  "profileBusinessSettings": "Biznes sozlamalari",
   "navMessages": "Xabarlar",
   "orderStatusNew": "Yangi",
   "orderStatusPreparing": "Tayyorlanmoqda",
@@ -253,6 +257,9 @@
   },
   "settingsRemindersFootnote": "Eslatmalar ushbu ilovaga va Telegramingizga yuboriladi.",
   "settingsTelegramBot": "TELEGRAM BOT",
+  "settingsChangeBot": "Botni o'zgartirish",
+  "settingsBotTokenHint": "Agar botingizni bekor qilgan yoki almashtirgan bo'lsangiz, @BotFather'dan yangi tokenni joylashtiring.",
+  "settingsBotTokenUpdated": "Bot yangilandi",
   "settingsNoBotConfigured": "Bot sozlanmagan. Botni sozlash uchun qo'llab-quvvatlash xizmatiga murojaat qiling.",
   "settingsCopyLinkTooltip": "Havolani nusxalash",
   "settingsBotLinkCopied": "Bot havolasi nusxalandi",
@@ -340,6 +347,8 @@
   "homeNoActivity": "Bugun faoliyat yo'q",
   "homeWelcome": "Assalomu alaykum",
   "homeHeroTodayOrders": "Bugungi buyurtmalar",
+  "homeHeroTodayAppointments": "Bugungi navbatlar",
+  "homeHeroTodayProjects": "Bugungi yangi loyihalar",
   "homeStatPending": "Kutilayotgan to'lovlar",
   "homeStatNewCustomers": "Yangi mijozlar",
   "homePendingPaymentsCount": "{count, plural, =0{To'lov kutilmayapti} =1{1 ta to'lov kutilmoqda} other{{count} ta to'lov kutilmoqda}}",
@@ -539,6 +548,12 @@
   "apptFormPaymentLabel": "To'lov",
   "apptFormNotesHint": "Ushbu navbat haqida izohlar...",
   "apptFormCreate": "Navbat yaratish",
+  "apptEditTitle": "Navbatni tahrirlash",
+  "apptEdit": "Tahrirlash",
+  "apptStatusLabel": "Holati",
+  "apptConflictTitle": "Bu mavjud navbat bilan to'qnashadi",
+  "apptConflictBody": "Bu vaqt boshqa navbat bilan to'qnashadi. Baribir qo'shilsinmi?",
+  "apptConflictConfirm": "Baribir qo'shish",
   "apptErrSelectCustomer": "Mijozni tanlang",
   "apptErrEnterCustomer": "Mijoz ismini kiriting",
   "apptErrSelectService": "Xizmatni tanlang",
@@ -654,13 +669,24 @@
       }
     }
   },
+  "analyticsThisMonthShort": "Bu oy",
+  "analyticsLastMonthShort": "O'tgan oy",
   "analyticsCompletedThisMonth": "Bu oy\nyakunlangan",
   "analyticsAvgOrderValue": "O'rtacha\nbuyurtma",
+  "analyticsAppointmentsThisMonth": "Bu oygi\nnavbatlar",
+  "analyticsApptCount": "{count, plural, =1{1 ta navbat} other{{count} ta navbat}}",
+  "@analyticsApptCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "analyticsPendingPayments": "Kutilayotgan to'lovlar",
   "analyticsAllReceived": "Barcha to'lovlar qabul qilindi",
-  "analyticsTopCustomers": "ENG YAXSHI MIJOZLAR — SO'NGGI 90 KUN",
-  "analyticsNoConfirmedOrders": "So'nggi 90 kunda tasdiqlangan buyurtmalar yo'q",
-  "analyticsBestSelling": "ENG KO'P SOTILGAN MAHSULOT",
+  "analyticsTopCustomers": "Eng yaxshi mijozlar — so'nggi 90 kun",
+  "analyticsNoConfirmedOrders": "So'nggi 90 kunda yakunlangan navbatlar yo'q",
+  "analyticsBestSelling": "Eng ko'p sotilgan mahsulot",
   "analyticsUnitsSold": "{count, plural, =1{1 dona sotilgan} other{{count} dona sotilgan}}",
   "@analyticsUnitsSold": {
     "placeholders": {
@@ -687,6 +713,12 @@
   "schedulingBufferHint": "Har bir navbatdan keyin qo‘shiladigan tanaffus, masalan tozalash uchun.",
   "schedulingBufferUnit": "daqiqa",
   "schedulingWorkingHoursSaved": "Ish vaqti saqlandi",
+  "schedulingCopyToWeekdays": "Ish kunlariga nusxalash",
+  "schedulingCopiedToWeekdays": "Du–Ju kunlariga nusxalandi",
+  "schedulingUnavailable": "Mavjud emas",
+  "schedulingAddHours": "Soat qo'shish",
+  "schedulingRemoveSlot": "O'chirish",
+  "schedulingOverlap": "Ish vaqtlari bir-biriga mos kelmasligi kerak.",
   "schedulingBlockedTime": "Band qilingan vaqt",
   "schedulingBlockedTimeHint": "Ta’til, tanaffus yoki bir martalik yopilishlarni band qiling, shunda mijozlar yozila olmaydi.",
   "schedulingAddBlocked": "Band vaqt qo‘shish",
@@ -708,5 +740,17 @@
   "settingsModeNameServices": "Navbatlar",
   "settingsModeNameFreelance": "Loyihalar",
   "settingsModeDataServices": "navbatlar",
-  "settingsModeDataFreelance": "loyihalar"
+  "settingsModeDataFreelance": "loyihalar",
+  "buttonRestore": "Tiklash",
+  "buttonYesDelete": "Ha, o'chirish",
+  "commonShowDeleted": "O'chirilganlarni ko'rsatish",
+  "commonDeletedBadge": "O'chirilgan",
+  "deleteCustomerTitle": "Bu mijoz o'chirilsinmi?",
+  "deleteCustomerBody": "U buyurtmalari va uchrashuvlari bilan ro'yxatlardan yashiriladi. Keyin tiklashingiz mumkin.",
+  "deleteOrderTitle": "Bu buyurtma o'chirilsinmi?",
+  "deleteOrderBody": "U buyurtmalar ro'yxatidan yashiriladi. Keyin tiklashingiz mumkin.",
+  "deleteAppointmentTitle": "Bu uchrashuv o'chirilsinmi?",
+  "deleteAppointmentBody": "U uchrashuvlar ro'yxatidan yashiriladi. Keyin tiklashingiz mumkin.",
+  "notificationView": "Ko'rish",
+  "notificationDismiss": "Yopish"
 }

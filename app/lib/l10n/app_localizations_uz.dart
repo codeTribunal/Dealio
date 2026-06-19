@@ -140,6 +140,18 @@ class AppLocalizationsUz extends AppLocalizations {
   String get navSettings => 'Sozlamalar';
 
   @override
+  String get profileTitle => 'Profil';
+
+  @override
+  String get profilePhoneLabel => 'Telefon';
+
+  @override
+  String get profilePlanLabel => 'Tarif';
+
+  @override
+  String get profileBusinessSettings => 'Biznes sozlamalari';
+
+  @override
   String get navMessages => 'Xabarlar';
 
   @override
@@ -686,6 +698,16 @@ class AppLocalizationsUz extends AppLocalizations {
   String get settingsTelegramBot => 'TELEGRAM BOT';
 
   @override
+  String get settingsChangeBot => 'Botni o\'zgartirish';
+
+  @override
+  String get settingsBotTokenHint =>
+      'Agar botingizni bekor qilgan yoki almashtirgan bo\'lsangiz, @BotFather\'dan yangi tokenni joylashtiring.';
+
+  @override
+  String get settingsBotTokenUpdated => 'Bot yangilandi';
+
+  @override
   String get settingsNoBotConfigured =>
       'Bot sozlanmagan. Botni sozlash uchun qo\'llab-quvvatlash xizmatiga murojaat qiling.';
 
@@ -863,6 +885,12 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get homeHeroTodayOrders => 'Bugungi buyurtmalar';
+
+  @override
+  String get homeHeroTodayAppointments => 'Bugungi navbatlar';
+
+  @override
+  String get homeHeroTodayProjects => 'Bugungi yangi loyihalar';
 
   @override
   String get homeStatPending => 'Kutilayotgan to\'lovlar';
@@ -1348,6 +1376,25 @@ class AppLocalizationsUz extends AppLocalizations {
   String get apptFormCreate => 'Navbat yaratish';
 
   @override
+  String get apptEditTitle => 'Navbatni tahrirlash';
+
+  @override
+  String get apptEdit => 'Tahrirlash';
+
+  @override
+  String get apptStatusLabel => 'Holati';
+
+  @override
+  String get apptConflictTitle => 'Bu mavjud navbat bilan to\'qnashadi';
+
+  @override
+  String get apptConflictBody =>
+      'Bu vaqt boshqa navbat bilan to\'qnashadi. Baribir qo\'shilsinmi?';
+
+  @override
+  String get apptConflictConfirm => 'Baribir qo\'shish';
+
+  @override
   String get apptErrSelectCustomer => 'Mijozni tanlang';
 
   @override
@@ -1568,6 +1615,12 @@ class AppLocalizationsUz extends AppLocalizations {
   String get analyticsRevenueThisMonth => 'Bu oylik daromad';
 
   @override
+  String get analyticsThisMonthShort => 'Bu oy';
+
+  @override
+  String get analyticsLastMonthShort => 'O\'tgan oy';
+
+  @override
   String analyticsLastMonth(String amount) {
     return 'O\'tgan oy: $amount';
   }
@@ -1579,20 +1632,34 @@ class AppLocalizationsUz extends AppLocalizations {
   String get analyticsAvgOrderValue => 'O\'rtacha\nbuyurtma';
 
   @override
+  String get analyticsAppointmentsThisMonth => 'Bu oygi\nnavbatlar';
+
+  @override
+  String analyticsApptCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ta navbat',
+      one: '1 ta navbat',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get analyticsPendingPayments => 'Kutilayotgan to\'lovlar';
 
   @override
   String get analyticsAllReceived => 'Barcha to\'lovlar qabul qilindi';
 
   @override
-  String get analyticsTopCustomers => 'ENG YAXSHI MIJOZLAR — SO\'NGGI 90 KUN';
+  String get analyticsTopCustomers => 'Eng yaxshi mijozlar — so\'nggi 90 kun';
 
   @override
   String get analyticsNoConfirmedOrders =>
-      'So\'nggi 90 kunda tasdiqlangan buyurtmalar yo\'q';
+      'So\'nggi 90 kunda yakunlangan navbatlar yo\'q';
 
   @override
-  String get analyticsBestSelling => 'ENG KO\'P SOTILGAN MAHSULOT';
+  String get analyticsBestSelling => 'Eng ko\'p sotilgan mahsulot';
 
   @override
   String analyticsUnitsSold(int count) {
@@ -1661,6 +1728,25 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get schedulingWorkingHoursSaved => 'Ish vaqti saqlandi';
+
+  @override
+  String get schedulingCopyToWeekdays => 'Ish kunlariga nusxalash';
+
+  @override
+  String get schedulingCopiedToWeekdays => 'Du–Ju kunlariga nusxalandi';
+
+  @override
+  String get schedulingUnavailable => 'Mavjud emas';
+
+  @override
+  String get schedulingAddHours => 'Soat qo\'shish';
+
+  @override
+  String get schedulingRemoveSlot => 'O\'chirish';
+
+  @override
+  String get schedulingOverlap =>
+      'Ish vaqtlari bir-biriga mos kelmasligi kerak.';
 
   @override
   String get schedulingBlockedTime => 'Band qilingan vaqt';
@@ -1733,4 +1819,43 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get settingsModeDataFreelance => 'loyihalar';
+
+  @override
+  String get buttonRestore => 'Tiklash';
+
+  @override
+  String get buttonYesDelete => 'Ha, o\'chirish';
+
+  @override
+  String get commonShowDeleted => 'O\'chirilganlarni ko\'rsatish';
+
+  @override
+  String get commonDeletedBadge => 'O\'chirilgan';
+
+  @override
+  String get deleteCustomerTitle => 'Bu mijoz o\'chirilsinmi?';
+
+  @override
+  String get deleteCustomerBody =>
+      'U buyurtmalari va uchrashuvlari bilan ro\'yxatlardan yashiriladi. Keyin tiklashingiz mumkin.';
+
+  @override
+  String get deleteOrderTitle => 'Bu buyurtma o\'chirilsinmi?';
+
+  @override
+  String get deleteOrderBody =>
+      'U buyurtmalar ro\'yxatidan yashiriladi. Keyin tiklashingiz mumkin.';
+
+  @override
+  String get deleteAppointmentTitle => 'Bu uchrashuv o\'chirilsinmi?';
+
+  @override
+  String get deleteAppointmentBody =>
+      'U uchrashuvlar ro\'yxatidan yashiriladi. Keyin tiklashingiz mumkin.';
+
+  @override
+  String get notificationView => 'Ko\'rish';
+
+  @override
+  String get notificationDismiss => 'Yopish';
 }

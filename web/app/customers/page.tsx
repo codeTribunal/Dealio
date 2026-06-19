@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { Icon } from '@/components/icons/Icon'
-import { getCustomers } from '@/lib/api'
+import { getCustomers, restoreCustomer } from '@/lib/api'
 import { useI18n } from '@/lib/i18n/i18nContext'
 import type { Customer } from '@/types'
 
@@ -22,13 +22,15 @@ export default function CustomersPage() {
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [retryToken, setRetryToken] = useState(0)
+  const [showDeleted, setShowDeleted] = useState(false)
+  const [restoringId, setRestoringId] = useState<string | null>(null)
 
   useEffect(() => {
     setLoading(true)
     setError(null)
 
     const timer = setTimeout(() => {
-      getCustomers({ search, page, limit: LIMIT })
+      getCustomers({ search, page, limit: LIMIT, includeDeleted: showDeleted })
         .then((data) => {
           setCustomers(data.customers)
           setTotal(data.total)
@@ -38,7 +40,17 @@ export default function CustomersPage() {
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [search, page, retryToken])
+  }, [search, page, retryToken, showDeleted])
+
+  async function handleRestore(cid: string) {
+    setRestoringId(cid)
+    try {
+      await restoreCustomer(cid)
+      setRetryToken((tok) => tok + 1)
+    } finally {
+      setRestoringId(null)
+    }
+  }
 
   return (
     <AuthLayout title={t('customers.title')}>
@@ -55,16 +67,29 @@ export default function CustomersPage() {
             {t('customers.totalCustomers', { count: total })}
           </p>
         </div>
-        <div className="w-full sm:w-80">
-          <Input
-            leftIcon="search"
-            placeholder={t('customers.searchHint')}
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex-1 sm:w-80">
+            <Input
+              leftIcon="search"
+              placeholder={t('customers.searchHint')}
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
+            />
+          </div>
+          <Button
+            variant={showDeleted ? 'primary' : 'secondary'}
+            size="sm"
+            className="flex-shrink-0 whitespace-nowrap"
+            onClick={() => {
+              setShowDeleted((v) => !v)
               setPage(1)
             }}
-          />
+          >
+            {t('common.showDeleted')}
+          </Button>
         </div>
       </div>
 
@@ -106,9 +131,39 @@ export default function CustomersPage() {
             </p>
           </div>
         ) : (
-          (customers ?? []).map((customer) => (
-            <CustomerCard key={customer.id} customer={customer} />
-          ))
+          (customers ?? []).map((customer) =>
+            customer.deleted ? (
+              <div
+                key={customer.id}
+                className="flex items-center justify-between gap-3 border-b border-border last:border-b-0 px-5 py-4 opacity-70"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-text-1 truncate">{customer.name}</p>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-pill text-xs font-semibold bg-error-soft text-error-strong">
+                      {t('common.deletedBadge')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-text-2 truncate mt-0.5">
+                    {customer.telegramUsername
+                      ? `@${customer.telegramUsername}`
+                      : customer.phone || '—'}
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  loading={restoringId === customer.id}
+                  onClick={() => handleRestore(customer.id)}
+                  className="flex-shrink-0"
+                >
+                  {t('common.restore')}
+                </Button>
+              </div>
+            ) : (
+              <CustomerCard key={customer.id} customer={customer} />
+            )
+          )
         )}
 
         {/* Pagination */}

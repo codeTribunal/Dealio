@@ -14,13 +14,13 @@ interface QuickActionsProps {
 
 export function QuickActions({ items, className = '' }: QuickActionsProps) {
   return (
-    <div className={`grid grid-cols-2 sm:grid-cols-4 gap-3 ${className}`}>
+    <div className={`flex gap-3 ${className}`}>
       {items.map((it) => (
         <button
           key={it.label}
           type="button"
           onClick={it.onClick}
-          className="bg-bg rounded-lg border border-border shadow-neu active:shadow-neu-inset transition-shadow flex flex-col items-center justify-center gap-2 py-4 px-3"
+          className="flex-1 bg-bg rounded-lg border border-border shadow-neu active:shadow-neu-inset transition-shadow flex flex-col items-center justify-center gap-2 py-4 px-3"
           style={{ transitionDuration: 'var(--dur-fast)', transitionTimingFunction: 'var(--ease)' }}
         >
           <Icon name={it.icon} size={24} className="text-accent" />

@@ -11,6 +11,7 @@ import {
   Shield,
   Menu,
   X,
+  Search,
 } from 'lucide-react'
 import { isAdminAuthenticated, clearAdminToken } from '@/lib/adminApi'
 
@@ -37,6 +38,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
+    { icon: Search, label: 'Search', href: '/admin/search' },
     { icon: Building2, label: 'Businesses', href: '/admin/businesses' },
     { icon: ScrollText, label: 'Audit log', href: '/admin/audit' },
     { icon: Users, label: 'Admin users', href: '/admin/users' },

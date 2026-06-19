@@ -5,17 +5,19 @@ import 'package:intl/intl.dart';
 
 import '../../core/icons/app_icon.dart';
 import '../../core/models/customer.dart';
-import '../../core/models/order.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../features/settings/customization_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_avatar.dart';
-import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_dialog.dart';
 import '../../shared/widgets/app_spinner.dart';
+import '../../shared/widgets/app_checkbox.dart';
+import '../../shared/widgets/app_switch.dart';
 import 'customer_detail_provider.dart';
+import 'customers_provider.dart';
 
 class CustomerDetailScreen extends ConsumerStatefulWidget {
   final String customerId;
@@ -70,6 +72,44 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
     }
   }
 
+  Future<void> _confirmDelete() async {
+    final l = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AppDialog(
+        title: l.deleteCustomerTitle,
+        content: Text(l.deleteCustomerBody),
+        actions: [
+          AppButton(
+            label: l.buttonCancel,
+            variant: AppButtonVariant.ghost,
+            size: AppButtonSize.sm,
+            onPressed: () => Navigator.of(ctx).pop(false),
+          ),
+          AppButton(
+            label: l.buttonDelete,
+            variant: AppButtonVariant.danger,
+            size: AppButtonSize.sm,
+            onPressed: () => Navigator.of(ctx).pop(true),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref.read(customersProvider.notifier).delete(widget.customerId);
+      if (mounted) context.go('/customers');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(e.toString()),
+              backgroundColor: AppTokens.of(context).error),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -88,7 +128,16 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
         _syncNotes(customer);
         final t = AppTokens.of(context);
         return Scaffold(
-          appBar: AppBar(title: Text(customer.name)),
+          appBar: AppBar(
+            title: Text(customer.name),
+            actions: [
+              TextButton(
+                onPressed: _confirmDelete,
+                style: TextButton.styleFrom(foregroundColor: t.errorStrong),
+                child: Text(l.buttonDelete),
+              ),
+            ],
+          ),
           body: RefreshIndicator(
             color: t.accent,
             onRefresh: notifier.refresh,
@@ -114,8 +163,6 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                 ),
                 const SizedBox(height: AppSpacing.s3),
                 _CustomFieldsCard(customer: customer, notifier: notifier),
-                const SizedBox(height: AppSpacing.s3),
-                _OrderHistorySection(orders: customer.orders),
                 const SizedBox(height: AppSpacing.s6),
               ],
             ),
@@ -549,6 +596,7 @@ class _StatsRow extends StatelessWidget {
           child: _StatCard(
             label: l.customerStatOrders,
             value: customer.totalOrders.toString(),
+            muted: customer.totalOrders == 0,
           ),
         ),
         const SizedBox(width: AppSpacing.s3),
@@ -557,6 +605,7 @@ class _StatsRow extends StatelessWidget {
             label: l.customerStatTotalSpent,
             value: formatUZS(customer.totalSpent),
             money: true,
+            muted: customer.totalSpent == 0,
           ),
         ),
         const SizedBox(width: AppSpacing.s3),
@@ -568,6 +617,7 @@ class _StatsRow extends StatelessWidget {
                 : d == 0
                     ? l.commonToday
                     : l.customerDaysAgo(d),
+            muted: d < 0,
           ),
         ),
       ],
@@ -579,15 +629,22 @@ class _StatCard extends StatelessWidget {
   final String label;
   final String value;
   final bool money;
+  // A zero/absent value: rendered in the muted color so all three "no data
+  // yet" cells (0, 0 so'm, —) share one consistent empty-state treatment and a
+  // zero amount never reads as positive (green) money.
+  final bool muted;
   const _StatCard({
     required this.label,
     required this.value,
     this.money = false,
+    this.muted = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final t = AppTokens.of(context);
+    final valueColor =
+        muted ? t.text3 : (money ? t.successStrong : t.text1);
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.s3),
       child: Column(
@@ -601,7 +658,7 @@ class _StatCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: AppTextSizes.lg,
                 fontWeight: AppFontWeights.bold,
-                color: money ? t.successStrong : t.text1,
+                color: valueColor,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
@@ -786,12 +843,9 @@ class _ReminderRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.s1),
       child: Row(
         children: [
-          Checkbox(
+          AppCheckbox(
             value: reminder.done,
-            onChanged: (v) => onToggle(v ?? false),
-            visualDensity: VisualDensity.compact,
-            activeColor: t.accent,
-            shape: const RoundedRectangleBorder(borderRadius: AppRadii.sm),
+            onChanged: (v) => onToggle(v),
           ),
           const SizedBox(width: AppSpacing.s1),
           Expanded(
@@ -1063,9 +1117,8 @@ class _FieldValueEditor extends StatelessWidget {
       final isBool = value == 'true';
       return Row(
         children: [
-          Switch(
+          AppSwitch(
             value: isBool,
-            activeThumbColor: t.accent,
             onChanged: (v) => onSave(v.toString()),
           ),
           Text(isBool ? l.commonYes : l.commonNo,
@@ -1158,142 +1211,6 @@ class _FieldValueEditor extends StatelessWidget {
           const SizedBox(width: AppSpacing.s1),
           AppIcon(name: AppIconName.settings, size: 13, color: t.text3),
         ],
-      ),
-    );
-  }
-}
-
-// ── Order history ─────────────────────────────────────────────────────
-
-class _OrderHistorySection extends StatelessWidget {
-  final List<Order> orders;
-  const _OrderHistorySection({required this.orders});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppCardHeader(
-            title: l.customerOrderHistory,
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.s2, vertical: 2),
-              decoration: BoxDecoration(
-                color: t.accentSoft,
-                borderRadius: AppRadii.pill,
-              ),
-              child: Text(
-                orders.length.toString(),
-                style: TextStyle(
-                  fontSize: AppTextSizes.caption,
-                  fontWeight: AppFontWeights.bold,
-                  color: t.accent,
-                ),
-              ),
-            ),
-          ),
-          if (orders.isEmpty) ...[
-            const SizedBox(height: AppSpacing.s4),
-            Center(
-              child: Text(
-                l.ordersEmpty,
-                style: TextStyle(color: t.text3),
-              ),
-            ),
-          ] else ...[
-            const SizedBox(height: AppSpacing.s2),
-            ...orders.map((o) => _OrderRow(order: o)),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _OrderRow extends StatelessWidget {
-  final Order order;
-  const _OrderRow({required this.order});
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppTokens.of(context);
-    return InkWell(
-      onTap: () => context.push('/orders/${order.id}'),
-      borderRadius: AppRadii.sm,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s2),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: t.accentSoft,
-              ),
-              child: Text(
-                '#${order.orderNumber}',
-                style: TextStyle(
-                  fontSize: AppTextSizes.caption,
-                  fontWeight: AppFontWeights.bold,
-                  color: t.accent,
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.s3),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    order.items
-                        .map((i) => '${i.productName} ×${i.quantity}')
-                        .join(', '),
-                    style:
-                        TextStyle(fontSize: AppTextSizes.sm, color: t.text1),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    formatDateTime(order.createdAt),
-                    style: TextStyle(
-                        color: t.text3, fontSize: AppTextSizes.caption),
-                  ),
-                  const SizedBox(height: AppSpacing.s1),
-                  Wrap(
-                    spacing: AppSpacing.s1,
-                    runSpacing: AppSpacing.s1,
-                    children: [
-                      AppBadge(
-                          status: order.paymentStatus,
-                          type: AppBadgeType.payment),
-                      AppBadge(
-                          status: order.orderStatus,
-                          type: AppBadgeType.order),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.s2),
-            Text(
-              formatUZS(order.total),
-              style: TextStyle(
-                fontWeight: AppFontWeights.bold,
-                fontSize: AppTextSizes.sm,
-                color: t.text1,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

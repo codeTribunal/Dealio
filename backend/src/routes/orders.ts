@@ -1,11 +1,12 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { prisma } from '../lib/prisma.js';
+import { prisma, prismaUnscoped } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { getBusinessOrFail } from '../lib/businessFromUser.js';
 import { sendError } from '../lib/errors.js';
 import { allocateOrderNumber } from '../services/orderNumber.js';
 import { checkOrderLimit } from '../middleware/checkLimits.js';
+import { softDelete, restore } from '../services/softDelete.js';
 
 const orderItemSchema = z.object({
   productId: z.string(),
@@ -30,7 +31,7 @@ const updateStatusBody = z.object({
 });
 
 const orderInclude = {
-  customer: { select: { id: true, name: true, phone: true, telegramUsername: true } },
+  customer: { select: { id: true, name: true, phone: true, telegramUsername: true, deletedAt: true } },
   items: {
     include: {
       product: { select: { id: true, name: true, photos: true } },
@@ -44,7 +45,13 @@ export default async function orderRoutes(app: FastifyInstance) {
     if (!business) return;
 
     const query = request.query as Record<string, string>;
-    const where: Record<string, unknown> = { businessId: business.id, deletedAt: null };
+    const includeDeleted = query.includeDeleted === 'true';
+    const db = includeDeleted ? (prismaUnscoped as unknown as typeof prisma) : prisma;
+    const where: Record<string, unknown> = { businessId: business.id };
+    // Orphan filter ("leave & filter"): in the default view, hide orders whose
+    // customer is soft-deleted (the order's own deletedAt is hidden by the
+    // extension). "Show deleted" drops both filters via prismaUnscoped.
+    if (!includeDeleted) where.customer = { deletedAt: null };
 
     if (query.status) {
       if (query.status === 'PAYMENT_PENDING') {
@@ -71,12 +78,12 @@ export default async function orderRoutes(app: FastifyInstance) {
       where.OR = orConditions;
     }
 
-    const orders = await prisma.order.findMany({
+    const orders = await db.order.findMany({
       where,
       include: orderInclude,
       orderBy: { createdAt: 'desc' },
     });
-    return reply.send(orders);
+    return reply.send(orders.map((o) => ({ ...o, deleted: o.deletedAt != null })));
   });
 
   app.post('/orders', { preHandler: [authenticate, checkOrderLimit()] }, async (request, reply) => {
@@ -203,5 +210,27 @@ export default async function orderRoutes(app: FastifyInstance) {
       include: orderInclude,
     });
     return reply.send(updated);
+  });
+
+  // ── Soft-delete order (recoverable) ─────────────────────────────
+  app.delete('/orders/:id', { preHandler: authenticate }, async (request, reply) => {
+    const business = await getBusinessOrFail(request.user.userId, reply);
+    if (!business) return;
+
+    const { id } = request.params as { id: string };
+    const { deleted } = await softDelete('order', id, business.id);
+    if (!deleted) return sendError(reply, 404, 'Order not found');
+    return reply.send({ id, deleted: true });
+  });
+
+  // ── Restore a soft-deleted order ────────────────────────────────
+  app.post('/orders/:id/restore', { preHandler: authenticate }, async (request, reply) => {
+    const business = await getBusinessOrFail(request.user.userId, reply);
+    if (!business) return;
+
+    const { id } = request.params as { id: string };
+    const { restored } = await restore('order', id, business.id);
+    if (!restored) return sendError(reply, 404, 'Order not found');
+    return reply.send({ id, restored: true });
   });
 }

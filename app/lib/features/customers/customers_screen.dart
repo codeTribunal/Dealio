@@ -22,11 +22,21 @@ class CustomersScreen extends ConsumerStatefulWidget {
 
 class _CustomersScreenState extends ConsumerState<CustomersScreen> {
   final _searchController = TextEditingController();
+  String? _restoringId;
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _restore(String id) async {
+    setState(() => _restoringId = id);
+    try {
+      await ref.read(customersProvider.notifier).restore(id);
+    } finally {
+      if (mounted) setState(() => _restoringId = null);
+    }
   }
 
   @override
@@ -37,7 +47,18 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
     final customersAsync = ref.watch(customersProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.customersTitle)),
+      appBar: AppBar(
+        title: Text(l.customersTitle),
+        actions: [
+          TextButton(
+            onPressed: () => notifier.setShowDeleted(!notifier.showDeleted),
+            style: TextButton.styleFrom(
+              foregroundColor: notifier.showDeleted ? t.accent : t.text2,
+            ),
+            child: Text(l.commonShowDeleted),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           // ── Search bar ────────────────────────────────────────
@@ -108,16 +129,25 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                   color: t.accent,
                   onRefresh: notifier.refresh,
                   child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.s4, 0, AppSpacing.s4, AppSpacing.s4),
+                    padding: EdgeInsets.fromLTRB(AppSpacing.s4, 0, AppSpacing.s4,
+                        AppSpacing.s4 + MediaQuery.of(context).padding.bottom),
                     itemCount: customers.length,
                     separatorBuilder: (_, __) =>
                         const SizedBox(height: AppSpacing.s2),
-                    itemBuilder: (ctx, i) => _CustomerCard(
-                      customer: customers[i],
-                      onTap: () =>
-                          context.push('/customers/${customers[i].id}'),
-                    ),
+                    itemBuilder: (ctx, i) {
+                      final c = customers[i];
+                      if (c.deleted) {
+                        return _DeletedCustomerCard(
+                          customer: c,
+                          restoring: _restoringId == c.id,
+                          onRestore: () => _restore(c.id),
+                        );
+                      }
+                      return _CustomerCard(
+                        customer: c,
+                        onTap: () => context.push('/customers/${c.id}'),
+                      );
+                    },
                   ),
                 );
               },
@@ -206,6 +236,89 @@ class _CustomerCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Deleted customer card (dimmed, with restore) ───────────────────
+
+class _DeletedCustomerCard extends StatelessWidget {
+  final Customer customer;
+  final bool restoring;
+  final VoidCallback onRestore;
+  const _DeletedCustomerCard({
+    required this.customer,
+    required this.restoring,
+    required this.onRestore,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    return Opacity(
+      opacity: 0.6,
+      child: AppCard(
+        padding: const EdgeInsets.all(AppSpacing.s3),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          customer.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: AppFontWeights.semibold,
+                            fontSize: AppTextSizes.sm,
+                            color: t.text1,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.s2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.s2, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: t.errorSoft,
+                          borderRadius: AppRadii.pill,
+                        ),
+                        child: Text(
+                          l.commonDeletedBadge,
+                          style: TextStyle(
+                            fontSize: AppTextSizes.caption,
+                            fontWeight: AppFontWeights.semibold,
+                            color: t.errorStrong,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (customer.telegramUsername != null)
+                    Text(
+                      '@${customer.telegramUsername}',
+                      style: TextStyle(
+                          color: t.text2, fontSize: AppTextSizes.caption),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.s2),
+            AppButton(
+              label: l.buttonRestore,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              loading: restoring,
+              onPressed: onRestore,
+            ),
+          ],
+        ),
       ),
     );
   }

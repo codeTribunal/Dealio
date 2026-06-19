@@ -158,7 +158,7 @@ export async function getCustomerOrders(botUsername: string, telegramUserId: str
   return res.data;
 }
 
-export async function getServices(botUsername: string): Promise<{ business: ApiBusiness & { cardNumber?: string; cardBank?: string }; services: ApiService[] }> {
+export async function getServices(botUsername: string): Promise<{ business: ApiBusiness; services: ApiService[] }> {
   const res = await client.get(`/api/v1/bot/services/${botUsername}`);
   return res.data;
 }

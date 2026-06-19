@@ -31,25 +31,21 @@ function buildQuickActions(
   router: ReturnType<typeof useRouter>,
   t: ReturnType<typeof useI18n>['t'],
 ): QuickActionItem[] {
-  // Product-seller mode is disabled — never surface catalog/orders actions.
-  // Default to SERVICES-style actions until the business loads.
+  // Quick CREATE actions — distinct from the sidebar's browse nav, so the row
+  // doesn't just mirror the menu (Customers / Appointments / Staff / Analytics /
+  // Settings all live in the sidebar). Defaults to SERVICES until it loads.
   const mode = business?.mode ?? 'SERVICES'
 
-  // Single mode keys the quick-actions row.
   if (mode === 'SERVICES') {
     return [
       { icon: 'calendar', label: t('home.quickActionNewAppointment'), onClick: () => router.push('/appointments') },
-      { icon: 'customers', label: t('nav.customers'), onClick: () => router.push('/customers') },
-      { icon: 'staff', label: t('nav.staff'), onClick: () => router.push('/staff') },
-      { icon: 'analytics', label: t('nav.analytics'), onClick: () => router.push('/analytics') },
+      { icon: 'customers', label: t('home.quickActionNewCustomer'), onClick: () => router.push('/customers') },
     ]
   }
   // FREELANCE
   return [
     { icon: 'projects', label: t('home.quickActionNewProject'), onClick: () => router.push('/projects') },
-    { icon: 'customers', label: t('nav.customers'), onClick: () => router.push('/customers') },
-    { icon: 'analytics', label: t('nav.analytics'), onClick: () => router.push('/analytics') },
-    { icon: 'settings', label: t('nav.settings'), onClick: () => router.push('/settings') },
+    { icon: 'customers', label: t('home.quickActionNewCustomer'), onClick: () => router.push('/customers') },
   ]
 }
 
@@ -155,7 +151,7 @@ export default function HomePage() {
           <HeroCard
             label={t('home.revenueLabel')}
             value={formatUZS(analytics.revenueThisMonth)}
-            sub={t('home.revenueSub', { count: analytics.ordersThisMonth })}
+            sub={t('home.revenueSub', { count: analytics.appointmentsThisMonth })}
           />
 
           {/* StatCard bento row */}
@@ -167,7 +163,7 @@ export default function HomePage() {
             <StatCard
               label={t('home.statPending')}
               value={formatUZS(analytics.pendingPaymentsTotal)}
-              money
+              money={analytics.pendingPaymentsTotal > 0}
             />
             <StatCard
               label={t('home.statAppointmentsToday')}

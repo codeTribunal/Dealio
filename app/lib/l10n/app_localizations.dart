@@ -358,6 +358,30 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get navSettings;
 
+  /// No description provided for @profileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profileTitle;
+
+  /// No description provided for @profilePhoneLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get profilePhoneLabel;
+
+  /// No description provided for @profilePlanLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get profilePlanLabel;
+
+  /// No description provided for @profileBusinessSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Business settings'**
+  String get profileBusinessSettings;
+
   /// No description provided for @navMessages.
   ///
   /// In en, this message translates to:
@@ -1324,6 +1348,24 @@ abstract class AppLocalizations {
   /// **'TELEGRAM BOT'**
   String get settingsTelegramBot;
 
+  /// No description provided for @settingsChangeBot.
+  ///
+  /// In en, this message translates to:
+  /// **'Change bot'**
+  String get settingsChangeBot;
+
+  /// No description provided for @settingsBotTokenHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste a new token from @BotFather if you revoked or replaced your bot.'**
+  String get settingsBotTokenHint;
+
+  /// No description provided for @settingsBotTokenUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Bot updated'**
+  String get settingsBotTokenUpdated;
+
   /// No description provided for @settingsNoBotConfigured.
   ///
   /// In en, this message translates to:
@@ -1635,6 +1677,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Today\'s orders'**
   String get homeHeroTodayOrders;
+
+  /// No description provided for @homeHeroTodayAppointments.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s appointments'**
+  String get homeHeroTodayAppointments;
+
+  /// No description provided for @homeHeroTodayProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'New projects today'**
+  String get homeHeroTodayProjects;
 
   /// No description provided for @homeStatPending.
   ///
@@ -2233,7 +2287,7 @@ abstract class AppLocalizations {
   /// No description provided for @serviceFormPriceLabel.
   ///
   /// In en, this message translates to:
-  /// **'Price (UZS)'**
+  /// **'Price (soum)'**
   String get serviceFormPriceLabel;
 
   /// No description provided for @serviceFormActiveSubtitle.
@@ -2536,6 +2590,42 @@ abstract class AppLocalizations {
   /// **'Create appointment'**
   String get apptFormCreate;
 
+  /// No description provided for @apptEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit appointment'**
+  String get apptEditTitle;
+
+  /// No description provided for @apptEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get apptEdit;
+
+  /// No description provided for @apptStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get apptStatusLabel;
+
+  /// No description provided for @apptConflictTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This overlaps an existing booking'**
+  String get apptConflictTitle;
+
+  /// No description provided for @apptConflictBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This time overlaps another appointment. Add it anyway?'**
+  String get apptConflictBody;
+
+  /// No description provided for @apptConflictConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Add anyway'**
+  String get apptConflictConfirm;
+
   /// No description provided for @apptErrSelectCustomer.
   ///
   /// In en, this message translates to:
@@ -2791,7 +2881,7 @@ abstract class AppLocalizations {
   /// No description provided for @projectUnitPrice.
   ///
   /// In en, this message translates to:
-  /// **'Unit price (UZS)'**
+  /// **'Unit price (soum)'**
   String get projectUnitPrice;
 
   /// No description provided for @projectDueDateLabel.
@@ -2845,7 +2935,7 @@ abstract class AppLocalizations {
   /// No description provided for @projectPriceLabel.
   ///
   /// In en, this message translates to:
-  /// **'Total agreed price (UZS)'**
+  /// **'Total agreed price (soum)'**
   String get projectPriceLabel;
 
   /// No description provided for @projectTermsHint.
@@ -2911,7 +3001,7 @@ abstract class AppLocalizations {
   /// No description provided for @milestoneAmountLabel.
   ///
   /// In en, this message translates to:
-  /// **'Amount (UZS)'**
+  /// **'Amount (soum)'**
   String get milestoneAmountLabel;
 
   /// No description provided for @milestoneDueDateLabel.
@@ -2950,6 +3040,18 @@ abstract class AppLocalizations {
   /// **'Revenue this month'**
   String get analyticsRevenueThisMonth;
 
+  /// No description provided for @analyticsThisMonthShort.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get analyticsThisMonthShort;
+
+  /// No description provided for @analyticsLastMonthShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Last month'**
+  String get analyticsLastMonthShort;
+
   /// No description provided for @analyticsLastMonth.
   ///
   /// In en, this message translates to:
@@ -2968,6 +3070,18 @@ abstract class AppLocalizations {
   /// **'Avg order\nvalue'**
   String get analyticsAvgOrderValue;
 
+  /// No description provided for @analyticsAppointmentsThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Appointments\nthis month'**
+  String get analyticsAppointmentsThisMonth;
+
+  /// No description provided for @analyticsApptCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 appointment} other{{count} appointments}}'**
+  String analyticsApptCount(int count);
+
   /// No description provided for @analyticsPendingPayments.
   ///
   /// In en, this message translates to:
@@ -2983,19 +3097,19 @@ abstract class AppLocalizations {
   /// No description provided for @analyticsTopCustomers.
   ///
   /// In en, this message translates to:
-  /// **'TOP CUSTOMERS — LAST 90 DAYS'**
+  /// **'Top customers — last 90 days'**
   String get analyticsTopCustomers;
 
   /// No description provided for @analyticsNoConfirmedOrders.
   ///
   /// In en, this message translates to:
-  /// **'No confirmed orders in the last 90 days'**
+  /// **'No completed appointments in the last 90 days'**
   String get analyticsNoConfirmedOrders;
 
   /// No description provided for @analyticsBestSelling.
   ///
   /// In en, this message translates to:
-  /// **'BEST SELLING PRODUCT'**
+  /// **'Best selling product'**
   String get analyticsBestSelling;
 
   /// No description provided for @analyticsUnitsSold.
@@ -3111,6 +3225,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Working hours saved'**
   String get schedulingWorkingHoursSaved;
+
+  /// No description provided for @schedulingCopyToWeekdays.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy to weekdays'**
+  String get schedulingCopyToWeekdays;
+
+  /// No description provided for @schedulingCopiedToWeekdays.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied to Mon–Fri'**
+  String get schedulingCopiedToWeekdays;
+
+  /// No description provided for @schedulingUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get schedulingUnavailable;
+
+  /// No description provided for @schedulingAddHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Add hours'**
+  String get schedulingAddHours;
+
+  /// No description provided for @schedulingRemoveSlot.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get schedulingRemoveSlot;
+
+  /// No description provided for @schedulingOverlap.
+  ///
+  /// In en, this message translates to:
+  /// **'Working hours can\'t overlap.'**
+  String get schedulingOverlap;
 
   /// No description provided for @schedulingBlockedTime.
   ///
@@ -3243,6 +3393,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'projects'**
   String get settingsModeDataFreelance;
+
+  /// No description provided for @buttonRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get buttonRestore;
+
+  /// No description provided for @buttonYesDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, delete'**
+  String get buttonYesDelete;
+
+  /// No description provided for @commonShowDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Show deleted'**
+  String get commonShowDeleted;
+
+  /// No description provided for @commonDeletedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted'**
+  String get commonDeletedBadge;
+
+  /// No description provided for @deleteCustomerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this customer?'**
+  String get deleteCustomerTitle;
+
+  /// No description provided for @deleteCustomerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'They will be hidden from your lists along with their orders and appointments. You can restore them later.'**
+  String get deleteCustomerBody;
+
+  /// No description provided for @deleteOrderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this order?'**
+  String get deleteOrderTitle;
+
+  /// No description provided for @deleteOrderBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It will be hidden from your orders. You can restore it later.'**
+  String get deleteOrderBody;
+
+  /// No description provided for @deleteAppointmentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this appointment?'**
+  String get deleteAppointmentTitle;
+
+  /// No description provided for @deleteAppointmentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It will be hidden from your appointments. You can restore it later.'**
+  String get deleteAppointmentBody;
+
+  /// No description provided for @notificationView.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get notificationView;
+
+  /// No description provided for @notificationDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get notificationDismiss;
 }
 
 class _AppLocalizationsDelegate

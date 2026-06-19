@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="180" viewBox="0 0 240 180" fill="none">
+  <!-- Vertical lockup: mark on top, "Dealio." wordmark below. Transparent bg
+       (the splash screen supplies the paper hsl(60,20%,98%) background).
+       Mark geometry is unchanged from the source: slate D-stroke, blue
+       quarter-wedge, blue floating dot. -->
+
+  <!-- Mark (centered at x=120; bbox 80x70 -> spans x[80,160], y[15,85]) -->
+  <g transform="translate(60, -5)">
+    <!-- D-stroke: slate (reads on the light paper background) -->
+    <path d="M40 25V85H65C72.9565 85 80.5871 81.8393 86.2132 76.2132C91.8393 70.5871 95 62.9565 95 55C95 47.0435 91.8393 39.4129 86.2132 33.7868C80.5871 28.1607 72.9565 25 65 25H40Z"
+          stroke="hsl(222, 47%, 11%)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Blue quarter-wedge -->
+    <path d="M65 55H95C95 62.9565 91.8393 70.5871 86.2132 76.2132C80.5871 81.8393 72.9565 85 65 85V55Z"
+          fill="hsl(217, 91%, 60%)"/>
+    <!-- Blue floating dot -->
+    <circle cx="25" cy="55" r="5" fill="hsl(217, 91%, 60%)"/>
+  </g>
+
+  <!-- Wordmark: Inter Bold, slate. The trailing period is slate TYPE (same fill
+       as the letters) — it echoes the mark's blue dot but is clearly type, so
+       the two dots do different jobs. ~24px gap below the mark (mark bottom y=85,
+       cap-top ~y=110). -->
+  <text x="120" y="139" text-anchor="middle"
+        font-family="Inter, sans-serif" font-weight="700" font-size="40"
+        fill="hsl(222, 47%, 11%)">Dealio.</text>
+</svg>

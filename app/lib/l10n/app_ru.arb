@@ -50,6 +50,10 @@
   "navProjects": "Проекты",
   "navAnalytics": "Аналитика",
   "navSettings": "Настройки",
+  "profileTitle": "Профиль",
+  "profilePhoneLabel": "Телефон",
+  "profilePlanLabel": "Тариф",
+  "profileBusinessSettings": "Настройки бизнеса",
   "navMessages": "Сообщения",
   "orderStatusNew": "Новый",
   "orderStatusPreparing": "Готовится",
@@ -253,6 +257,9 @@
   },
   "settingsRemindersFootnote": "Напоминания отправляются в это приложение и в ваш Telegram.",
   "settingsTelegramBot": "TELEGRAM-БОТ",
+  "settingsChangeBot": "Сменить бота",
+  "settingsBotTokenHint": "Вставьте новый токен от @BotFather, если вы отозвали или заменили бота.",
+  "settingsBotTokenUpdated": "Бот обновлён",
   "settingsNoBotConfigured": "Бот не настроен. Обратитесь в поддержку, чтобы настроить бот.",
   "settingsCopyLinkTooltip": "Копировать ссылку",
   "settingsBotLinkCopied": "Ссылка на бот скопирована",
@@ -340,6 +347,8 @@
   "homeNoActivity": "Сегодня активности нет",
   "homeWelcome": "Здравствуйте",
   "homeHeroTodayOrders": "Заказы сегодня",
+  "homeHeroTodayAppointments": "Записи сегодня",
+  "homeHeroTodayProjects": "Новые проекты сегодня",
   "homeStatPending": "Ожидают оплаты",
   "homeStatNewCustomers": "Новые клиенты",
   "homePendingPaymentsCount": "{count, plural, =0{Нет ожидающих оплат} =1{1 ожидает оплаты} other{{count} ожидают оплаты}}",
@@ -539,6 +548,12 @@
   "apptFormPaymentLabel": "Оплата",
   "apptFormNotesHint": "Любые заметки об этой записи...",
   "apptFormCreate": "Создать запись",
+  "apptEditTitle": "Изменить запись",
+  "apptEdit": "Изменить",
+  "apptStatusLabel": "Статус",
+  "apptConflictTitle": "Пересекается с существующей записью",
+  "apptConflictBody": "Это время пересекается с другой записью. Всё равно добавить?",
+  "apptConflictConfirm": "Всё равно добавить",
   "apptErrSelectCustomer": "Выберите клиента",
   "apptErrEnterCustomer": "Введите имя клиента",
   "apptErrSelectService": "Выберите услугу",
@@ -654,13 +669,24 @@
       }
     }
   },
+  "analyticsThisMonthShort": "Этот месяц",
+  "analyticsLastMonthShort": "Прошлый месяц",
   "analyticsCompletedThisMonth": "Завершено\nза месяц",
   "analyticsAvgOrderValue": "Средний\nзаказ",
+  "analyticsAppointmentsThisMonth": "Записи\nза месяц",
+  "analyticsApptCount": "{count, plural, =1{1 запись} few{{count} записи} other{{count} записей}}",
+  "@analyticsApptCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "analyticsPendingPayments": "Ожидающие оплаты",
   "analyticsAllReceived": "Все платежи получены",
-  "analyticsTopCustomers": "ЛУЧШИЕ КЛИЕНТЫ — ПОСЛЕДНИЕ 90 ДНЕЙ",
-  "analyticsNoConfirmedOrders": "Нет подтверждённых заказов за последние 90 дней",
-  "analyticsBestSelling": "САМЫЙ ПРОДАВАЕМЫЙ ТОВАР",
+  "analyticsTopCustomers": "Лучшие клиенты — последние 90 дней",
+  "analyticsNoConfirmedOrders": "Нет завершённых записей за последние 90 дней",
+  "analyticsBestSelling": "Самый продаваемый товар",
   "analyticsUnitsSold": "{count, plural, one{продана 1 шт.} few{продано {count} шт.} other{продано {count} шт.}}",
   "@analyticsUnitsSold": {
     "placeholders": {
@@ -687,6 +713,12 @@
   "schedulingBufferHint": "Промежуток после каждой записи, например для уборки.",
   "schedulingBufferUnit": "минут",
   "schedulingWorkingHoursSaved": "Часы работы сохранены",
+  "schedulingCopyToWeekdays": "Скопировать на будни",
+  "schedulingCopiedToWeekdays": "Скопировано на Пн–Пт",
+  "schedulingUnavailable": "Недоступно",
+  "schedulingAddHours": "Добавить часы",
+  "schedulingRemoveSlot": "Удалить",
+  "schedulingOverlap": "Часы работы не должны пересекаться.",
   "schedulingBlockedTime": "Заблокированное время",
   "schedulingBlockedTimeHint": "Заблокируйте отпуска, перерывы или разовые закрытия, чтобы клиенты не могли записаться.",
   "schedulingAddBlocked": "Добавить блокировку",
@@ -708,5 +740,17 @@
   "settingsModeNameServices": "Записи",
   "settingsModeNameFreelance": "Проекты",
   "settingsModeDataServices": "записи",
-  "settingsModeDataFreelance": "проекты"
+  "settingsModeDataFreelance": "проекты",
+  "buttonRestore": "Восстановить",
+  "buttonYesDelete": "Да, удалить",
+  "commonShowDeleted": "Показать удалённые",
+  "commonDeletedBadge": "Удалён",
+  "deleteCustomerTitle": "Удалить этого клиента?",
+  "deleteCustomerBody": "Он будет скрыт из списков вместе с его заказами и записями. Позже можно восстановить.",
+  "deleteOrderTitle": "Удалить этот заказ?",
+  "deleteOrderBody": "Он будет скрыт из списка заказов. Позже можно восстановить.",
+  "deleteAppointmentTitle": "Удалить эту запись?",
+  "deleteAppointmentBody": "Она будет скрыта из списка записей. Позже можно восстановить.",
+  "notificationView": "Открыть",
+  "notificationDismiss": "Скрыть"
 }

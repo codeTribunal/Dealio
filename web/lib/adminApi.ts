@@ -202,3 +202,231 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
   const res = await adminApi.get('/admin/users')
   return res.data
 }
+
+// ── Tenant data-management (Phase B) ──────────────────────────────────────────
+
+export type TenantEntity = 'customers' | 'orders' | 'appointments' | 'projects'
+
+export interface Paginated<T> {
+  items: T[]
+  total: number
+  page: number
+  limit: number
+}
+
+export interface AdminCustomerRow {
+  id: string
+  name: string
+  phone: string | null
+  telegramUsername: string | null
+  createdAt: string
+  lastInteractionAt: string
+  deleted: boolean
+  anonymizedAt: string | null
+}
+
+export interface AdminOrderRow {
+  id: string
+  orderNumber: number
+  total: number
+  orderStatus: string
+  paymentStatus: string
+  createdAt: string
+  deleted: boolean
+  customer: { id: string; name: string } | null
+}
+
+export interface AdminAppointmentRow {
+  id: string
+  startTime: string
+  endTime: string
+  status: string
+  price: number
+  paymentStatus: string
+  createdAt: string
+  deleted: boolean
+  customer: { id: string; name: string } | null
+  service: { id: string; name: string } | null
+  staff: { id: string; name: string } | null
+}
+
+export interface AdminProjectRow {
+  id: string
+  name: string
+  totalPrice: number
+  status: string
+  deadline: string | null
+  createdAt: string
+  deleted: boolean
+  customer: { id: string; name: string } | null
+}
+
+export interface TenantListParams {
+  page?: number
+  limit?: number
+  search?: string
+  status?: string
+  date?: string
+  includeDeleted?: boolean
+}
+
+function tenantParams(params: TenantListParams) {
+  return {
+    page: params.page || 1,
+    limit: params.limit || 20,
+    search: params.search || undefined,
+    status: params.status && params.status !== 'ALL' ? params.status : undefined,
+    date: params.date || undefined,
+    includeDeleted: params.includeDeleted ? 'true' : undefined,
+  }
+}
+
+export async function getBusinessCustomers(
+  businessId: string,
+  params: TenantListParams
+): Promise<Paginated<AdminCustomerRow>> {
+  const res = await adminApi.get(`/admin/businesses/${businessId}/customers`, { params: tenantParams(params) })
+  return res.data
+}
+
+export async function getBusinessOrders(
+  businessId: string,
+  params: TenantListParams
+): Promise<Paginated<AdminOrderRow>> {
+  const res = await adminApi.get(`/admin/businesses/${businessId}/orders`, { params: tenantParams(params) })
+  return res.data
+}
+
+export async function getBusinessAppointments(
+  businessId: string,
+  params: TenantListParams
+): Promise<Paginated<AdminAppointmentRow>> {
+  const res = await adminApi.get(`/admin/businesses/${businessId}/appointments`, { params: tenantParams(params) })
+  return res.data
+}
+
+export async function getBusinessProjects(
+  businessId: string,
+  params: TenantListParams
+): Promise<Paginated<AdminProjectRow>> {
+  const res = await adminApi.get(`/admin/businesses/${businessId}/projects`, { params: tenantParams(params) })
+  return res.data
+}
+
+// Single-record detail (full fields; always returns the record even if deleted).
+export async function getAdminRecord(
+  entity: TenantEntity,
+  id: string
+): Promise<Record<string, unknown> & { id: string; deleted: boolean }> {
+  const res = await adminApi.get(`/admin/${entity}/${id}`)
+  return res.data
+}
+
+// Edit — body keys mirror the owner-editable fields for that entity.
+export async function updateAdminRecord(
+  entity: TenantEntity,
+  id: string,
+  body: Record<string, unknown>
+): Promise<Record<string, unknown> & { id: string; deleted: boolean }> {
+  const res = await adminApi.patch(`/admin/${entity}/${id}`, body)
+  return res.data
+}
+
+export async function softDeleteAdminRecord(
+  entity: TenantEntity,
+  id: string
+): Promise<{ id: string; deleted: boolean }> {
+  const res = await adminApi.delete(`/admin/${entity}/${id}`)
+  return res.data
+}
+
+export async function restoreAdminRecord(
+  entity: TenantEntity,
+  id: string
+): Promise<{ id: string; restored: boolean }> {
+  const res = await adminApi.post(`/admin/${entity}/${id}/restore`)
+  return res.data
+}
+
+// ── Erasure (Phase C) — irreversible, super-admin only ────────────────────────
+
+// Read the current admin's role from the JWT (display-gating only; the server
+// enforces requireSuperAdmin regardless).
+export function getAdminRole(): 'SUPER_ADMIN' | 'SUPPORT' | null {
+  const token = getAdminToken()
+  if (!token) return null
+  try {
+    const seg = token.split('.')[1]
+    const obj = JSON.parse(atob(seg.replace(/-/g, '+').replace(/_/g, '/')))
+    return obj.role === 'SUPER_ADMIN' || obj.role === 'SUPPORT' ? obj.role : null
+  } catch {
+    return null
+  }
+}
+
+export async function anonymizeCustomer(
+  id: string
+): Promise<{ id: string; anonymized: boolean; scrubbedFields: string[] }> {
+  const res = await adminApi.post(`/admin/customers/${id}/anonymize`)
+  return res.data
+}
+
+export async function eraseBusiness(
+  id: string
+): Promise<{ id: string; erased: boolean; tableCounts: Record<string, number> }> {
+  const res = await adminApi.post(`/admin/businesses/${id}/erase`)
+  return res.data
+}
+
+// ── Global search (Phase D) — cross-business, admin-only ──────────────────────
+
+export interface BusinessSearchResult {
+  kind: 'business'
+  id: string
+  name: string
+  ownerPhone: string
+  plan: string
+  status: 'active' | 'suspended'
+}
+
+export interface CustomerSearchResult {
+  kind: 'customer'
+  id: string
+  name: string
+  phone: string | null
+  telegramUsername: string | null
+  businessId: string
+  businessName: string
+  anonymizedAt: string | null
+  deleted: boolean
+}
+
+export type SearchResult = BusinessSearchResult | CustomerSearchResult
+
+export interface SearchResponse {
+  items: SearchResult[]
+  total: number
+  page: number
+  limit: number
+  counts: { businesses: number; customers: number }
+  message?: string
+}
+
+export async function adminSearch(params: {
+  q: string
+  type?: 'all' | 'business' | 'customer'
+  page?: number
+  limit?: number
+  includeDeleted?: boolean
+}): Promise<SearchResponse> {
+  const res = await adminApi.get('/admin/search', {
+    params: {
+      q: params.q,
+      type: params.type && params.type !== 'all' ? params.type : undefined,
+      page: params.page || 1,
+      limit: params.limit || 20,
+      includeDeleted: params.includeDeleted ? 'true' : undefined,
+    },
+  })
+  return res.data
+}

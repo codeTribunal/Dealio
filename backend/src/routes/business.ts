@@ -16,8 +16,6 @@ const SAFE_BUSINESS_SELECT = {
   photoUrl: true,
   mode: true,
   language: true,
-  cardNumber: true,
-  cardBank: true,
   botUsername: true,
   calendarToken: true,
   workingHours: true,
@@ -37,8 +35,6 @@ const createBusinessBody = z.object({
   // Single mode (scalar). PRODUCTS disabled — only SERVICES/FREELANCE accepted.
   mode: z.enum(['SERVICES', 'FREELANCE']),
   language: z.enum(['UZBEK', 'RUSSIAN', 'ENGLISH']).optional(),
-  cardNumber: z.string().min(16).max(20).optional(),
-  cardBank: z.enum(['UZCARD', 'HUMO']).optional(),
   ownerTelegramChatId: z.string().optional(),
   botToken: z.string().optional(),
   botUsername: z.string().optional(),
@@ -57,9 +53,22 @@ const dayWindowSchema = z
     },
     { message: 'Working day start must be before end' },
   );
+const dayIntervalsSchema = z
+  .array(dayWindowSchema)
+  .refine(
+    (intervals) => {
+      const sorted = [...intervals].sort((a, b) => a.start.localeCompare(b.start));
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i].start < sorted[i - 1].end) return false; // overlapping intervals
+      }
+      return true;
+    },
+    { message: 'Working hour intervals must not overlap' },
+  );
 const workingHoursSchema = z.record(
   z.enum(['0', '1', '2', '3', '4', '5', '6']),
-  z.union([dayWindowSchema, z.null()]),
+  // Array of intervals (new) | single window (legacy) | null (closed).
+  z.union([dayIntervalsSchema, dayWindowSchema, z.null()]),
 );
 
 const updateBusinessBody = z.object({
@@ -74,13 +83,6 @@ const updateBusinessBody = z.object({
   botToken: z.string().optional(),
   botUsername: z.string().optional(),
   ownerTelegramChatId: z.string().optional(),
-  cardNumber: z.string().min(16).max(20).optional(),
-  cardBank: z.enum(['UZCARD', 'HUMO']).optional(),
-});
-
-const updatePaymentBody = z.object({
-  cardNumber: z.string().min(16).max(20),
-  cardBank: z.enum(['UZCARD', 'HUMO']),
 });
 
 const reminderSettingsSchema = z.object({
@@ -102,6 +104,49 @@ function buildTokenData(botToken: string | undefined) {
     botTokenIv: iv,
     botTokenTag: tag,
   };
+}
+
+const BOT_TOKEN_REGEX = /^\d+:[A-Za-z0-9_-]{35,}$/;
+const updateBotTokenBody = z.object({
+  botToken: z.string().regex(BOT_TOKEN_REGEX, 'Invalid bot token format'),
+});
+
+/** Authoritative bot identity check via Telegram getMe. */
+async function telegramGetMe(token: string): Promise<{ ok: boolean; username?: string }> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+    const data = (await res.json()) as { ok: boolean; result?: { username: string } };
+    if (!data.ok) return { ok: false };
+    return { ok: true, username: data.result?.username };
+  } catch {
+    return { ok: false };
+  }
+}
+
+/**
+ * Hot-swap a running bot with its newly-stored token. start-bot is a no-op when
+ * the bot is already running, so a token change only takes effect after a stop;
+ * start-bot then re-fetches the (new) token from the DB. Best-effort.
+ */
+async function restartBusinessBot(businessId: string): Promise<void> {
+  const botServiceUrl = process.env.BOT_SERVICE_URL ?? 'http://localhost:3002';
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-bot-secret': process.env.BOT_MANAGER_SECRET ?? '',
+  };
+  const body = JSON.stringify({ businessId });
+  await fetch(`${botServiceUrl}/internal/stop-bot`, {
+    method: 'POST',
+    headers,
+    body,
+    signal: AbortSignal.timeout(10_000),
+  });
+  await fetch(`${botServiceUrl}/internal/start-bot`, {
+    method: 'POST',
+    headers,
+    body,
+    signal: AbortSignal.timeout(10_000),
+  });
 }
 
 export default async function businessRoutes(app: FastifyInstance) {
@@ -156,18 +201,42 @@ export default async function businessRoutes(app: FastifyInstance) {
     return reply.send(updated);
   });
 
-  app.patch('/business/payment', { preHandler: authenticate }, async (request, reply) => {
+  // PATCH /business/bot-token
+  // Change the Telegram bot token (e.g. after revoking/replacing the bot).
+  // Re-verifies with Telegram, re-derives the username, and hot-swaps the bot.
+  app.patch('/business/bot-token', { preHandler: authenticate }, async (request, reply) => {
     const business = await getBusinessOrFail(request.user.userId, reply);
     if (!business) return;
 
-    const parsed = updatePaymentBody.safeParse(request.body);
+    const parsed = updateBotTokenBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
+
+    const tg = await telegramGetMe(parsed.data.botToken);
+    if (!tg.ok || !tg.username) {
+      return sendError(reply, 400, 'Invalid bot token. Check and try again.');
+    }
+
+    // The bot must not already belong to a different business.
+    const taken = await prisma.business.findUnique({ where: { botUsername: tg.username } });
+    if (taken && taken.id !== business.id) {
+      return sendError(reply, 409, 'This bot is already registered to another business.');
+    }
 
     const updated = await prisma.business.update({
       where: { id: business.id },
-      data: parsed.data,
+      data: { ...buildTokenData(parsed.data.botToken), botUsername: tg.username },
+      select: SAFE_BUSINESS_SELECT,
     });
-    return reply.send({ cardNumber: updated.cardNumber, cardBank: updated.cardBank });
+
+    // Best-effort hot-swap; if the bot service is down it picks up on next restart.
+    restartBusinessBot(business.id).catch((err) =>
+      app.log.error({ err }, '[business/bot-token] bot restart failed'),
+    );
+
+    return reply.send({
+      botUsername: updated.botUsername,
+      botLink: `https://t.me/${updated.botUsername}`,
+    });
   });
 
   app.patch('/business/fcm-token', { preHandler: authenticate }, async (request, reply) => {

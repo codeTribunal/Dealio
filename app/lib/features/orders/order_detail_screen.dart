@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/icons/app_icon.dart';
 import '../../core/models/order.dart';
@@ -10,9 +11,11 @@ import '../../shared/widgets/app_avatar.dart';
 import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_dialog.dart';
 import '../../shared/widgets/app_spinner.dart';
 import '../settings/customization_provider.dart';
 import 'order_detail_provider.dart';
+import 'orders_provider.dart';
 
 class OrderDetailScreen extends ConsumerWidget {
   final String orderId;
@@ -21,8 +24,44 @@ class OrderDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
     final orderAsync = ref.watch(orderDetailProvider(orderId));
     final notifier = ref.read(orderDetailProvider(orderId).notifier);
+
+    Future<void> confirmDelete() async {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AppDialog(
+          title: l.deleteOrderTitle,
+          content: Text(l.deleteOrderBody),
+          actions: [
+            AppButton(
+              label: l.buttonCancel,
+              variant: AppButtonVariant.ghost,
+              size: AppButtonSize.sm,
+              onPressed: () => Navigator.of(ctx).pop(false),
+            ),
+            AppButton(
+              label: l.buttonDelete,
+              variant: AppButtonVariant.danger,
+              size: AppButtonSize.sm,
+              onPressed: () => Navigator.of(ctx).pop(true),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
+      try {
+        await ref.read(ordersProvider.notifier).delete(orderId);
+        if (context.mounted) context.go('/orders');
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString()), backgroundColor: t.error),
+          );
+        }
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -30,6 +69,13 @@ class OrderDetailScreen extends ConsumerWidget {
           data: (o) => Text(l.orderNumberLabel(o.orderNumber)),
           orElse: () => Text(l.orderDetailTitle),
         ),
+        actions: [
+          TextButton(
+            onPressed: confirmDelete,
+            style: TextButton.styleFrom(foregroundColor: t.errorStrong),
+            child: Text(l.buttonDelete),
+          ),
+        ],
       ),
       body: orderAsync.when(
         loading: () => const Center(child: AppSpinner(size: 32)),
@@ -509,21 +555,24 @@ class _ActionButtons extends StatelessWidget {
 
   Future<void> _cancelOrder(BuildContext context) async {
     final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: t.surface,
-        title: Text(l.orderCancelTitle, style: TextStyle(color: t.text1)),
-        content: Text(l.orderCancelConfirm, style: TextStyle(color: t.text2)),
+      builder: (ctx) => AppDialog(
+        title: l.orderCancelTitle,
+        content: Text(l.orderCancelConfirm),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l.orderKeep, style: TextStyle(color: t.text2))),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(l.orderCancel,
-                  style: TextStyle(color: t.errorStrong))),
+          AppButton(
+            label: l.orderKeep,
+            variant: AppButtonVariant.ghost,
+            size: AppButtonSize.sm,
+            onPressed: () => Navigator.pop(ctx, false),
+          ),
+          AppButton(
+            label: l.orderCancel,
+            variant: AppButtonVariant.danger,
+            size: AppButtonSize.sm,
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
         ],
       ),
     );

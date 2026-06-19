@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api/api_service.dart';
+import '../../core/models/appointment.dart';
 import '../../core/models/customer.dart';
 import '../../core/models/service.dart';
 import '../../core/models/staff.dart';
@@ -11,12 +12,16 @@ import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_dialog.dart';
 import 'appointments_provider.dart';
 
 final _displayFmt = DateFormat('d MMM yyyy');
 
 class AppointmentFormScreen extends ConsumerStatefulWidget {
-  const AppointmentFormScreen({super.key});
+  /// When non-null the form is in EDIT mode: it prefills from this appointment
+  /// and PATCHes it instead of creating a new one.
+  final Appointment? existing;
+  const AppointmentFormScreen({super.key, this.existing});
 
   @override
   ConsumerState<AppointmentFormScreen> createState() =>
@@ -57,9 +62,24 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
   bool _saving = false;
   String? _error;
 
+  bool get _isEdit => widget.existing != null;
+
   @override
   void initState() {
     super.initState();
+    final existing = widget.existing;
+    if (existing != null) {
+      _customerManualMode = false;
+      _selectedCustomerId = existing.customer.id;
+      _serviceManualMode = false;
+      _selectedServiceId = existing.service.id;
+      _selectedStaffId = existing.staff?.id;
+      final s = existing.startTime.toLocal();
+      _date = DateTime(s.year, s.month, s.day);
+      _time = TimeOfDay(hour: s.hour, minute: s.minute);
+      _paymentType = existing.paymentType;
+      _notesCtrl.text = existing.notes ?? '';
+    }
     _loadReferenceData();
   }
 
@@ -85,6 +105,16 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
           _services = services;
           // If the owner already has services, default to picking one.
           if (services.isNotEmpty) _serviceManualMode = false;
+          // Edit mode: if the booked service is gone/inactive it won't be in
+          // the list — fall back to a prefilled manual entry so the dropdown
+          // never holds a value that isn't one of its items.
+          if (_isEdit && !services.any((s) => s.id == _selectedServiceId)) {
+            _serviceManualMode = true;
+            _manualServiceName = widget.existing!.service.name;
+            _manualServiceDuration =
+                widget.existing!.service.durationMinutes.toString();
+            _selectedServiceId = null;
+          }
         });
       }
     } catch (_) {
@@ -101,6 +131,9 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
   List<Staff> get _availableStaff {
     final staff = _staff;
     if (staff == null) return const [];
+    // In edit mode show ALL staff so the already-booked staff is always a valid
+    // dropdown option (it may not be linked to the chosen service).
+    if (_isEdit) return staff;
     if (_serviceManualMode || _selectedServiceId == null) return staff;
     return staff
         .where((m) => m.services.any((s) => s.id == _selectedServiceId))
@@ -115,7 +148,7 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
     final hasStaff = (_staff?.isNotEmpty ?? false);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.apptFormTitle)),
+      appBar: AppBar(title: Text(_isEdit ? l.apptEditTitle : l.apptFormTitle)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.s5),
         child: Column(
@@ -123,50 +156,63 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
           children: [
             // ── Customer ──────────────────────────────────────────
             _label(l.apptFormCustomerLabel),
-            Row(
-              children: [
-                _toggleButton(
-                  label: l.apptFormSelectExisting,
-                  selected: !_customerManualMode,
-                  onTap: () => setState(() => _customerManualMode = false),
-                ),
-                const SizedBox(width: AppSpacing.s2),
-                _toggleButton(
-                  label: l.apptFormEnterManually,
-                  selected: _customerManualMode,
-                  onTap: () => setState(() => _customerManualMode = true),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.s3),
-            if (!_customerManualMode)
-              DropdownButtonFormField<String>(
+            if (_isEdit)
+              // The customer is fixed on an existing appointment (read-only).
+              InputDecorator(
                 decoration: _decoration(context, label: l.orderSectionCustomer),
-                dropdownColor: t.surface,
-                style: TextStyle(color: t.text1),
-                // ignore: deprecated_member_use
-                value: _selectedCustomerId,
-                hint: _customers == null
-                    ? Text(l.commonLoading)
-                    : Text(l.apptFormSelectCustomer),
-                items: _customers
-                    ?.map(
-                      (c) => DropdownMenuItem<String>(
-                        value: c.id,
-                        child: Text(c.name),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedCustomerId = v),
+                child: Text(
+                  widget.existing!.customer.name,
+                  style: TextStyle(color: t.text1),
+                ),
               )
-            else
-              TextFormField(
-                style: TextStyle(color: t.text1),
-                decoration: _decoration(context,
-                    label: l.apptFormCustomerNameLabel,
-                    hint: l.apptFormCustomerNameHint),
-                onChanged: (v) => setState(() => _manualCustomerName = v),
+            else ...[
+              Row(
+                children: [
+                  _toggleButton(
+                    label: l.apptFormSelectExisting,
+                    selected: !_customerManualMode,
+                    onTap: () => setState(() => _customerManualMode = false),
+                  ),
+                  const SizedBox(width: AppSpacing.s2),
+                  _toggleButton(
+                    label: l.apptFormEnterManually,
+                    selected: _customerManualMode,
+                    onTap: () => setState(() => _customerManualMode = true),
+                  ),
+                ],
               ),
+              const SizedBox(height: AppSpacing.s3),
+              if (!_customerManualMode)
+                DropdownButtonFormField<String>(
+                  decoration:
+                      _decoration(context, label: l.orderSectionCustomer),
+                  dropdownColor: t.surface,
+                  borderRadius: AppRadii.md,
+                  style: TextStyle(color: t.text1),
+                  // ignore: deprecated_member_use
+                  value: _selectedCustomerId,
+                  hint: _customers == null
+                      ? Text(l.commonLoading)
+                      : Text(l.apptFormSelectCustomer),
+                  items: _customers
+                      ?.map(
+                        (c) => DropdownMenuItem<String>(
+                          value: c.id,
+                          child: Text(c.name),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) => setState(() => _selectedCustomerId = v),
+                )
+              else
+                TextFormField(
+                  style: TextStyle(color: t.text1),
+                  decoration: _decoration(context,
+                      label: l.apptFormCustomerNameLabel,
+                      hint: l.apptFormCustomerNameHint),
+                  onChanged: (v) => setState(() => _manualCustomerName = v),
+                ),
+            ],
             const SizedBox(height: AppSpacing.s5),
 
             // ── Service ───────────────────────────────────────────
@@ -192,6 +238,7 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
               DropdownButtonFormField<String>(
                 decoration: _decoration(context, label: l.apptFormServiceField),
                 dropdownColor: t.surface,
+                borderRadius: AppRadii.md,
                 style: TextStyle(color: t.text1),
                 // ignore: deprecated_member_use
                 value: _selectedServiceId,
@@ -261,6 +308,7 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
               DropdownButtonFormField<String?>(
                 decoration: _decoration(context, label: l.staffTitle),
                 dropdownColor: t.surface,
+                borderRadius: AppRadii.md,
                 style: TextStyle(color: t.text1),
                 // ignore: deprecated_member_use
                 value: _selectedStaffId,
@@ -361,7 +409,7 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
             ],
 
             AppButton(
-              label: l.apptFormCreate,
+              label: _isEdit ? l.buttonSave : l.apptFormCreate,
               fullWidth: true,
               loading: _saving,
               onPressed: _saving ? null : _submit,
@@ -428,7 +476,9 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
     final picked = await showDatePicker(
       context: context,
       initialDate: _date ?? now,
-      firstDate: DateTime(now.year, now.month, now.day),
+      // Owners may log PAST appointments (history / walk-ins), so allow well
+      // before today. Out-of-hours/past is fine — only overlap warns on save.
+      firstDate: DateTime(now.year - 2, now.month, now.day),
       lastDate: DateTime(now.year + 2),
     );
     if (picked != null) setState(() => _date = picked);
@@ -444,11 +494,12 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
 
   Future<void> _submit() async {
     final l = AppLocalizations.of(context)!;
-    if (!_customerManualMode && _selectedCustomerId == null) {
+    // Customer is only chosen on create — it's fixed in edit mode.
+    if (!_isEdit && !_customerManualMode && _selectedCustomerId == null) {
       setState(() => _error = l.apptErrSelectCustomer);
       return;
     }
-    if (_customerManualMode && _manualCustomerName.trim().isEmpty) {
+    if (!_isEdit && _customerManualMode && _manualCustomerName.trim().isEmpty) {
       setState(() => _error = l.apptErrEnterCustomer);
       return;
     }
@@ -473,8 +524,11 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
     try {
       final api = ref.read(apiServiceProvider);
 
+      // Resolve customer (create when manual). Fixed on edit.
       String customerId;
-      if (_customerManualMode) {
+      if (_isEdit) {
+        customerId = widget.existing!.customer.id;
+      } else if (_customerManualMode) {
         final customer =
             await api.createCustomer(name: _manualCustomerName.trim());
         customerId = customer.id;
@@ -482,6 +536,7 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
         customerId = _selectedCustomerId!;
       }
 
+      // Resolve service (create when manual).
       String serviceId;
       if (_serviceManualMode) {
         final service = await api.createService({
@@ -495,26 +550,7 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
         serviceId = _selectedServiceId!;
       }
 
-      final start = DateTime(
-        _date!.year,
-        _date!.month,
-        _date!.day,
-        _time!.hour,
-        _time!.minute,
-      );
-
-      final data = <String, dynamic>{
-        'customerId': customerId,
-        'serviceId': serviceId,
-        if (_selectedStaffId != null) 'staffId': _selectedStaffId,
-        'startTime': start.toUtc().toIso8601String(),
-        if (_notesCtrl.text.trim().isNotEmpty) 'notes': _notesCtrl.text.trim(),
-        'paymentType': _paymentType,
-      };
-
-      await api.createAppointment(data);
-      await ref.read(appointmentsProvider.notifier).refresh();
-      if (mounted) context.pop();
+      await _sendWithConflictGuard(api, customerId, serviceId);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -522,6 +558,93 @@ class _AppointmentFormScreenState extends ConsumerState<AppointmentFormScreen> {
         _error = e.toString();
       });
     }
+  }
+
+  /// Sends create-or-edit. Past/out-of-hours are allowed; on a 409 overlap the
+  /// owner is asked to confirm and the request is retried once with
+  /// allowConflict.
+  Future<void> _sendWithConflictGuard(
+    ApiService api,
+    String customerId,
+    String serviceId,
+  ) async {
+    Map<String, dynamic> buildBody(bool allowConflict) {
+      final start = DateTime(
+        _date!.year,
+        _date!.month,
+        _date!.day,
+        _time!.hour,
+        _time!.minute,
+      );
+      final data = <String, dynamic>{
+        'serviceId': serviceId,
+        'startTime': start.toUtc().toIso8601String(),
+        'paymentType': _paymentType,
+        'notes': _notesCtrl.text.trim(),
+        if (allowConflict) 'allowConflict': true,
+      };
+      if (_isEdit) {
+        // null clears the staff assignment ("Any available").
+        data['staffId'] = _selectedStaffId;
+      } else {
+        data['customerId'] = customerId;
+        if (_selectedStaffId != null) data['staffId'] = _selectedStaffId;
+      }
+      return data;
+    }
+
+    Future<void> send(bool allowConflict) async {
+      if (_isEdit) {
+        await api.updateAppointment(widget.existing!.id, buildBody(allowConflict));
+      } else {
+        await api.createAppointment(buildBody(allowConflict));
+      }
+    }
+
+    try {
+      await send(false);
+    } on ApiException catch (e) {
+      if (e.statusCode == 409 && e.message == 'APPOINTMENT_CONFLICT') {
+        final proceed = await _confirmOverlap();
+        if (proceed != true) {
+          if (mounted) setState(() => _saving = false);
+          return;
+        }
+        await send(true);
+      } else {
+        rethrow;
+      }
+    }
+
+    await ref.read(appointmentsProvider.notifier).refresh();
+    if (_isEdit) {
+      ref.invalidate(appointmentDetailProvider(widget.existing!.id));
+    }
+    if (mounted) context.pop();
+  }
+
+  Future<bool?> _confirmOverlap() {
+    final l = AppLocalizations.of(context)!;
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AppDialog(
+        title: l.apptConflictTitle,
+        content: Text(l.apptConflictBody),
+        actions: [
+          AppButton(
+            label: l.buttonCancel,
+            variant: AppButtonVariant.ghost,
+            size: AppButtonSize.sm,
+            onPressed: () => Navigator.of(ctx).pop(false),
+          ),
+          AppButton(
+            label: l.apptConflictConfirm,
+            size: AppButtonSize.sm,
+            onPressed: () => Navigator.of(ctx).pop(true),
+          ),
+        ],
+      ),
+    );
   }
 }
 

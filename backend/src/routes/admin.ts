@@ -4,20 +4,9 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { sendError } from '../lib/errors.js';
 import { requireAdmin, requireSuperAdmin } from '../middleware/adminAuth.js';
+import { writeAuditLog } from '../lib/audit.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-async function writeAuditLog(params: {
-  adminUserId: string;
-  action: string;
-  targetType: string;
-  targetId: string;
-  metadata?: Record<string, unknown>;
-  ipAddress?: string;
-}) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await prisma.auditLog.create({ data: params as any });
-}
 
 const SAFE_BUSINESS_SELECT = {
   id: true,
@@ -232,11 +221,20 @@ export default async function adminRoutes(app: FastifyInstance) {
     const now = new Date();
     const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-    const [business, usageLog, recentOrders, recentCustomers] = await Promise.all([
+    const [
+      business,
+      usageLog,
+      recentOrders,
+      recentCustomers,
+      customerCount,
+      orderCount,
+      appointmentCount,
+      staffCount,
+    ] = await Promise.all([
       prisma.business.findUnique({ where: { id }, select: SAFE_BUSINESS_SELECT }),
       prisma.usageLog.findUnique({ where: { businessId_month: { businessId: id, month: monthKey } } }),
       prisma.order.findMany({
-        where: { businessId: id },
+        where: { businessId: id, deletedAt: null },
         orderBy: { createdAt: 'desc' },
         take: 5,
         select: { id: true, orderNumber: true, total: true, createdAt: true },
@@ -247,11 +245,28 @@ export default async function adminRoutes(app: FastifyInstance) {
         take: 5,
         select: { id: true, name: true, createdAt: true },
       }),
+      // Accurate counts: the extended client excludes soft-deleted rows, so
+      // these replace the relation _count (which would include deleted rows).
+      prisma.customer.count({ where: { businessId: id } }),
+      prisma.order.count({ where: { businessId: id } }),
+      prisma.appointment.count({ where: { businessId: id } }),
+      prisma.staff.count({ where: { businessId: id } }),
     ]);
 
     if (!business) return sendError(reply, 404, 'Business not found');
 
-    return reply.send({ ...business, usageThisMonth: usageLog, recentOrders, recentCustomers });
+    return reply.send({
+      ...business,
+      _count: {
+        customers: customerCount,
+        orders: orderCount,
+        appointments: appointmentCount,
+        staff: staffCount,
+      },
+      usageThisMonth: usageLog,
+      recentOrders,
+      recentCustomers,
+    });
   });
 
   // PATCH /admin/businesses/:id/plan

@@ -14,8 +14,6 @@ class OnboardingState {
   final String botToken;
   final String botUsername;
   final String botName;
-  final String cardNumber;
-  final String cardBank;
   final bool verifyingToken;
   final bool tokenVerified;
   final String? tokenError;
@@ -44,8 +42,6 @@ class OnboardingState {
     this.botToken = '',
     this.botUsername = '',
     this.botName = '',
-    this.cardNumber = '',
-    this.cardBank = 'UZCARD',
     this.verifyingToken = false,
     this.tokenVerified = false,
     this.tokenError,
@@ -72,8 +68,6 @@ class OnboardingState {
     String? botToken,
     String? botUsername,
     String? botName,
-    String? cardNumber,
-    String? cardBank,
     bool? verifyingToken,
     bool? tokenVerified,
     String? tokenError,
@@ -102,8 +96,6 @@ class OnboardingState {
       botToken: botToken ?? this.botToken,
       botUsername: botUsername ?? this.botUsername,
       botName: botName ?? this.botName,
-      cardNumber: cardNumber ?? this.cardNumber,
-      cardBank: cardBank ?? this.cardBank,
       verifyingToken: verifyingToken ?? this.verifyingToken,
       tokenVerified: tokenVerified ?? this.tokenVerified,
       tokenError: clearTokenError ? null : (tokenError ?? this.tokenError),
@@ -153,10 +145,6 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
     );
   }
 
-  void setCardNumber(String number) => state = state.copyWith(cardNumber: number);
-
-  void setCardBank(String bank) => state = state.copyWith(cardBank: bank);
-
   // ── Step 5: Telegram verification ───────────────────────────────────────
 
   void setCode(String code) => state = state.copyWith(code: code);
@@ -169,7 +157,7 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
 
   /// Move to the verification step and request a fresh enrollment deep link.
   void goToVerify() {
-    state = state.copyWith(step: 5);
+    state = state.copyWith(step: 4);
     startEnrollment();
   }
 
@@ -243,8 +231,6 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
         mode: state.mode,
         language: state.language,
         botToken: state.botToken,
-        cardNumber: state.cardNumber.isNotEmpty ? state.cardNumber : null,
-        cardBank: state.cardNumber.isNotEmpty ? state.cardBank : null,
       );
 
       // Bind the freshly-created business to auth state BEFORE showing the done

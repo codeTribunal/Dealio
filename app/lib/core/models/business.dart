@@ -7,8 +7,7 @@ class Business {
   // Values: 'SERVICES' | 'FREELANCE' ('PRODUCTS' dormant, no longer assigned).
   final String mode;
   final String language;
-  final String? cardNumber;
-  final String? cardBank;
+  final String? plan;
   final String? botToken;
   final String? botUsername;
   final String? calendarToken;
@@ -25,8 +24,7 @@ class Business {
     this.photoUrl,
     required this.mode,
     required this.language,
-    this.cardNumber,
-    this.cardBank,
+    this.plan,
     this.botToken,
     this.botUsername,
     this.calendarToken,
@@ -42,8 +40,7 @@ class Business {
         photoUrl: json['photoUrl'] as String?,
         mode: json['mode'] as String? ?? 'SERVICES',
         language: json['language'] as String? ?? 'UZBEK',
-        cardNumber: json['cardNumber'] as String?,
-        cardBank: json['cardBank'] as String?,
+        plan: json['plan'] as String?,
         botToken: json['botToken'] as String?,
         botUsername: json['botUsername'] as String?,
         calendarToken: json['calendarToken'] as String?,
@@ -60,8 +57,6 @@ class Business {
     String? photoUrl,
     String? mode,
     String? language,
-    String? cardNumber,
-    String? cardBank,
     String? botUsername,
     String? calendarToken,
     bool clearCalendarToken = false,
@@ -75,8 +70,7 @@ class Business {
         photoUrl: photoUrl ?? this.photoUrl,
         mode: mode ?? this.mode,
         language: language ?? this.language,
-        cardNumber: cardNumber ?? this.cardNumber,
-        cardBank: cardBank ?? this.cardBank,
+        plan: plan,
         botToken: botToken,
         botUsername: botUsername ?? this.botUsername,
         calendarToken:

@@ -5,17 +5,36 @@ import '../../core/models/customer.dart';
 
 class CustomersNotifier extends AsyncNotifier<List<Customer>> {
   String _searchQuery = '';
+  bool _showDeleted = false;
 
   String get searchQuery => _searchQuery;
+  bool get showDeleted => _showDeleted;
 
   @override
   Future<List<Customer>> build() async {
-    return ref.read(apiServiceProvider).getCustomers();
+    return ref.read(apiServiceProvider).getCustomers(includeDeleted: _showDeleted);
   }
 
   void setSearch(String query) {
     _searchQuery = query;
     state = state; // client-side filter — no API call needed
+  }
+
+  void setShowDeleted(bool value) {
+    _showDeleted = value;
+    ref.invalidateSelf();
+  }
+
+  Future<void> delete(String id) async {
+    await ref.read(apiServiceProvider).deleteCustomer(id);
+    ref.invalidateSelf();
+    await future;
+  }
+
+  Future<void> restore(String id) async {
+    await ref.read(apiServiceProvider).restoreCustomer(id);
+    ref.invalidateSelf();
+    await future;
   }
 
   Future<void> refresh() async {

@@ -14,6 +14,7 @@ import '../../shared/utils/status_labels.dart';
 import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_dialog.dart';
 import '../../shared/widgets/app_spinner.dart';
 import 'projects_provider.dart';
 
@@ -416,28 +417,27 @@ class _MilestoneRow extends ConsumerWidget {
 
   void _showResetDialog(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: t.surface,
-        title: Text(l.projectResetMilestone, style: TextStyle(color: t.text1)),
-        content: Text(l.projectResetMilestoneBody(milestone.name),
-            style: TextStyle(color: t.text2)),
+      builder: (ctx) => AppDialog(
+        title: l.projectResetMilestone,
+        content: Text(l.projectResetMilestoneBody(milestone.name)),
         actions: [
-          TextButton(
+          AppButton(
+            label: l.buttonCancel,
+            variant: AppButtonVariant.ghost,
+            size: AppButtonSize.sm,
             onPressed: () => Navigator.pop(ctx),
-            child: Text(l.buttonCancel, style: TextStyle(color: t.text2)),
           ),
-          TextButton(
+          AppButton(
+            label: l.projectResetToPending,
+            size: AppButtonSize.sm,
             onPressed: () {
               Navigator.pop(ctx);
               ref
                   .read(projectDetailProvider(projectId).notifier)
                   .resetMilestoneToPending(milestone.id);
             },
-            child: Text(l.projectResetToPending,
-                style: TextStyle(color: t.accent)),
           ),
         ],
       ),
@@ -707,9 +707,8 @@ class _GenerateInvoiceDialogState extends ConsumerState<_GenerateInvoiceDialog> 
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final t = AppTokens.of(context);
-    return AlertDialog(
-      backgroundColor: t.surface,
-      title: Text(l.projectGenerateInvoice, style: TextStyle(color: t.text1)),
+    return AppDialog(
+      title: l.projectGenerateInvoice,
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -753,9 +752,11 @@ class _GenerateInvoiceDialogState extends ConsumerState<_GenerateInvoiceDialog> 
         ),
       ),
       actions: [
-        TextButton(
+        AppButton(
+          label: l.buttonCancel,
+          variant: AppButtonVariant.ghost,
+          size: AppButtonSize.sm,
           onPressed: _saving ? null : () => Navigator.pop(context),
-          child: Text(l.buttonCancel, style: TextStyle(color: t.text2)),
         ),
         AppButton(
           label: l.projectGenerate,

@@ -25,17 +25,38 @@ const _sentinel = Object();
 
 class OrdersNotifier extends AsyncNotifier<List<Order>> {
   OrdersFilter _filter = const OrdersFilter();
+  bool _showDeleted = false;
 
   OrdersFilter get filter => _filter;
+  bool get showDeleted => _showDeleted;
 
   @override
   Future<List<Order>> build() async {
-    return ref.read(apiServiceProvider).getOrders(status: _filter.status);
+    return ref
+        .read(apiServiceProvider)
+        .getOrders(status: _filter.status, includeDeleted: _showDeleted);
   }
 
   void setStatus(String? status) {
     _filter = _filter.copyWith(status: status);
     ref.invalidateSelf();
+  }
+
+  void setShowDeleted(bool value) {
+    _showDeleted = value;
+    ref.invalidateSelf();
+  }
+
+  Future<void> delete(String id) async {
+    await ref.read(apiServiceProvider).deleteOrder(id);
+    ref.invalidateSelf();
+    await future;
+  }
+
+  Future<void> restore(String id) async {
+    await ref.read(apiServiceProvider).restoreOrder(id);
+    ref.invalidateSelf();
+    await future;
   }
 
   void setSearch(String query) {

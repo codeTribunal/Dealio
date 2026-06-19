@@ -55,6 +55,40 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^4.0.0
 
+  # App launcher icon generator (Android adaptive + legacy mipmaps)
+  flutter_launcher_icons: ^0.14.1
+
+  # Native launch/splash screen generator (paper bg + Dealio mark)
+  flutter_native_splash: ^2.4.1
+
 flutter:
   uses-material-design: true
   generate: true
+  assets:
+    - assets/branding/
+
+# Dealio launcher icon — Android only (launch is Android-only).
+# image_path: paper (#FAFAF8) tile with the navy "d" mark (legacy mipmaps).
+# adaptive: #FAFAF8 background layer + transparent "d" foreground layer.
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/dealio_icon.png"
+  adaptive_icon_background: "#FAFAF8"
+  adaptive_icon_foreground: "assets/icon/dealio_foreground.png"
+  min_sdk_android: 21
+
+# Dealio native splash — Android only. COLOR-ONLY cold-start bridge: blank paper
+# background (#FBFBF9 = hsl(60,20%,98%)) with NO image, so cold start goes
+# blank paper → Dart SplashScreen lockup (mark + "Dealio." wordmark) without an
+# ugly bare-mark flash. The native splash deliberately renders no logo because
+# the Android 12+ system splash masks the icon to a fixed centered circle and
+# cannot show the tall lockup / wordmark anyway. Both legacy and android_12
+# share the same paper color.
+flutter_native_splash:
+  color: "#FBFBF9"
+  android: true
+  ios: false
+  web: false
+  android_12:
+    color: "#FBFBF9"

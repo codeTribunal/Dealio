@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import AuthLayout from '@/components/AuthLayout'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -9,22 +9,27 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { Icon } from '@/components/icons/Icon'
-import { getCustomerDetail, updateCustomerNotes } from '@/lib/api'
+import { getCustomerDetail, updateCustomerNotes, deleteCustomer } from '@/lib/api'
 import { formatUZS, formatDate, formatDateTime, formatRelativeTime } from '@/lib/format'
+import { useI18n } from '@/lib/i18n/i18nContext'
 import type { CustomerDetail } from '@/types'
 
-type Tab = 'orders' | 'appointments' | 'projects'
+type Tab = 'appointments' | 'projects'
 
-const TABS: Tab[] = ['orders', 'appointments', 'projects']
+const TABS: Tab[] = ['appointments', 'projects']
 
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
+  const { t } = useI18n()
   const [customer, setCustomer] = useState<CustomerDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
   const [savingNotes, setSavingNotes] = useState(false)
-  const [activeTab, setActiveTab] = useState<Tab>('orders')
+  const [activeTab, setActiveTab] = useState<Tab>('appointments')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   function fetchCustomer() {
     setLoading(true)
@@ -55,6 +60,18 @@ export default function CustomerDetailPage() {
     setSavingNotes(true)
     await updateCustomerNotes(customer.id, notes)
     setSavingNotes(false)
+  }
+
+  async function handleDelete() {
+    if (!customer) return
+    setDeleting(true)
+    try {
+      await deleteCustomer(customer.id)
+      router.push('/customers')
+    } catch {
+      setDeleting(false)
+      setShowDeleteConfirm(false)
+    }
   }
 
   return (
@@ -203,6 +220,44 @@ export default function CustomerDetailPage() {
                 </div>
               </Card>
             )}
+
+            {/* Delete (soft, recoverable) */}
+            <Card>
+              {!showDeleteConfirm ? (
+                <Button
+                  variant="danger"
+                  fullWidth
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  {t('common.delete')}
+                </Button>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-text-1">
+                    {t('common.deleteCustomerTitle')}
+                  </p>
+                  <p className="text-sm text-text-2">{t('common.deleteCustomerBody')}</p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="danger"
+                      fullWidth
+                      loading={deleting}
+                      onClick={handleDelete}
+                    >
+                      {t('common.yesDelete')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      fullWidth
+                      disabled={deleting}
+                      onClick={() => setShowDeleteConfirm(false)}
+                    >
+                      {t('common.cancel')}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Card>
           </div>
 
           {/* RIGHT COLUMN — tabbed content */}
@@ -228,50 +283,6 @@ export default function CustomerDetailPage() {
                 )
               })}
             </div>
-
-            {/* Orders tab */}
-            {activeTab === 'orders' && (
-              <>
-                {customer.orders.length === 0 ? (
-                  <div className="text-center py-12 text-sm text-text-2">No orders yet</div>
-                ) : (
-                  <div className="space-y-3">
-                    {customer.orders.map((order) => (
-                      <Card key={order.id}>
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="text-sm font-bold text-text-1">
-                            Order #{order.orderNumber}
-                          </span>
-                          <div className="flex gap-2">
-                            <Badge status={order.paymentStatus} type="payment" />
-                            <Badge status={order.orderStatus} type="order" />
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          {order.items.map((item, i) => (
-                            <div key={i} className="flex justify-between text-sm py-1">
-                              <p className="text-text-2">
-                                {item.product.name} × {item.quantity}
-                              </p>
-                              <p className="text-text-1 font-medium tabular-nums">
-                                {formatUZS(item.price * item.quantity)}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="border-t border-border my-3" />
-                        <div className="flex justify-between items-center">
-                          <p className="text-xs text-text-3">{formatDateTime(order.createdAt)}</p>
-                          <p className="text-sm font-bold text-text-1 tabular-nums">
-                            Total: {formatUZS(order.total)}
-                          </p>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
 
             {/* Appointments tab */}
             {activeTab === 'appointments' && (

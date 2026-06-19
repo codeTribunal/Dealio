@@ -50,6 +50,10 @@
   "navProjects": "Projects",
   "navAnalytics": "Analytics",
   "navSettings": "Settings",
+  "profileTitle": "Profile",
+  "profilePhoneLabel": "Phone",
+  "profilePlanLabel": "Plan",
+  "profileBusinessSettings": "Business settings",
   "navMessages": "Messages",
   "orderStatusNew": "New",
   "orderStatusPreparing": "Preparing",
@@ -253,6 +257,9 @@
   },
   "settingsRemindersFootnote": "Reminders are sent to this app and your Telegram.",
   "settingsTelegramBot": "TELEGRAM BOT",
+  "settingsChangeBot": "Change bot",
+  "settingsBotTokenHint": "Paste a new token from @BotFather if you revoked or replaced your bot.",
+  "settingsBotTokenUpdated": "Bot updated",
   "settingsNoBotConfigured": "No bot configured. Contact support to set up your bot.",
   "settingsCopyLinkTooltip": "Copy link",
   "settingsBotLinkCopied": "Bot link copied",
@@ -340,6 +347,8 @@
   "homeNoActivity": "No activity today",
   "homeWelcome": "Welcome",
   "homeHeroTodayOrders": "Today's orders",
+  "homeHeroTodayAppointments": "Today's appointments",
+  "homeHeroTodayProjects": "New projects today",
   "homeStatPending": "Pending payments",
   "homeStatNewCustomers": "New customers",
   "homePendingPaymentsCount": "{count, plural, =0{No pending payments} =1{1 pending payment} other{{count} pending payments}}",
@@ -488,7 +497,7 @@
   "serviceFormEditTitle": "Edit service",
   "serviceFormNameLabel": "Service name",
   "serviceFormDurationLabel": "Duration (minutes)",
-  "serviceFormPriceLabel": "Price (UZS)",
+  "serviceFormPriceLabel": "Price (soum)",
   "serviceFormActiveSubtitle": "Visible to customers in the bot",
   "staffTitle": "Staff",
   "staffEmpty": "No staff yet. Tap + to add one.",
@@ -546,6 +555,12 @@
   "apptFormPaymentLabel": "Payment",
   "apptFormNotesHint": "Any notes about this appointment...",
   "apptFormCreate": "Create appointment",
+  "apptEditTitle": "Edit appointment",
+  "apptEdit": "Edit",
+  "apptStatusLabel": "Status",
+  "apptConflictTitle": "This overlaps an existing booking",
+  "apptConflictBody": "This time overlaps another appointment. Add it anyway?",
+  "apptConflictConfirm": "Add anyway",
   "apptErrSelectCustomer": "Select a customer",
   "apptErrEnterCustomer": "Enter a customer name",
   "apptErrSelectService": "Select a service",
@@ -619,7 +634,7 @@
   "projectMarkPaid": "Mark paid",
   "projectGenerateInvoice": "Generate invoice",
   "projectQty": "Qty",
-  "projectUnitPrice": "Unit price (UZS)",
+  "projectUnitPrice": "Unit price (soum)",
   "projectDueDateLabel": "Due date (YYYY-MM-DD)",
   "projectFormTitle": "New project",
   "projectSelectClient": "Select a client",
@@ -628,7 +643,7 @@
   "projectNameLabel": "Project name",
   "projectNameHint": "e.g. Brand identity redesign",
   "projectScopeHint": "Describe deliverables...",
-  "projectPriceLabel": "Total agreed price (UZS)",
+  "projectPriceLabel": "Total agreed price (soum)",
   "projectTermsHint": "e.g. 50% upfront, 50% on delivery",
   "projectStartDate": "Start date",
   "projectFormCreate": "Create project",
@@ -639,7 +654,7 @@
   "milestoneAdd": "Add milestone",
   "milestoneNameLabel": "Milestone name",
   "milestoneNameHint": "e.g. Initial design mockups",
-  "milestoneAmountLabel": "Amount (UZS)",
+  "milestoneAmountLabel": "Amount (soum)",
   "milestoneDueDateLabel": "Due date",
   "milestoneAmountInvalid": "Enter a valid amount",
   "analyticsTitle": "Analytics",
@@ -653,6 +668,8 @@
     }
   },
   "analyticsRevenueThisMonth": "Revenue this month",
+  "analyticsThisMonthShort": "This month",
+  "analyticsLastMonthShort": "Last month",
   "analyticsLastMonth": "Last month: {amount}",
   "@analyticsLastMonth": {
     "placeholders": {
@@ -663,11 +680,20 @@
   },
   "analyticsCompletedThisMonth": "Completed\nthis month",
   "analyticsAvgOrderValue": "Avg order\nvalue",
+  "analyticsAppointmentsThisMonth": "Appointments\nthis month",
+  "analyticsApptCount": "{count, plural, =1{1 appointment} other{{count} appointments}}",
+  "@analyticsApptCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "analyticsPendingPayments": "Pending payments",
   "analyticsAllReceived": "All payments received",
-  "analyticsTopCustomers": "TOP CUSTOMERS — LAST 90 DAYS",
-  "analyticsNoConfirmedOrders": "No confirmed orders in the last 90 days",
-  "analyticsBestSelling": "BEST SELLING PRODUCT",
+  "analyticsTopCustomers": "Top customers — last 90 days",
+  "analyticsNoConfirmedOrders": "No completed appointments in the last 90 days",
+  "analyticsBestSelling": "Best selling product",
   "analyticsUnitsSold": "{count, plural, =1{1 unit sold} other{{count} units sold}}",
   "@analyticsUnitsSold": {
     "placeholders": {
@@ -694,6 +720,12 @@
   "schedulingBufferHint": "Gap added after each appointment, e.g. for cleanup.",
   "schedulingBufferUnit": "minutes",
   "schedulingWorkingHoursSaved": "Working hours saved",
+  "schedulingCopyToWeekdays": "Copy to weekdays",
+  "schedulingCopiedToWeekdays": "Copied to Mon–Fri",
+  "schedulingUnavailable": "Unavailable",
+  "schedulingAddHours": "Add hours",
+  "schedulingRemoveSlot": "Remove",
+  "schedulingOverlap": "Working hours can't overlap.",
   "schedulingBlockedTime": "Blocked time",
   "schedulingBlockedTimeHint": "Block off vacations, breaks or one-off closures so customers cannot book them.",
   "schedulingAddBlocked": "Add blocked time",
@@ -735,5 +767,17 @@
         "type": "String"
       }
     }
-  }
+  },
+  "buttonRestore": "Restore",
+  "buttonYesDelete": "Yes, delete",
+  "commonShowDeleted": "Show deleted",
+  "commonDeletedBadge": "Deleted",
+  "deleteCustomerTitle": "Delete this customer?",
+  "deleteCustomerBody": "They will be hidden from your lists along with their orders and appointments. You can restore them later.",
+  "deleteOrderTitle": "Delete this order?",
+  "deleteOrderBody": "It will be hidden from your orders. You can restore it later.",
+  "deleteAppointmentTitle": "Delete this appointment?",
+  "deleteAppointmentBody": "It will be hidden from your appointments. You can restore it later.",
+  "notificationView": "View",
+  "notificationDismiss": "Dismiss"
 }

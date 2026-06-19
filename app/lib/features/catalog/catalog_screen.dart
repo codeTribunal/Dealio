@@ -11,6 +11,7 @@ import '../../shared/utils/status_labels.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_spinner.dart';
+import '../../shared/widgets/app_switch.dart';
 import 'catalog_provider.dart';
 
 class CatalogScreen extends ConsumerWidget {
@@ -195,10 +196,9 @@ class _ProductCard extends StatelessWidget {
           ),
 
           // Active/paused toggle
-          Switch(
+          AppSwitch(
             value: product.active,
             onChanged: (_) => onToggle(),
-            activeThumbColor: t.accent,
           ),
         ],
       ),

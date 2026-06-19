@@ -14,81 +14,69 @@ export default async function analyticsRoutes(app: FastifyInstance) {
     const ninetyDaysAgo = new Date(now);
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-    const baseWhere = { businessId: business.id, deletedAt: null };
+    // Analytics are appointment-based (the product/order model is dormant).
+    const base = { businessId: business.id, deletedAt: null };
 
     const [
-      thisMonthRevResult,
-      lastMonthRevResult,
-      ordersCompleted,
-      ordersThisMonth,
+      thisMonthRev,
+      lastMonthRev,
+      completedThisMonth,
+      appointmentsThisMonth,
       topCustomerRows,
-      bestItemRows,
-      avgResult,
       pendingResult,
     ] = await Promise.all([
-      // Revenue this month — confirmed payments only
-      prisma.order.aggregate({
-        where: { ...baseWhere, paymentStatus: 'CONFIRMED', createdAt: { gte: thisMonthStart } },
-        _sum: { total: true },
+      // Revenue this month — completed appointments, by start time.
+      prisma.appointment.aggregate({
+        where: { ...base, status: 'COMPLETED', startTime: { gte: thisMonthStart } },
+        _sum: { price: true },
       }),
 
-      // Revenue last month
-      prisma.order.aggregate({
+      // Revenue last month.
+      prisma.appointment.aggregate({
         where: {
-          ...baseWhere,
-          paymentStatus: 'CONFIRMED',
-          createdAt: { gte: lastMonthStart, lt: thisMonthStart },
+          ...base,
+          status: 'COMPLETED',
+          startTime: { gte: lastMonthStart, lt: thisMonthStart },
         },
-        _sum: { total: true },
+        _sum: { price: true },
       }),
 
-      // Orders delivered this month
-      prisma.order.count({
-        where: { ...baseWhere, orderStatus: 'DELIVERED', createdAt: { gte: thisMonthStart } },
+      // Completed appointments this month.
+      prisma.appointment.count({
+        where: { ...base, status: 'COMPLETED', startTime: { gte: thisMonthStart } },
       }),
 
-      // All orders placed this month (excluding cancelled)
-      prisma.order.count({
+      // Booked (non-cancelled / non-no-show) appointments this month.
+      prisma.appointment.count({
         where: {
-          ...baseWhere,
-          orderStatus: { not: 'CANCELLED' },
-          createdAt: { gte: thisMonthStart },
+          ...base,
+          status: { notIn: ['CANCELLED', 'NO_SHOW'] },
+          startTime: { gte: thisMonthStart },
         },
       }),
 
-      // Top 3 customers by spend in last 90 days
-      prisma.order.groupBy({
+      // Top 3 customers by completed-appointment spend in the last 90 days.
+      prisma.appointment.groupBy({
         by: ['customerId'],
-        where: { ...baseWhere, paymentStatus: 'CONFIRMED', createdAt: { gte: ninetyDaysAgo } },
-        _sum: { total: true },
+        where: { ...base, status: 'COMPLETED', startTime: { gte: ninetyDaysAgo } },
+        _sum: { price: true },
         _count: { id: true },
-        orderBy: { _sum: { total: 'desc' } },
+        orderBy: { _sum: { price: 'desc' } },
         take: 3,
       }),
 
-      // Best selling product by units sold (all time)
-      prisma.orderItem.groupBy({
-        by: ['productId'],
-        where: { order: { ...baseWhere } },
-        _sum: { quantity: true },
-        orderBy: { _sum: { quantity: 'desc' } },
-        take: 1,
-      }),
-
-      // Average order value (confirmed payments, all time)
-      prisma.order.aggregate({
-        where: { ...baseWhere, paymentStatus: 'CONFIRMED' },
-        _avg: { total: true },
-      }),
-
-      // Pending payments total (non-cancelled orders with pending payment)
-      prisma.order.aggregate({
-        where: { ...baseWhere, paymentStatus: 'PENDING', orderStatus: { not: 'CANCELLED' } },
-        _sum: { total: true },
+      // Pending payments — appointments awaiting payment.
+      prisma.appointment.aggregate({
+        where: {
+          ...base,
+          paymentStatus: 'PENDING',
+          status: { notIn: ['CANCELLED', 'NO_SHOW'] },
+        },
+        _sum: { price: true },
       }),
     ]);
 
-    // Resolve customer names for top customers
+    // Resolve customer names for the top customers.
     const topCustomers = await Promise.all(
       topCustomerRows.map(async (row) => {
         const customer = await prisma.customer.findFirst({
@@ -98,38 +86,19 @@ export default async function analyticsRoutes(app: FastifyInstance) {
         return {
           id: row.customerId,
           name: customer?.name ?? 'Unknown',
-          totalSpent: row._sum.total ?? 0,
-          orderCount: row._count.id,
+          totalSpent: row._sum.price ?? 0,
+          appointmentCount: row._count.id,
         };
       }),
     );
 
-    // Resolve product name for best selling
-    let bestSellingProduct = null;
-    if (bestItemRows.length > 0) {
-      const row = bestItemRows[0];
-      const product = await prisma.product.findFirst({
-        where: { id: row.productId, businessId: business.id },
-        select: { id: true, name: true },
-      });
-      if (product) {
-        bestSellingProduct = {
-          id: product.id,
-          name: product.name,
-          unitsSold: row._sum.quantity ?? 0,
-        };
-      }
-    }
-
     return reply.send({
-      revenueThisMonth: thisMonthRevResult._sum.total ?? 0,
-      revenueLastMonth: lastMonthRevResult._sum.total ?? 0,
-      ordersThisMonth,
-      ordersCompletedThisMonth: ordersCompleted,
+      revenueThisMonth: thisMonthRev._sum.price ?? 0,
+      revenueLastMonth: lastMonthRev._sum.price ?? 0,
+      completedThisMonth,
+      appointmentsThisMonth,
+      pendingPaymentsTotal: pendingResult._sum.price ?? 0,
       topCustomers,
-      bestSellingProduct,
-      averageOrderValue: Math.round(avgResult._avg.total ?? 0),
-      pendingPaymentsTotal: pendingResult._sum.total ?? 0,
     });
   });
 }

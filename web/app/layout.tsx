@@ -15,6 +15,15 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: 'CRM Dashboard',
   description: 'Business management platform',
+  // Root /favicon.ico (16/32/48) is auto-served from app/favicon.ico. These add
+  // the larger PNGs (PWA / high-DPI) and the iOS apple-touch icon.
+  icons: {
+    icon: [
+      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/icon-512.png', type: 'image/png', sizes: '512x512' },
+    ],
+    apple: { url: '/apple-touch-icon.png', sizes: '180x180' },
+  },
 }
 
 // Runs before paint — reads the theme cookie and sets `.dark` on <html> to

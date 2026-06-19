@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import AuthLayout from '@/components/AuthLayout'
 import { Card, CardHeader } from '@/components/ui/Card'
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
-import { getOrderDetail, updateOrderStatus, confirmOrderPayment } from '@/lib/api'
+import { getOrderDetail, updateOrderStatus, confirmOrderPayment, deleteOrder } from '@/lib/api'
 import { formatUZS, formatDate, formatDateTime } from '@/lib/format'
 import { useI18n } from '@/lib/i18n/i18nContext'
 import type { Order } from '@/types'
@@ -17,12 +17,15 @@ export default function OrderDetailPage() {
   const params = useParams()
   const id = params.id as string
   const { t } = useI18n()
+  const router = useRouter()
 
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [confirmingPayment, setConfirmingPayment] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   function load() {
     setLoading(true)
@@ -51,6 +54,18 @@ export default function OrderDetailPage() {
     await confirmOrderPayment(order.id)
     setOrder({ ...order, paymentStatus: 'CONFIRMED' })
     setConfirmingPayment(false)
+  }
+
+  async function handleDelete() {
+    if (!order) return
+    setDeleting(true)
+    try {
+      await deleteOrder(order.id)
+      router.push('/orders')
+    } catch {
+      setDeleting(false)
+      setShowDeleteConfirm(false)
+    }
   }
 
   return (
@@ -219,6 +234,44 @@ export default function OrderDetailPage() {
                   </p>
                 </Card>
               )}
+
+              {/* Delete (soft, recoverable) */}
+              <Card>
+                {!showDeleteConfirm ? (
+                  <Button
+                    variant="danger"
+                    fullWidth
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    {t('common.delete')}
+                  </Button>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-text-1">
+                      {t('common.deleteOrderTitle')}
+                    </p>
+                    <p className="text-sm text-text-2">{t('common.deleteOrderBody')}</p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="danger"
+                        fullWidth
+                        loading={deleting}
+                        onClick={handleDelete}
+                      >
+                        {t('common.yesDelete')}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        fullWidth
+                        disabled={deleting}
+                        onClick={() => setShowDeleteConfirm(false)}
+                      >
+                        {t('common.cancel')}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Card>
             </div>
 
             {/* RIGHT COLUMN */}

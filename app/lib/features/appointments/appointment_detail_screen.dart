@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/icons/app_icon.dart';
 import '../../core/models/appointment.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
+import '../../shared/utils/status_labels.dart';
 import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_dialog.dart';
 import '../../shared/widgets/app_spinner.dart';
 import 'appointments_provider.dart';
 
@@ -21,9 +24,60 @@ class AppointmentDetailScreen extends ConsumerWidget {
     final l = AppLocalizations.of(context)!;
     final t = AppTokens.of(context);
     final apptAsync = ref.watch(appointmentDetailProvider(appointmentId));
+    final appt = apptAsync.valueOrNull;
+
+    Future<void> confirmDelete() async {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AppDialog(
+          title: l.deleteAppointmentTitle,
+          content: Text(l.deleteAppointmentBody),
+          actions: [
+            AppButton(
+              label: l.buttonCancel,
+              variant: AppButtonVariant.ghost,
+              size: AppButtonSize.sm,
+              onPressed: () => Navigator.of(ctx).pop(false),
+            ),
+            AppButton(
+              label: l.buttonDelete,
+              variant: AppButtonVariant.danger,
+              size: AppButtonSize.sm,
+              onPressed: () => Navigator.of(ctx).pop(true),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
+      try {
+        await ref.read(appointmentsProvider.notifier).delete(appointmentId);
+        if (context.mounted) Navigator.of(context).pop();
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString()), backgroundColor: t.error),
+          );
+        }
+      }
+    }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.apptDetailTitle)),
+      appBar: AppBar(
+        title: Text(l.apptDetailTitle),
+        actions: [
+          if (appt != null)
+            TextButton(
+              onPressed: () =>
+                  context.push('/appointments/${appt.id}/edit', extra: appt),
+              child: Text(l.apptEdit),
+            ),
+          TextButton(
+            onPressed: confirmDelete,
+            style: TextButton.styleFrom(foregroundColor: t.errorStrong),
+            child: Text(l.buttonDelete),
+          ),
+        ],
+      ),
       body: apptAsync.when(
         loading: () => const Center(child: AppSpinner(size: 32)),
         error: (e, _) => Center(
@@ -154,7 +208,6 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final t = AppTokens.of(context);
-    final isTerminal = !_appt.isActive;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.s4),
@@ -309,44 +362,32 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
             const SizedBox(height: AppSpacing.s3),
           ],
 
-          // ── Status action buttons ─────────────────────────────────
-          if (!isTerminal) ...[
-            if (_appt.status == 'REQUESTED') ...[
-              AppButton(
-                label: l.apptConfirm,
-                leftIcon: AppIconName.paid,
-                fullWidth: true,
-                loading: _updatingStatus,
-                onPressed: () => _updateStatus('CONFIRMED'),
-              ),
-              const SizedBox(height: AppSpacing.s2),
-            ],
-            if (_appt.status == 'CONFIRMED') ...[
-              AppButton(
-                label: l.apptMarkCompleted,
-                variant: AppButtonVariant.secondary,
-                fullWidth: true,
-                loading: _updatingStatus,
-                onPressed: () => _updateStatus('COMPLETED'),
-              ),
-              const SizedBox(height: AppSpacing.s2),
-              AppButton(
-                label: l.apptMarkNoShow,
-                variant: AppButtonVariant.danger,
-                fullWidth: true,
-                loading: _updatingStatus,
-                onPressed: () => _updateStatus('NO_SHOW'),
-              ),
-              const SizedBox(height: AppSpacing.s2),
-            ],
-            AppButton(
-              label: l.apptCancel,
-              variant: AppButtonVariant.danger,
-              fullWidth: true,
-              onPressed:
-                  _updatingStatus ? null : () => _updateStatus('CANCELLED'),
+          // ── Status selector — set ANY status directly, anytime ────
+          // (including correcting a terminal one). The owner has a free hand;
+          // no forward-only state machine.
+          AppCard(
+            header: AppCardHeader(title: l.apptStatusLabel),
+            child: Wrap(
+              spacing: AppSpacing.s2,
+              runSpacing: AppSpacing.s2,
+              children: [
+                for (final s in const [
+                  'REQUESTED',
+                  'CONFIRMED',
+                  'COMPLETED',
+                  'CANCELLED',
+                  'NO_SHOW',
+                ])
+                  _StatusChip(
+                    label: appointmentStatusLabel(l, s),
+                    selected: _appt.status == s,
+                    onTap: (_updatingStatus || _appt.status == s)
+                        ? null
+                        : () => _updateStatus(s),
+                  ),
+              ],
             ),
-          ],
+          ),
 
           const SizedBox(height: AppSpacing.s4),
         ],
@@ -411,6 +452,41 @@ class _InfoRow extends StatelessWidget {
                     TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A selectable status pill. `onTap == null` → current/disabled.
+class _StatusChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+  const _StatusChip({required this.label, required this.selected, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: AppMotion.durFast,
+        curve: AppMotion.ease,
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s3, vertical: AppSpacing.s2),
+        decoration: BoxDecoration(
+          color: selected ? t.accentSoft : t.surface,
+          borderRadius: AppRadii.pill,
+          border: Border.all(color: selected ? t.accent : t.border),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: AppTextSizes.sm,
+            fontWeight: AppFontWeights.semibold,
+            color: selected ? t.accent : t.text2,
+          ),
+        ),
       ),
     );
   }

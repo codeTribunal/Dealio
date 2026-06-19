@@ -28,19 +28,35 @@ class AppStatCard extends StatelessWidget {
     final t = AppTokens.of(context);
     final deltaNegative = delta != null && delta!.trimLeft().startsWith('-');
 
+    // Reserve a constant two-line height for the label so the value below always
+    // starts at the same offset. Side-by-side cards then line up — a 1-line
+    // label ("New customers") and a 2-line one ("Pending payments") share the
+    // same title row and the same number row.
+    const labelLineHeight = 1.25;
+    final labelStyle = TextStyle(
+      fontSize: AppTextSizes.caption,
+      fontWeight: AppFontWeights.semibold,
+      letterSpacing: 0.5,
+      color: t.text2,
+      height: labelLineHeight,
+    );
+    final labelHeight = MediaQuery.textScalerOf(context)
+        .scale(AppTextSizes.caption * labelLineHeight * 2);
+
     return AppCard(
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontSize: AppTextSizes.caption,
-              fontWeight: AppFontWeights.semibold,
-              letterSpacing: 0.5,
-              color: t.text2,
+          SizedBox(
+            height: labelHeight,
+            width: double.infinity,
+            child: Text(
+              label.toUpperCase(),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: labelStyle,
             ),
           ),
           const SizedBox(height: AppSpacing.s2),

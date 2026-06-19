@@ -29,70 +29,48 @@ class HeroCard extends StatelessWidget {
         borderRadius: AppRadii.xl,
         boxShadow: t.shadowAccent,
       ),
-      child: ClipRRect(
-        borderRadius: AppRadii.xl,
-        child: Stack(
-          children: [
-            // Decorative translucent circle, bleeding off the top-right corner.
-            Positioned(
-              right: -28,
-              top: -28,
-              child: Container(
-                width: 128,
-                height: 128,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
+      padding: const EdgeInsets.all(AppSpacing.s5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: AppTextSizes.sm,
+              fontWeight: AppFontWeights.semibold,
+              color: onAccent.withValues(alpha: 0.85),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s2),
+          // Scale down so long currency values stay on one line.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              maxLines: 1,
+              softWrap: false,
+              style: TextStyle(
+                fontSize: AppTextSizes.h1,
+                fontWeight: AppFontWeights.extra,
+                color: onAccent,
+                height: 1.1,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.s5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: AppTextSizes.sm,
-                      fontWeight: AppFontWeights.semibold,
-                      color: onAccent.withValues(alpha: 0.85),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.s2),
-                  // Scale down so long currency values stay on one line.
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      value,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: TextStyle(
-                        fontSize: AppTextSizes.h1,
-                        fontWeight: AppFontWeights.extra,
-                        color: onAccent,
-                        height: 1.1,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ),
-                  if (sub != null) ...[
-                    const SizedBox(height: AppSpacing.s2),
-                    Text(
-                      sub!,
-                      style: TextStyle(
-                        fontSize: AppTextSizes.sm,
-                        color: onAccent.withValues(alpha: 0.90),
-                      ),
-                    ),
-                  ],
-                ],
+          ),
+          if (sub != null) ...[
+            const SizedBox(height: AppSpacing.s2),
+            Text(
+              sub!,
+              style: TextStyle(
+                fontSize: AppTextSizes.sm,
+                color: onAccent.withValues(alpha: 0.90),
               ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }

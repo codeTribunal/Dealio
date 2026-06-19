@@ -5,7 +5,6 @@ import { setToken } from '@/lib/auth'
 
 type Mode = 'SERVICES' | 'FREELANCE'
 type Language = 'UZBEK' | 'RUSSIAN'
-type Bank = 'UZCARD' | 'HUMO'
 
 interface FormState {
   businessName: string
@@ -15,8 +14,6 @@ interface FormState {
   botUsername: string
   botName: string
   botLink: string
-  cardNumber: string
-  cardBank: Bank
 }
 
 const inputClass =
@@ -47,8 +44,6 @@ export default function OnboardingPage() {
     botUsername: '',
     botName: '',
     botLink: '',
-    cardNumber: '',
-    cardBank: 'UZCARD',
   })
   const [verifying, setVerifying] = useState(false)
   const [tokenVerified, setTokenVerified] = useState(false)
@@ -96,7 +91,7 @@ export default function OnboardingPage() {
   // Review → final step: move to the Telegram verification step and request a
   // fresh enrollment deep link.
   function goToVerify() {
-    setStep(5)
+    setStep(4)
     startEnrollment()
   }
 
@@ -148,11 +143,9 @@ export default function OnboardingPage() {
         mode: form.mode,
         language: form.language,
         botToken: form.botToken,
-        cardNumber: form.cardNumber || undefined,
-        cardBank: form.cardNumber ? form.cardBank : undefined,
       })
       setForm((f) => ({ ...f, botLink: result.botLink, botUsername: result.botUsername }))
-      setStep(6)
+      setStep(5)
     } catch (e: unknown) {
       const status = (e as { response?: { status?: number } })?.response?.status
       const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? ''
@@ -169,19 +162,14 @@ export default function OnboardingPage() {
     }
   }
 
-  function formatCard(raw: string): string {
-    const digits = raw.replace(/\D/g, '').slice(0, 16)
-    return digits.replace(/(.{4})/g, '$1 ').trim()
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 w-full max-w-lg p-8">
 
         {/* Progress bar (steps 1-5) */}
-        {step < 6 && (
+        {step < 5 && (
           <div className="flex gap-1.5 mb-8">
-            {[1, 2, 3, 4, 5].map((n) => (
+            {[1, 2, 3, 4].map((n) => (
               <div
                 key={n}
                 className={`h-1 flex-1 rounded-full ${
@@ -321,69 +309,10 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── Step 3: Payment method ── */}
+        {/* ── Step 3: Review & launch ── */}
         {step === 3 && (
           <div>
             <button onClick={() => setStep(2)} className="text-sm text-blue-600 mb-4">
-              ← Back
-            </button>
-            <h1 className="text-2xl font-bold text-gray-900">How will customers pay?</h1>
-            <p className="text-sm text-gray-500 mt-1 mb-6">You can change this later in Settings</p>
-
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Card number (optional)
-            </label>
-            <input
-              className={inputClass}
-              placeholder="8600 1234 5678 1234"
-              value={formatCard(form.cardNumber)}
-              maxLength={19}
-              onChange={(e) => {
-                const digits = e.target.value.replace(/\D/g, '').slice(0, 16)
-                setForm((f) => ({ ...f, cardNumber: digits }))
-              }}
-            />
-
-            <p className="text-sm font-medium text-gray-700 mt-4 mb-2">Bank</p>
-            <div className="flex gap-3">
-              {(['UZCARD', 'HUMO'] as Bank[]).map((bank) => (
-                <button
-                  key={bank}
-                  type="button"
-                  onClick={() => setForm((f) => ({ ...f, cardBank: bank }))}
-                  className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
-                    form.cardBank === bank
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
-                >
-                  {bank === 'UZCARD' ? 'Uzcard' : 'Humo'}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setStep(4)}
-              className="w-full mt-8 bg-blue-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
-            >
-              Continue
-            </button>
-            <button
-              onClick={() => {
-                setForm((f) => ({ ...f, cardNumber: '' }))
-                setStep(4)
-              }}
-              className="w-full mt-2 text-sm text-gray-500 hover:text-gray-700"
-            >
-              Skip for now
-            </button>
-          </div>
-        )}
-
-        {/* ── Step 4: Review & launch ── */}
-        {step === 4 && (
-          <div>
-            <button onClick={() => setStep(3)} className="text-sm text-blue-600 mb-4">
               ← Back
             </button>
             <h1 className="text-2xl font-bold text-gray-900">Almost done!</h1>
@@ -398,12 +327,6 @@ export default function OnboardingPage() {
                 },
                 { label: 'Language', value: form.language === 'UZBEK' ? "O'zbek" : 'Русский' },
                 { label: 'Bot', value: `@${form.botUsername}` },
-                {
-                  label: 'Payment',
-                  value: form.cardNumber
-                    ? `${form.cardNumber.replace(/(.{4})/g, '$1 ').trim()} (${form.cardBank === 'UZCARD' ? 'Uzcard' : 'Humo'})`
-                    : 'Not set',
-                },
               ].map((row, i, arr) => (
                 <div
                   key={row.label}
@@ -429,10 +352,10 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── Step 5: Verify via Telegram (owner auth) ── */}
-        {step === 5 && (
+        {/* ── Step 4: Verify via Telegram (owner auth) ── */}
+        {step === 4 && (
           <div>
-            <button onClick={() => setStep(4)} className="text-sm text-blue-600 mb-4">
+            <button onClick={() => setStep(3)} className="text-sm text-blue-600 mb-4">
               ← Back
             </button>
             <h1 className="text-2xl font-bold text-gray-900">Verify via Telegram</h1>
@@ -485,7 +408,7 @@ export default function OnboardingPage() {
                 checked={generalConsent}
                 onChange={(e) => setGeneralConsent(e.target.checked)}
                 className="mt-0.5 h-4 w-4 shrink-0"
-                style={{ accentColor: '#2563eb' }}
+                style={{ accentColor: 'var(--accent)' }}
               />
               <span>
                 I have read the{' '}
@@ -502,7 +425,7 @@ export default function OnboardingPage() {
                 checked={crossBorderConsent}
                 onChange={(e) => setCrossBorderConsent(e.target.checked)}
                 className="mt-0.5 h-4 w-4 shrink-0"
-                style={{ accentColor: '#2563eb' }}
+                style={{ accentColor: 'var(--accent)' }}
               />
               <span>
                 I consent to the storage and transfer of my personal data on servers located
@@ -525,8 +448,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── Step 6: Done ── */}
-        {step === 6 && (
+        {/* ── Step 5: Done ── */}
+        {step === 5 && (
           <div className="text-center">
             <div className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-6">
               <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>

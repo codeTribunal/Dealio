@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Avatar } from '@/components/ui/Avatar'
 import { Icon } from '@/components/icons/Icon'
 
@@ -26,9 +27,15 @@ export default function TopBar({ title, userName = 'CRM', onMenuClick, menuOpen 
         </button>
       )}
       <span className="text-lg font-bold text-text-1 truncate flex-1">{title}</span>
-      <div className="ml-4">
+      {/* Account entry — opens the owner's Profile page. */}
+      <Link
+        href="/profile"
+        aria-label="Profile"
+        className="ml-4 rounded-full transition-opacity hover:opacity-80"
+        style={{ transitionDuration: 'var(--dur-base)' }}
+      >
         <Avatar name={userName} size="md" />
-      </div>
+      </Link>
     </div>
   )
 }

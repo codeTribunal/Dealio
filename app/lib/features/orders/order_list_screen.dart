@@ -32,11 +32,21 @@ class OrderListScreen extends ConsumerStatefulWidget {
 
 class _OrderListScreenState extends ConsumerState<OrderListScreen> {
   final _searchController = TextEditingController();
+  String? _restoringId;
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _restore(String id) async {
+    setState(() => _restoringId = id);
+    try {
+      await ref.read(ordersProvider.notifier).restore(id);
+    } finally {
+      if (mounted) setState(() => _restoringId = null);
+    }
   }
 
   @override
@@ -48,7 +58,18 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
     final filter = ref.watch(ordersProvider.notifier).filter;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.ordersTitle)),
+      appBar: AppBar(
+        title: Text(l.ordersTitle),
+        actions: [
+          TextButton(
+            onPressed: () => notifier.setShowDeleted(!notifier.showDeleted),
+            style: TextButton.styleFrom(
+              foregroundColor: notifier.showDeleted ? t.accent : t.text2,
+            ),
+            child: Text(l.commonShowDeleted),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           // ── Search bar ────────────────────────────────────────
@@ -149,7 +170,17 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                     itemCount: orders.length,
                     separatorBuilder: (_, __) =>
                         const SizedBox(height: AppSpacing.s2),
-                    itemBuilder: (ctx, i) => _OrderCard(order: orders[i]),
+                    itemBuilder: (ctx, i) {
+                      final o = orders[i];
+                      if (o.deleted) {
+                        return _DeletedOrderCard(
+                          order: o,
+                          restoring: _restoringId == o.id,
+                          onRestore: () => _restore(o.id),
+                        );
+                      }
+                      return _OrderCard(order: o);
+                    },
                   ),
                 );
               },
@@ -291,6 +322,87 @@ class _OrderCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Deleted order card (dimmed, with restore) ──────────────────────
+
+class _DeletedOrderCard extends StatelessWidget {
+  final Order order;
+  final bool restoring;
+  final VoidCallback onRestore;
+  const _DeletedOrderCard({
+    required this.order,
+    required this.restoring,
+    required this.onRestore,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    return Opacity(
+      opacity: 0.6,
+      child: AppCard(
+        padding: const EdgeInsets.all(AppSpacing.s4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        l.orderNumberLabel(order.orderNumber),
+                        style: TextStyle(
+                          fontWeight: AppFontWeights.bold,
+                          fontSize: AppTextSizes.sm,
+                          color: t.text1,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.s2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.s2, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: t.errorSoft,
+                          borderRadius: AppRadii.pill,
+                        ),
+                        child: Text(
+                          l.commonDeletedBadge,
+                          style: TextStyle(
+                            fontSize: AppTextSizes.caption,
+                            fontWeight: AppFontWeights.semibold,
+                            color: t.errorStrong,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${order.customer.name} · ${formatUZS(order.total)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style:
+                        TextStyle(color: t.text2, fontSize: AppTextSizes.caption),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.s2),
+            AppButton(
+              label: l.buttonRestore,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              loading: restoring,
+              onPressed: onRestore,
+            ),
+          ],
+        ),
       ),
     );
   }

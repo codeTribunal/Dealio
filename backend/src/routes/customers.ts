@@ -1,10 +1,11 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { prisma } from '../lib/prisma.js';
+import { prisma, prismaUnscoped } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { getBusinessOrFail } from '../lib/businessFromUser.js';
 import { sendError } from '../lib/errors.js';
 import { getBotToken, hasBotToken } from '../lib/getBotToken.js';
+import { softDelete, restore } from '../services/softDelete.js';
 
 const createCustomerBody = z.object({
   name: z.string().min(1).max(200),
@@ -52,17 +53,24 @@ export default async function customerRoutes(app: FastifyInstance) {
     const business = await getBusinessOrFail(request.user.userId, reply);
     if (!business) return;
 
-    const { search, page: pageParam, limit: limitParam } = request.query as {
-      search?: string;
-      page?: string;
-      limit?: string;
-    };
+    const { search, page: pageParam, limit: limitParam, includeDeleted: includeDeletedParam } =
+      request.query as {
+        search?: string;
+        page?: string;
+        limit?: string;
+        includeDeleted?: string;
+      };
     const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(limitParam ?? '30', 10) || 30));
 
+    // "Show deleted": switch to the unscoped client so soft-deleted customers
+    // are returned too (each flagged below). Default uses the extension, which
+    // hides them.
+    const includeDeleted = includeDeletedParam === 'true';
+    const db = includeDeleted ? (prismaUnscoped as unknown as typeof prisma) : prisma;
+
     const where = {
       businessId: business.id,
-      deletedAt: null,
       ...(search ? {
         OR: [
           { name: { contains: search, mode: 'insensitive' as const } },
@@ -73,7 +81,7 @@ export default async function customerRoutes(app: FastifyInstance) {
     };
 
     const [customers, total] = await Promise.all([
-      prisma.customer.findMany({
+      db.customer.findMany({
         where,
         select: {
           id: true,
@@ -82,8 +90,11 @@ export default async function customerRoutes(app: FastifyInstance) {
           phone: true,
           createdAt: true,
           lastInteractionAt: true,
+          deletedAt: true,
           _count: {
-            select: { orders: true },
+            // Exclude soft-deleted orders from the count (the extension does
+            // not reach relation _count, so filter explicitly).
+            select: { orders: { where: { deletedAt: null } } },
           },
           orders: {
             where: {
@@ -97,7 +108,7 @@ export default async function customerRoutes(app: FastifyInstance) {
         take: limit,
         skip: (page - 1) * limit,
       }),
-      prisma.customer.count({ where }),
+      db.customer.count({ where }),
     ]);
 
     const mapped = customers.map(c => ({
@@ -109,6 +120,7 @@ export default async function customerRoutes(app: FastifyInstance) {
       lastInteractionAt: c.lastInteractionAt,
       totalOrders: c._count.orders,
       totalSpent: c.orders.reduce((sum, o) => sum + o.total, 0),
+      deleted: c.deletedAt != null,
     }));
 
     return reply.send({ customers: mapped, total });
@@ -153,8 +165,8 @@ export default async function customerRoutes(app: FastifyInstance) {
       console.log('[customer] starting parallel queries');
       const queryPromise = Promise.all([
         prisma.order.findMany({ where: { customerId: customer.id, deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 20, select: { id: true, orderNumber: true, total: true, orderStatus: true, paymentStatus: true, createdAt: true, items: { select: { quantity: true, price: true, product: { select: { name: true } } } } } }),
-        prisma.appointment.findMany({ where: { customerId: customer.id }, orderBy: { startTime: 'desc' }, take: 20, select: { id: true, startTime: true, endTime: true, status: true, price: true, service: { select: { name: true } } } }),
-        prisma.project.findMany({ where: { customerId: customer.id }, orderBy: { createdAt: 'desc' }, take: 10, select: { id: true, name: true, totalPrice: true, status: true, deadline: true, createdAt: true } }),
+        prisma.appointment.findMany({ where: { customerId: customer.id, deletedAt: null }, orderBy: { startTime: 'desc' }, take: 20, select: { id: true, startTime: true, endTime: true, status: true, price: true, service: { select: { name: true } } } }),
+        prisma.project.findMany({ where: { customerId: customer.id, deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 10, select: { id: true, name: true, totalPrice: true, status: true, deadline: true, createdAt: true } }),
         prisma.customerFieldValue.findMany({ where: { customerId: customer.id }, include: { field: { select: { id: true, name: true, fieldType: true } } } }),
         prisma.customerTag.findMany({ where: { customerId: customer.id } }),
         prisma.reminder.findMany({ where: { customerId: customer.id, done: false }, orderBy: { dueDate: 'asc' }, take: 10 }),
@@ -355,5 +367,28 @@ export default async function customerRoutes(app: FastifyInstance) {
     });
 
     return reply.send({ ok: true });
+  });
+
+  // ── Soft-delete customer (recoverable) ──────────────────────────
+  app.delete('/customers/:id', { preHandler: authenticate }, async (request, reply) => {
+    const business = await getBusinessOrFail(request.user.userId, reply);
+    if (!business) return;
+
+    const { id } = request.params as { id: string };
+    // Tenant-scoped: a foreign/unknown id matches 0 rows → not found.
+    const { deleted } = await softDelete('customer', id, business.id);
+    if (!deleted) return sendError(reply, 404, 'Customer not found');
+    return reply.send({ id, deleted: true });
+  });
+
+  // ── Restore a soft-deleted customer ─────────────────────────────
+  app.post('/customers/:id/restore', { preHandler: authenticate }, async (request, reply) => {
+    const business = await getBusinessOrFail(request.user.userId, reply);
+    if (!business) return;
+
+    const { id } = request.params as { id: string };
+    const { restored } = await restore('customer', id, business.id);
+    if (!restored) return sendError(reply, 404, 'Customer not found');
+    return reply.send({ id, restored: true });
   });
 }

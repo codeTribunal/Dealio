@@ -16,6 +16,7 @@ const updateServiceBody = z.object({
   name: z.string().min(1).max(200).optional(),
   durationMinutes: z.number().int().positive().optional(),
   price: z.number().int().nonnegative().optional(),
+  active: z.boolean().optional(),
   staffIds: z.array(z.string()).optional(),
 });
 

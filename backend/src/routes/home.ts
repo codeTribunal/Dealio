@@ -58,7 +58,9 @@ export default async function homeRoutes(app: FastifyInstance) {
           name: true,
           telegramUsername: true,
           lastInteractionAt: true,
-          _count: { select: { orders: true } },
+          // Exclude soft-deleted orders from the count (relation _count is not
+          // reached by the soft-delete extension, so filter explicitly).
+          _count: { select: { orders: { where: { deletedAt: null } } } },
         },
         orderBy: { lastInteractionAt: 'asc' },
         take: 5,

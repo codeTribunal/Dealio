@@ -16,8 +16,6 @@ model Business {
   // PRODUCTS remains in the enum but is no longer selectable (dormant).
   mode         Mode      @default(SERVICES)
   language     Language  @default(UZBEK)
-  cardNumber   String?
-  cardBank     CardBank?
   botUsername           String?   @unique
   calendarToken         String?   @unique
   // Working hours: JSON object keyed "0".."6" (0=Sunday … 6=Saturday, in
@@ -135,6 +133,10 @@ model Customer {
   currentStage       CustomerStage? @relation(fields: [currentStageId], references: [id])
   languagePreference Language?
   deletedAt          DateTime?
+  // Set by the irreversible GDPR-style anonymize path (Phase C). When non-null
+  // the row's personal fields have been scrubbed and the customer is "erased"
+  // while its de-identified transactional records are retained.
+  anonymizedAt       DateTime?
 
   orders       Order[]
   appointments Appointment[]
@@ -515,11 +517,6 @@ enum Language {
   UZBEK
   RUSSIAN
   ENGLISH
-}
-
-enum CardBank {
-  UZCARD
-  HUMO
 }
 
 enum DeliveryMethod {

@@ -155,6 +155,7 @@ class Customer {
   final CustomerStage? currentStage;
   final DateTime lastInteractionAt;
   final DateTime createdAt;
+  final bool deleted;
 
   const Customer({
     required this.id,
@@ -168,6 +169,7 @@ class Customer {
     this.currentStage,
     required this.lastInteractionAt,
     required this.createdAt,
+    this.deleted = false,
   });
 
   factory Customer.fromJson(Map<String, dynamic> json) {
@@ -192,6 +194,7 @@ class Customer {
       lastInteractionAt:
           DateTime.parse(json['lastInteractionAt'] as String),
       createdAt: DateTime.parse(json['createdAt'] as String),
+      deleted: json['deleted'] as bool? ?? false,
     );
   }
 }

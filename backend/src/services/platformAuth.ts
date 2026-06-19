@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import { generateLinkToken, LINK_TOKEN_TTL_MS } from '../lib/authCodes.js';
+import { normalizePhone } from '../lib/phone.js';
 import { issueAuthCode } from './otp.js';
 
 /**
@@ -56,11 +57,16 @@ export async function bindPhoneAndIssueEnrollCode(
   // The chat that shares the contact must be the same chat that opened the link.
   if (link.chatId && link.chatId !== chatId) return { ok: false, reason: 'chat_mismatch' };
 
+  // Canonicalize before storing + keying the OTP, so the user that gets created
+  // at /auth/enroll/verify (User.phone = link.phone) is stored in the same
+  // E.164 form that login lookups will normalize to.
+  const normalized = normalizePhone(phone);
+
   await prisma.linkToken.update({
     where: { token },
-    data: { phone, chatId },
+    data: { phone: normalized, chatId },
   });
 
-  const code = await issueAuthCode({ phone, purpose: 'ENROLL', chatId });
+  const code = await issueAuthCode({ phone: normalized, purpose: 'ENROLL', chatId });
   return { ok: true, code };
 }

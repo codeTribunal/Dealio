@@ -90,7 +90,7 @@ export default async function proposalRoutes(app: FastifyInstance) {
       include: {
         project: {
           include: {
-            business: { select: { name: true, cardNumber: true, cardBank: true } },
+            business: { select: { name: true } },
             customer: { select: { name: true } },
           },
         },

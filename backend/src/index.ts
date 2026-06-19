@@ -25,10 +25,12 @@ import proposalRoutes from './routes/proposals.js';
 import deviceTokenRoutes from './routes/device-token.js';
 import internalRoutes from './routes/internal.js';
 import adminRoutes from './routes/admin.js';
+import adminDataRoutes from './routes/adminData.js';
 import onboardingRoutes from './routes/onboarding.js';
 import { calendarRoutes } from './routes/calendar.js';
 import { securityHeaders } from './middleware/security.js';
 import { detectMaliciousInput } from './middleware/inputSanitizer.js';
+import { impersonationGuard } from './middleware/impersonation.js';
 import { prisma } from './lib/prisma.js';
 import { runOwnerReminders } from './jobs/ownerReminders.js';
 
@@ -48,6 +50,10 @@ const app = Fastify({
 // fire for every route regardless of plugin scope.
 app.addHook('preHandler', securityHeaders);
 app.addHook('preHandler', detectMaliciousInput);
+// Blocks destructive/sensitive actions when the owner JWT is an impersonation
+// token (see middleware/impersonation.ts). Self-verifies the token, so it is
+// inert for public/admin/non-impersonation requests.
+app.addHook('preHandler', impersonationGuard);
 
 async function bootstrap() {
   await app.register(helmetPlugin);
@@ -77,6 +83,7 @@ async function bootstrap() {
   await app.register(deviceTokenRoutes, { prefix: '/api/v1' });
   await app.register(internalRoutes, { prefix: '/api/v1' });
   await app.register(adminRoutes, { prefix: '/api/v1' });
+  await app.register(adminDataRoutes, { prefix: '/api/v1' });
   await app.register(onboardingRoutes, { prefix: '/api/v1' });
 
   // Calendar ICS feed — registered at root (no /api/v1 prefix) so the

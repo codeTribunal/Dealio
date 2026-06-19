@@ -37,7 +37,9 @@ interface WorkingDay {
   start: string; // "HH:MM"
   end: string; // "HH:MM"
 }
-type WorkingHours = Record<string, WorkingDay | null>;
+// A day's hours: an array of intervals (breaks/lunch are the gaps between
+// them), a single interval object (legacy format), or null/absent (closed).
+type WorkingHours = Record<string, WorkingDay | WorkingDay[] | null>;
 
 export interface TimeSlot {
   startTime: string; // ISO datetime (UTC)
@@ -59,21 +61,37 @@ function minutesToLabel(min: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+function isWorkingDay(v: unknown): v is WorkingDay {
+  return (
+    v != null &&
+    typeof v === 'object' &&
+    typeof (v as WorkingDay).start === 'string' &&
+    typeof (v as WorkingDay).end === 'string'
+  );
+}
+
 /**
- * Resolve the working window for a given day.
- *  - workingHours entirely UNSET (no object)        → default 09:00–18:00.
- *  - configured object, this day === null           → CLOSED (returns null).
- *  - configured object, this day missing            → CLOSED (returns null).
- *  - configured object, this day has { start,end }  → that window.
+ * Resolve the open INTERVALS for a given day (a day can have several, with
+ * breaks/lunch as the gaps between them).
+ *  - workingHours entirely UNSET (no object)        → default [09:00–18:00].
+ *  - this day === null / absent / empty             → CLOSED (returns null).
+ *  - this day === { start,end } (legacy single)     → one interval.
+ *  - this day === [{ start,end }, …]                → those intervals.
  */
-function resolveDayWindow(rawHours: unknown, dayOfWeek: number): WorkingDay | null {
+function resolveDayWindows(rawHours: unknown, dayOfWeek: number): WorkingDay[] | null {
   if (rawHours == null || typeof rawHours !== 'object') {
-    return DEFAULT_DAY; // never configured
+    return [DEFAULT_DAY]; // never configured
   }
   const hours = rawHours as WorkingHours;
   const key = String(dayOfWeek);
   if (!(key in hours)) return null; // configured but day absent → closed
-  return hours[key]; // may be null (explicitly closed) or a window
+  const v = hours[key];
+  if (v == null) return null; // explicitly closed
+  if (Array.isArray(v)) {
+    const arr = v.filter(isWorkingDay);
+    return arr.length > 0 ? arr : null;
+  }
+  return isWorkingDay(v) ? [v] : null; // legacy single window
 }
 
 function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
@@ -84,8 +102,8 @@ function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): b
 // Everything the per-interval availability test needs for a single Tashkent day.
 interface DayContext {
   closed: boolean;
-  dayStartMin: number; // Tashkent minute-of-day the window opens
-  dayEndMin: number; // Tashkent minute-of-day the window closes
+  // Tashkent minute-of-day intervals the business is open (breaks are the gaps).
+  windows: { startMin: number; endMin: number }[];
   dayStartUtcMs: number; // UTC instant of Tashkent midnight for this date
   durationMin: number;
   bufferMs: number;
@@ -101,33 +119,28 @@ async function loadDayContext(params: {
   service: { id: string; durationMinutes: number };
   staff: { id: string; daysOff: Date[] } | null;
   dateStr: string;
+  // Edit/reschedule self-exclusion: omit this appointment's own row from the
+  // overlap set so a booking never conflicts with itself.
+  ignoreAppointmentId?: string;
 }): Promise<DayContext> {
-  const { business, service, staff, dateStr } = params;
+  const { business, service, staff, dateStr, ignoreAppointmentId } = params;
   const { year, month1, day } = parseDateStr(dateStr);
   const dayOfWeek = tashkentDayOfWeek(year, month1, day);
   const dayStartUtcMs = tashkentMidnightUtcMs(year, month1, day);
   const bufferMs = (business.bufferMinutes ?? 0) * 60_000;
   const durationMin = service.durationMinutes;
 
-  const window = resolveDayWindow(business.workingHours, dayOfWeek);
-  if (!window) {
-    return {
-      closed: true,
-      dayStartMin: 0,
-      dayEndMin: 0,
-      dayStartUtcMs,
-      durationMin,
-      bufferMs,
-      appointments: [],
-      blocks: [],
-      qualifiedStaffIds: [],
-      staffOffToday: new Set(),
-      implicitResource: true,
-    };
-  }
+  const rawWindows = resolveDayWindows(business.workingHours, dayOfWeek);
+  const windows = (rawWindows ?? [])
+    .map((w) => ({ startMin: minutesFromTime(w.start), endMin: minutesFromTime(w.end) }))
+    .filter((w) => w.endMin > w.startMin)
+    .sort((a, b) => a.startMin - b.startMin);
 
-  const dayStartMin = minutesFromTime(window.start);
-  const dayEndMin = minutesFromTime(window.end);
+  // NOTE: we intentionally do NOT early-return when there are no working
+  // windows. Owners may place appointments outside working hours, so overlap
+  // detection must still run on a "closed" day. `closed` is reported below
+  // (windows.length === 0); the slot-LISTING path (computeAvailableSlots) is
+  // the one that bails on a closed day, not this loader.
 
   // Resolve the set of staff who can perform this service.
   let qualifiedStaff: { id: string; daysOff: Date[] }[];
@@ -162,6 +175,7 @@ async function loadDayContext(params: {
         status: { notIn: ['CANCELLED', 'NO_SHOW'] },
         startTime: { lt: fetchEnd },
         endTime: { gt: fetchStart },
+        ...(ignoreAppointmentId ? { id: { not: ignoreAppointmentId } } : {}),
       },
       select: { startTime: true, endTime: true, staffId: true },
     }),
@@ -176,9 +190,8 @@ async function loadDayContext(params: {
   ]);
 
   return {
-    closed: false,
-    dayStartMin,
-    dayEndMin,
+    closed: windows.length === 0,
+    windows,
     dayStartUtcMs,
     durationMin,
     bufferMs,
@@ -255,57 +268,85 @@ export async function computeAvailableSlots(params: {
 }): Promise<TimeSlot[]> {
   const ctx = await loadDayContext(params);
   if (ctx.closed) return [];
-  if (ctx.dayEndMin - ctx.dayStartMin < ctx.durationMin) return [];
 
   const now = Date.now();
   const slots: TimeSlot[] = [];
 
-  for (let cursor = ctx.dayStartMin; cursor + ctx.durationMin <= ctx.dayEndMin; cursor += 30) {
-    const endMin = cursor + ctx.durationMin;
-    const startMs = ctx.dayStartUtcMs + cursor * 60_000;
-    const endMs = ctx.dayStartUtcMs + endMin * 60_000;
+  // Generate slots WITHIN each open interval, so the gaps between intervals
+  // (breaks / lunch) yield no bookable slots.
+  for (const w of ctx.windows) {
+    for (let cursor = w.startMin; cursor + ctx.durationMin <= w.endMin; cursor += 30) {
+      const endMin = cursor + ctx.durationMin;
+      const startMs = ctx.dayStartUtcMs + cursor * 60_000;
+      const endMs = ctx.dayStartUtcMs + endMin * 60_000;
 
-    if (startMs <= now) continue; // no slots in the past
-    if (!isIntervalFree(ctx, startMs, endMs)) continue;
+      if (startMs <= now) continue; // no slots in the past
+      if (!isIntervalFree(ctx, startMs, endMs)) continue;
 
-    slots.push({
-      startTime: new Date(startMs).toISOString(),
-      endTime: new Date(endMs).toISOString(),
-      startLabel: minutesToLabel(cursor),
-      endLabel: minutesToLabel(endMin),
-    });
+      slots.push({
+        startTime: new Date(startMs).toISOString(),
+        endTime: new Date(endMs).toISOString(),
+        startLabel: minutesToLabel(cursor),
+        endLabel: minutesToLabel(endMin),
+      });
+    }
   }
 
   return slots;
 }
 
+// Why a requested slot was rejected. CONFLICT = overlaps an existing booking
+// (or block / buffer); PAST = before now; OUT_OF_HOURS = outside working hours
+// (incl. a fully-closed day).
+export type SlotRejectReason = 'PAST' | 'OUT_OF_HOURS' | 'CONFLICT';
+
+export interface SlotCheckResult {
+  ok: boolean;
+  reason?: SlotRejectReason;
+}
+
 /**
- * Write-time guard: is a specific requested appointment start still bookable?
- * Re-runs the same engine logic (working hours, day off, blocked time, buffer,
- * appointment overlap) for the exact requested interval. Used by both the
- * owner-facing and bot appointment-create endpoints to close the double-booking
- * TOCTOU gap.
+ * Write-time guard: re-runs the engine for the exact requested interval and
+ * reports WHY it is not bookable (so callers can treat the reasons differently).
+ *
+ * Overlap (CONFLICT) is evaluated FIRST and independently of timing, so the
+ * owner path can warn specifically on double-booking even when the slot is also
+ * in the past or outside working hours. Callers decide policy:
+ *   - Bot booking (strict): reject on ANY `!ok`.
+ *   - Owner create/edit: ignore PAST and OUT_OF_HOURS; only CONFLICT warns,
+ *     and even that is overridable.
+ *
+ * `ignoreAppointmentId` excludes an appointment's own row from the overlap set
+ * (edit/reschedule self-exclusion).
  */
 export async function isSlotBookable(params: {
   business: { id: string; workingHours: unknown; bufferMinutes?: number | null };
   service: { id: string; durationMinutes: number };
   staff: { id: string; daysOff: Date[] } | null;
   startTime: Date;
-}): Promise<boolean> {
-  const { business, service, staff, startTime } = params;
+  ignoreAppointmentId?: string;
+}): Promise<SlotCheckResult> {
+  const { business, service, staff, startTime, ignoreAppointmentId } = params;
   const startMs = startTime.getTime();
   const endMs = startMs + service.durationMinutes * 60_000;
 
-  if (startMs <= Date.now()) return false; // cannot book the past
-
   const dateStr = tashkentDateStr(startTime);
-  const ctx = await loadDayContext({ business, service, staff, dateStr });
-  if (ctx.closed) return false;
+  const ctx = await loadDayContext({ business, service, staff, dateStr, ignoreAppointmentId });
 
-  // Requested interval must fall entirely within the working-hours window.
+  // 1) Overlap — the only guardrail the owner path cares about.
+  if (!isIntervalFree(ctx, startMs, endMs)) return { ok: false, reason: 'CONFLICT' };
+
+  // 2) Past.
+  if (startMs <= Date.now()) return { ok: false, reason: 'PAST' };
+
+  // 3) Working hours — closed day, or interval not fully inside one open window.
+  if (ctx.closed) return { ok: false, reason: 'OUT_OF_HOURS' };
   const startMin = Math.round((startMs - ctx.dayStartUtcMs) / 60_000);
   const endMin = startMin + service.durationMinutes;
-  if (startMin < ctx.dayStartMin || endMin > ctx.dayEndMin) return false;
+  const withinWindow = ctx.windows.some(
+    (w) => startMin >= w.startMin && endMin <= w.endMin,
+  );
+  if (!withinWindow) return { ok: false, reason: 'OUT_OF_HOURS' };
 
-  return isIntervalFree(ctx, startMs, endMs);
+  return { ok: true };
 }

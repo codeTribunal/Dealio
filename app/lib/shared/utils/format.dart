@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-// Currency suffix follows the app language: "so'm" (uz), "сум" (ru), "UZS" (en).
-// Updated from main.dart whenever the locale changes. Defaults to UZS.
-String _currencySuffix = 'UZS';
+// Localized lowercase currency word, following the app language:
+// "so'm" (uz, straight apostrophe U+0027), "сум" (ru), "soum" (en).
+// Updated from main.dart whenever the locale changes. Defaults to "soum".
+String _currencySuffix = 'soum';
 
 void setCurrencyLocale(String code) {
   switch (code) {
@@ -14,9 +15,13 @@ void setCurrencyLocale(String code) {
       _currencySuffix = 'сум';
       break;
     default:
-      _currencySuffix = 'UZS';
+      _currencySuffix = 'soum';
   }
 }
+
+/// The current localized currency word (e.g. "soum" / "so'm" / "сум"), for use
+/// as a static suffix/label where the amount formatter isn't applied.
+String currencyWord() => _currencySuffix;
 
 String formatUZS(int amount) {
   final formatted = NumberFormat('#,##0', 'en_US')

@@ -1,36 +1,51 @@
-/* Design tokens — Practical Soft Depth (Cobalt).
-   Loaded after globals.css so token-driven body font wins. */
+/* Design tokens — Practical Soft Depth (Dealio blue).
+   Loaded after globals.css so token-driven body font wins.
+
+   ── HSL authoring convention ──────────────────────────────────────────────
+   Colors are authored in HSL so shades are easy to make/tweak:
+     hsl(H S% L%)            — opaque
+     hsla(H S% L% / A)       — translucent (A = 0..1)
+   To build a shade from a base token:
+     • adjust L (lightness) for lighter/darker shades (hover / active / soft),
+     • adjust S (saturation) for more/less intensity,
+     • keep H (hue) constant to stay in the same color family.
+   Numbers are clean (integer or 1-decimal). Rendered output is within ≤1/255
+   per channel of the previous hex palette — the tiny rounding is intentional;
+   readable, adjustable HSL is the goal.
+
+   PARITY: the Flutter app (app/lib/core/theme/app_tokens.dart) mirrors these
+   EXACT H S% L% values via HSLColor — keep the two in sync. */
 
 :root {
-  /* Accent */
-  --accent: #2563EB;
-  --accent-hover: #1D4ED8;
-  --accent-active: #1E40AF;
-  --accent-soft: #EAF0FF;
-  --accent-on: #FFFFFF;
+  /* Accent — Dealio brand blue. Darker shades drop L (60 → 53 → 48); soft = high L. */
+  --accent: hsl(217 91% 60%);
+  --accent-hover: hsl(221 83% 53%);
+  --accent-active: hsl(224 76% 48%);
+  --accent-soft: hsl(223 100% 96%);
+  --accent-on: hsl(0 0% 100%);
 
-  /* Semantic status */
-  --success: #16A34A;
-  --success-soft: #DCFCE7;
-  --success-strong: #15803D;
-  --warning: #D97706;
-  --warning-soft: #FEF3C7;
-  --warning-strong: #B45309;
-  --error: #DC2626;
-  --error-soft: #FEE2E2;
-  --error-strong: #B91C1C;
+  /* Semantic status — hue fixed per family; soft = high L, strong = low L */
+  --success: hsl(142 76% 36%);
+  --success-soft: hsl(140.6 84.2% 92.5%);
+  --success-strong: hsl(142 72% 29%);
+  --warning: hsl(32.1 94.6% 43.7%);
+  --warning-soft: hsl(48 96% 89%);
+  --warning-strong: hsl(26 90% 37%);
+  --error: hsl(0 72.2% 50.6%);
+  --error-soft: hsl(0 93% 94%);
+  --error-strong: hsl(0 74% 42%);
 
   /* Surfaces */
-  --bg: #EEF2FB;
-  --surface: #FFFFFF;
-  --surface-2: #F7F9FE;
-  --border: #E3EAFA;
-  --border-strong: #D4DDEE;
+  --bg: hsl(222 62% 96%);
+  --surface: hsl(0 0% 100%);
+  --surface-2: hsl(223 78% 98%);
+  --border: hsl(221.7 69.7% 93.5%);
+  --border-strong: hsl(219 43% 88%);
 
   /* Text */
-  --text-1: #1A2540;
-  --text-2: #6B7A9C;
-  --text-3: #97A3BC;
+  --text-1: hsl(223 42% 18%);
+  --text-2: hsl(222 20% 52%);
+  --text-3: hsl(220.5 21.6% 66.5%);
 
   /* Radii */
   --r-sm: 10px;
@@ -49,14 +64,14 @@
   --s-7: 48px;
   --s-8: 64px;
 
-  /* Elevation — soft outer shadows */
-  --shadow-sm: 0 1px 2px rgba(26, 37, 64, .05), 0 4px 12px -8px rgba(26, 37, 64, .12);
-  --shadow-md: 0 8px 20px -12px rgba(26, 37, 64, .18);
-  --shadow-lg: 0 16px 40px -20px rgba(26, 37, 64, .28);
-  --shadow-accent: 0 12px 26px -10px rgba(37, 99, 235, .45);
+  /* Elevation — soft outer shadows. Ink = hsl(223 42% 18%); accent glow uses accent hue. */
+  --shadow-sm: 0 1px 2px hsla(223 42% 18% / .05), 0 4px 12px -8px hsla(223 42% 18% / .12);
+  --shadow-md: 0 8px 20px -12px hsla(223 42% 18% / .18);
+  --shadow-lg: 0 16px 40px -20px hsla(223 42% 18% / .28);
+  --shadow-accent: 0 12px 26px -10px hsla(217 91% 60% / .45);
   /* The one neumorphic accent — reserved for quick-action buttons only */
-  --shadow-neu: 5px 5px 12px #d2dbef, -5px -5px 12px #ffffff;
-  --shadow-neu-inset: inset 4px 4px 9px #d2dbef, inset -4px -4px 9px #ffffff;
+  --shadow-neu: 5px 5px 12px hsl(221 48% 88%), -5px -5px 12px hsl(0 0% 100%);
+  --shadow-neu-inset: inset 4px 4px 9px hsl(221 48% 88%), inset -4px -4px 9px hsl(0 0% 100%);
 
   /* Typography scale */
   --fs-caption: 12px;
@@ -80,39 +95,39 @@
 }
 
 .dark {
-  --accent: #3B82F6;
-  --accent-hover: #60A5FA;
-  --accent-active: #93C5FD;
-  --accent-soft: rgba(59, 130, 246, .16);
-  --accent-on: #0B1322;
+  --accent: hsl(217 91% 60%);
+  --accent-hover: hsl(213 94% 68%);
+  --accent-active: hsl(211.7 96.4% 78.4%);
+  --accent-soft: hsla(217 91% 60% / .16);
+  --accent-on: hsl(219 51% 9%);
 
-  --success: #22C55E;
-  --success-soft: rgba(34, 197, 94, .16);
-  --success-strong: #4ADE80;
-  --warning: #F59E0B;
-  --warning-soft: rgba(245, 158, 11, .16);
-  --warning-strong: #FBBF24;
-  --error: #F87171;
-  --error-soft: rgba(248, 113, 113, .16);
-  --error-strong: #FCA5A5;
+  --success: hsl(142 71% 45%);
+  --success-soft: hsla(142 71% 45% / .16);
+  --success-strong: hsl(142 69% 58%);
+  --warning: hsl(38 92% 50%);
+  --warning-soft: hsla(38 92% 50% / .16);
+  --warning-strong: hsl(43.3 96.4% 56.3%);
+  --error: hsl(0 91% 71%);
+  --error-soft: hsla(0 91% 71% / .16);
+  --error-strong: hsl(0 94% 82%);
 
-  --bg: #0B1322;
-  --surface: #111B2E;
-  --surface-2: #0E1626;
-  --border: #22324D;
-  --border-strong: #2C3E5C;
+  --bg: hsl(219 51% 9%);
+  --surface: hsl(219 46% 12%);
+  --surface-2: hsl(220 46% 10%);
+  --border: hsl(218 39% 22%);
+  --border-strong: hsl(218 35% 27%);
 
-  --text-1: #EEF3FB;
-  --text-2: #8DA0C0;
-  --text-3: #5D7299;
+  --text-1: hsl(217 62% 96%);
+  --text-2: hsl(218 29% 65%);
+  --text-3: hsl(219 24% 48%);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 16px -10px rgba(0, 0, 0, .5);
-  --shadow-md: 0 8px 24px -12px rgba(0, 0, 0, .55);
-  --shadow-lg: 0 16px 40px -18px rgba(0, 0, 0, .65);
-  --shadow-accent: 0 12px 26px -10px rgba(59, 130, 246, .5);
+  --shadow-sm: 0 1px 2px hsla(0 0% 0% / .3), 0 6px 16px -10px hsla(0 0% 0% / .5);
+  --shadow-md: 0 8px 24px -12px hsla(0 0% 0% / .55);
+  --shadow-lg: 0 16px 40px -18px hsla(0 0% 0% / .65);
+  --shadow-accent: 0 12px 26px -10px hsla(217 91% 60% / .5);
   /* Neumorphic dual-shadow doesn't work in dark — flatten to a soft outer shadow */
-  --shadow-neu: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 16px -10px rgba(0, 0, 0, .5);
-  --shadow-neu-inset: inset 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-neu: 0 1px 2px hsla(0 0% 0% / .3), 0 6px 16px -10px hsla(0 0% 0% / .5);
+  --shadow-neu-inset: inset 0 1px 2px hsla(0 0% 0% / .4);
 }
 
 /* Apply the typeface via the next/font CSS var. This is additive to globals.css

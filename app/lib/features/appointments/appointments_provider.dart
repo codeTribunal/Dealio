@@ -40,6 +40,9 @@ class AppointmentsNotifier extends AsyncNotifier<List<Appointment>> {
   AppointmentsFilter _filter = AppointmentsFilter(selectedDate: DateTime.now());
   AppointmentsFilter get filter => _filter;
 
+  bool _showDeleted = false;
+  bool get showDeleted => _showDeleted;
+
   @override
   Future<List<Appointment>> build() async {
     _cache.clear();
@@ -67,6 +70,7 @@ class AppointmentsNotifier extends AsyncNotifier<List<Appointment>> {
           endDate: endStr,
           staffId: _filter.staffId,
           status: _filter.status,
+          includeDeleted: _showDeleted,
         );
 
     // Pre-populate every day in the range with an empty list
@@ -89,6 +93,7 @@ class AppointmentsNotifier extends AsyncNotifier<List<Appointment>> {
           date: k,
           staffId: _filter.staffId,
           status: _filter.status,
+          includeDeleted: _showDeleted,
         );
     _cache[k] = list;
     _loadedDates.add(k);
@@ -118,6 +123,7 @@ class AppointmentsNotifier extends AsyncNotifier<List<Appointment>> {
           date: k,
           staffId: _filter.staffId,
           status: _filter.status,
+          includeDeleted: _showDeleted,
         )
         .then((list) {
       _cache[k] = list;
@@ -138,6 +144,23 @@ class AppointmentsNotifier extends AsyncNotifier<List<Appointment>> {
     _cache.clear();
     _loadedDates.clear();
     ref.invalidateSelf();
+  }
+
+  void setShowDeleted(bool value) {
+    _showDeleted = value;
+    _cache.clear();
+    _loadedDates.clear();
+    ref.invalidateSelf();
+  }
+
+  Future<void> delete(String id) async {
+    await ref.read(apiServiceProvider).deleteAppointment(id);
+    await refresh();
+  }
+
+  Future<void> restore(String id) async {
+    await ref.read(apiServiceProvider).restoreAppointment(id);
+    await refresh();
   }
 
   Future<void> refresh() async {

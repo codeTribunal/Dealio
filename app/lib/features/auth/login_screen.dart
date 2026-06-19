@@ -11,6 +11,7 @@ import '../../core/models/user.dart';
 import '../../core/services/fcm_service.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/utils/phone.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_text_field.dart';
 import '../../shared/widgets/language_switcher.dart';
@@ -51,13 +52,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
-      // Always succeeds (backend returns a generic 200 — no enumeration).
-      await ref.read(apiServiceProvider).loginRequest(_phone);
+      // Canonicalize to E.164 so the backend matches the stored form regardless
+      // of how the number was typed. Backend returns a generic 200 on success
+      // (no enumeration) — the only non-2xx we surface specially is 429.
+      await ref.read(apiServiceProvider).loginRequest(normalizePhone(_phone));
       if (!mounted) return;
       setState(() => _codeStep = true);
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      setState(() => _error = l.loginSendFailed);
+      final status = e is ApiException ? e.statusCode : null;
+      setState(() => _error =
+          status == 429 ? l.loginTooManyAttempts : l.loginSendFailed);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -72,12 +77,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
-      final result =
-          await ref.read(apiServiceProvider).loginVerify(_phone, code);
+      final result = await ref
+          .read(apiServiceProvider)
+          .loginVerify(normalizePhone(_phone), code);
       final user = User.fromJson(result.user);
-      final business = result.business != null
-          ? Business.fromJson(result.business!)
-          : null;
+      final business =
+          result.business != null ? Business.fromJson(result.business!) : null;
 
       await ref
           .read(authNotifierProvider)
@@ -94,7 +99,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final msg = e.toString();
       setState(() {
         _codeController.clear();
-        _error = (status == 429 || RegExp('many|attempt', caseSensitive: false).hasMatch(msg))
+        _error = (status == 429 ||
+                RegExp('many|attempt', caseSensitive: false).hasMatch(msg))
             ? l.loginTooManyAttempts
             : l.otpErrorInvalid;
       });
@@ -109,125 +115,144 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final t = AppTokens.of(context);
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.s5),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    icon: AppIcon(name: AppIconName.menu, color: t.text1),
-                    onPressed: () {
-                      if (_codeStep) {
-                        setState(() {
-                          _codeStep = false;
-                          _codeController.clear();
-                          _error = null;
-                        });
-                      } else {
-                        context.go('/welcome');
-                      }
-                    },
+        // Keyboard-safe: when the soft keyboard opens the viewport shrinks, so
+        // the content scrolls instead of overflowing. ConstrainedBox +
+        // IntrinsicHeight keep the Spacer-based centering identical when the
+        // keyboard is closed.
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.s5),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          IconButton(
+                            icon:
+                                AppIcon(name: AppIconName.menu, color: t.text1),
+                            onPressed: () {
+                              if (_codeStep) {
+                                setState(() {
+                                  _codeStep = false;
+                                  _codeController.clear();
+                                  _error = null;
+                                });
+                              } else {
+                                context.go('/welcome');
+                              }
+                            },
+                          ),
+                          const Spacer(),
+                          const LanguageSwitcher(),
+                        ],
+                      ),
+                      const Spacer(),
+                      Center(
+                        child: Container(
+                          width: 72,
+                          height: 72,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: t.accent,
+                            borderRadius: AppRadii.xl,
+                            boxShadow: t.shadowAccent,
+                          ),
+                          child: AppIcon(
+                              name: AppIconName.orders,
+                              size: 36,
+                              color: t.accentOn),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.s6),
+                      Text(
+                        l.loginReturningTitle,
+                        style: TextStyle(
+                          fontSize: AppTextSizes.h2,
+                          fontWeight: AppFontWeights.extra,
+                          color: t.text1,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: AppSpacing.s2),
+                      Text(
+                        _codeStep
+                            ? l.loginCodeSentNotice
+                            : l.loginPhoneSubtitle,
+                        style: TextStyle(
+                            fontSize: AppTextSizes.base, color: t.text2),
+                        textAlign: TextAlign.center,
+                      ),
+                      const Spacer(),
+                      if (!_codeStep)
+                        AppTextField(
+                          label: l.loginPhoneLabel,
+                          hint: '+998 90 123 45 67',
+                          controller: _phoneController,
+                          leftIcon: AppIconName.customers,
+                          keyboardType: TextInputType.phone,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[+\d]'))
+                          ],
+                        )
+                      else
+                        AppTextField(
+                          label: l.otpCodeLabel,
+                          hint: '123456',
+                          controller: _codeController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(6),
+                          ],
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      if (_error != null) ...[
+                        const SizedBox(height: AppSpacing.s2),
+                        Text(
+                          _error!,
+                          style: TextStyle(
+                              color: t.errorStrong, fontSize: AppTextSizes.sm),
+                        ),
+                      ],
+                      const SizedBox(height: AppSpacing.s5),
+                      if (!_codeStep)
+                        AppButton(
+                          label: l.loginSendCodeButton,
+                          fullWidth: true,
+                          loading: _loading,
+                          onPressed: _sendCode,
+                        )
+                      else ...[
+                        AppButton(
+                          label: l.otpVerifyButton,
+                          fullWidth: true,
+                          loading: _loading,
+                          onPressed: _codeController.text.trim().length == 6
+                              ? _verify
+                              : null,
+                        ),
+                        const SizedBox(height: AppSpacing.s3),
+                        AppButton(
+                          label: l.loginChangeNumber,
+                          variant: AppButtonVariant.ghost,
+                          fullWidth: true,
+                          onPressed: () => setState(() {
+                            _codeStep = false;
+                            _codeController.clear();
+                            _error = null;
+                          }),
+                        ),
+                      ],
+                      const Spacer(),
+                    ],
                   ),
-                  const Spacer(),
-                  const LanguageSwitcher(),
-                ],
-              ),
-              const Spacer(),
-              Center(
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: t.accent,
-                    borderRadius: AppRadii.xl,
-                    boxShadow: t.shadowAccent,
-                  ),
-                  child: AppIcon(
-                      name: AppIconName.orders, size: 36, color: t.accentOn),
                 ),
               ),
-              const SizedBox(height: AppSpacing.s6),
-              Text(
-                l.loginReturningTitle,
-                style: TextStyle(
-                  fontSize: AppTextSizes.h2,
-                  fontWeight: AppFontWeights.extra,
-                  color: t.text1,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.s2),
-              Text(
-                _codeStep ? l.loginCodeSentNotice : l.loginPhoneSubtitle,
-                style: TextStyle(fontSize: AppTextSizes.base, color: t.text2),
-                textAlign: TextAlign.center,
-              ),
-              const Spacer(),
-              if (!_codeStep)
-                AppTextField(
-                  label: l.loginPhoneLabel,
-                  hint: '+998 90 123 45 67',
-                  controller: _phoneController,
-                  leftIcon: AppIconName.customers,
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[+\d]'))
-                  ],
-                )
-              else
-                AppTextField(
-                  label: l.otpCodeLabel,
-                  hint: '123456',
-                  controller: _codeController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(6),
-                  ],
-                  onChanged: (_) => setState(() {}),
-                ),
-              if (_error != null) ...[
-                const SizedBox(height: AppSpacing.s2),
-                Text(
-                  _error!,
-                  style: TextStyle(
-                      color: t.errorStrong, fontSize: AppTextSizes.sm),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.s5),
-              if (!_codeStep)
-                AppButton(
-                  label: l.loginSendCodeButton,
-                  fullWidth: true,
-                  loading: _loading,
-                  onPressed: _sendCode,
-                )
-              else ...[
-                AppButton(
-                  label: l.otpVerifyButton,
-                  fullWidth: true,
-                  loading: _loading,
-                  onPressed: _codeController.text.trim().length == 6
-                      ? _verify
-                      : null,
-                ),
-                const SizedBox(height: AppSpacing.s3),
-                AppButton(
-                  label: l.loginChangeNumber,
-                  variant: AppButtonVariant.ghost,
-                  fullWidth: true,
-                  onPressed: () => setState(() {
-                    _codeStep = false;
-                    _codeController.clear();
-                    _error = null;
-                  }),
-                ),
-              ],
-              const Spacer(),
-            ],
+            ),
           ),
         ),
       ),

@@ -14,6 +14,7 @@ import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_checkbox.dart';
 import 'onboarding_provider.dart';
 
 class OnboardingScreen extends ConsumerWidget {
@@ -54,7 +55,7 @@ class OnboardingScreen extends ConsumerWidget {
         body: SafeArea(
           child: Column(
             children: [
-              if (state.step < 6) _ProgressBar(step: state.step),
+              if (state.step < 5) _ProgressBar(step: state.step),
               Expanded(
                 child: AnimatedSwitcher(
                   duration: AppMotion.durSlow,
@@ -78,11 +79,9 @@ class OnboardingScreen extends ConsumerWidget {
       case 2:
         return const _Step2Bot();
       case 3:
-        return const _Step3Payment();
+        return const _Step3Review();
       case 4:
-        return const _Step4Review();
-      case 5:
-        return const _Step5Verify();
+        return const _Step4Verify();
       default:
         return const SizedBox.shrink();
     }
@@ -102,12 +101,12 @@ class _ProgressBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.s5, AppSpacing.s4, AppSpacing.s5, 0),
       child: Row(
-        children: List.generate(5, (i) {
+        children: List.generate(4, (i) {
           final active = i < step;
           return Expanded(
             child: Container(
               height: 4,
-              margin: EdgeInsets.only(right: i < 4 ? AppSpacing.s1 : 0),
+              margin: EdgeInsets.only(right: i < 3 ? AppSpacing.s1 : 0),
               decoration: BoxDecoration(
                 color: active ? t.accent : t.border,
                 borderRadius: AppRadii.pill,
@@ -511,147 +510,10 @@ class _Step2BotState extends ConsumerState<_Step2Bot> {
   }
 }
 
-// ── Step 3 — Payment method ───────────────────────────────────────────────────
+// ── Step 3 — Review and launch ────────────────────────────────────────────────
 
-class _Step3Payment extends ConsumerStatefulWidget {
-  const _Step3Payment();
-
-  @override
-  ConsumerState<_Step3Payment> createState() => _Step3PaymentState();
-}
-
-class _Step3PaymentState extends ConsumerState<_Step3Payment> {
-  final _cardController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _cardController.text = ref.read(onboardingProvider).cardNumber;
-  }
-
-  @override
-  void dispose() {
-    _cardController.dispose();
-    super.dispose();
-  }
-
-  String _formatCard(String raw) {
-    final digits = raw.replaceAll(RegExp(r'\D'), '');
-    final groups = <String>[];
-    for (var i = 0; i < digits.length && i < 16; i += 4) {
-      groups.add(digits.substring(i, (i + 4).clamp(0, digits.length)));
-    }
-    return groups.join(' ');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
-    final state = ref.watch(onboardingProvider);
-    final notifier = ref.read(onboardingProvider.notifier);
-
-    void goNext() => notifier.setStep(4);
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.s5),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              IconButton(
-                icon: AppIcon(name: AppIconName.menu, color: t.text1),
-                onPressed: () => notifier.setStep(2),
-              ),
-              const SizedBox(width: AppSpacing.s1),
-              Text(l.onboardingPaymentHeader,
-                  style: TextStyle(
-                      fontSize: AppTextSizes.lg,
-                      fontWeight: AppFontWeights.bold,
-                      color: t.text1)),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.s4),
-          Text(l.onboardingPaymentStepTitle,
-              style: TextStyle(
-                  fontSize: AppTextSizes.lg,
-                  fontWeight: AppFontWeights.bold,
-                  color: t.text1)),
-          const SizedBox(height: AppSpacing.s1),
-          Text(l.onboardingPaymentSubtitle,
-              style: TextStyle(fontSize: AppTextSizes.base, color: t.text2)),
-          const SizedBox(height: AppSpacing.s6),
-          TextField(
-            controller: _cardController,
-            keyboardType: TextInputType.number,
-            maxLength: 19, // 16 digits + 3 spaces
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: TextStyle(color: t.text1),
-            decoration: _decoration(
-              context,
-              label: l.onboardingCardNumberLabel(l.commonOptional),
-              hint: '8600 1234 5678 1234',
-            ).copyWith(counterText: ''),
-            onChanged: (raw) {
-              final formatted = _formatCard(raw);
-              final digits = raw.replaceAll(RegExp(r'\D'), '');
-              notifier.setCardNumber(digits);
-              if (formatted != _cardController.text) {
-                _cardController.value = TextEditingValue(
-                  text: formatted,
-                  selection:
-                      TextSelection.collapsed(offset: formatted.length),
-                );
-              }
-            },
-          ),
-          const SizedBox(height: AppSpacing.s4),
-          Row(
-            children: [
-              Expanded(
-                child: _ToggleButton(
-                  label: 'Uzcard',
-                  selected: state.cardBank == 'UZCARD',
-                  onTap: () => notifier.setCardBank('UZCARD'),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s3),
-              Expanded(
-                child: _ToggleButton(
-                  label: 'Humo',
-                  selected: state.cardBank == 'HUMO',
-                  onTap: () => notifier.setCardBank('HUMO'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.s6),
-          AppButton(
-            label: l.buttonContinue,
-            fullWidth: true,
-            onPressed: goNext,
-          ),
-          const SizedBox(height: AppSpacing.s3),
-          AppButton(
-            label: l.onboardingSkipForNow,
-            variant: AppButtonVariant.ghost,
-            fullWidth: true,
-            onPressed: () {
-              notifier.setCardNumber('');
-              goNext();
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Step 4 — Review and launch ────────────────────────────────────────────────
-
-class _Step4Review extends ConsumerWidget {
-  const _Step4Review();
+class _Step3Review extends ConsumerWidget {
+  const _Step3Review();
 
   String _modeName(AppLocalizations l, String mode) {
     switch (mode) {
@@ -693,7 +555,7 @@ class _Step4Review extends ConsumerWidget {
             children: [
               IconButton(
                 icon: AppIcon(name: AppIconName.menu, color: t.text1),
-                onPressed: () => notifier.setStep(3),
+                onPressed: () => notifier.setStep(2),
               ),
               const SizedBox(width: AppSpacing.s1),
               Text(l.onboardingAlmostDone,
@@ -712,12 +574,7 @@ class _Step4Review extends ConsumerWidget {
                 _SummaryRow(l.onboardingSummaryType, _modeName(l, state.mode)),
                 _SummaryRow(
                     l.onboardingLanguageLabel, _languageName(state.language)),
-                _SummaryRow(l.onboardingSummaryBot, '@${state.botUsername}'),
-                _SummaryRow(
-                    l.onboardingSummaryPayment,
-                    state.cardNumber.isNotEmpty
-                        ? '${state.cardNumber} (${state.cardBank})'
-                        : l.onboardingNotSet,
+                _SummaryRow(l.onboardingSummaryBot, '@${state.botUsername}',
                     isLast: true),
               ],
             ),
@@ -735,16 +592,16 @@ class _Step4Review extends ConsumerWidget {
   }
 }
 
-// ── Step 5 — Verify via Telegram (owner auth) ─────────────────────────────────
+// ── Step 4 — Verify via Telegram (owner auth) ─────────────────────────────────
 
-class _Step5Verify extends ConsumerStatefulWidget {
-  const _Step5Verify();
+class _Step4Verify extends ConsumerStatefulWidget {
+  const _Step4Verify();
 
   @override
-  ConsumerState<_Step5Verify> createState() => _Step5VerifyState();
+  ConsumerState<_Step4Verify> createState() => _Step4VerifyState();
 }
 
-class _Step5VerifyState extends ConsumerState<_Step5Verify> {
+class _Step4VerifyState extends ConsumerState<_Step4Verify> {
   final _codeController = TextEditingController();
 
   @override
@@ -810,7 +667,7 @@ class _Step5VerifyState extends ConsumerState<_Step5Verify> {
             children: [
               IconButton(
                 icon: AppIcon(name: AppIconName.menu, color: t.text1),
-                onPressed: () => notifier.setStep(4),
+                onPressed: () => notifier.setStep(3),
               ),
               const SizedBox(width: AppSpacing.s1),
               Text(l.onboardingVerifyHeader,
@@ -976,15 +833,9 @@ class _ConsentCheckbox extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 24,
-          height: 24,
-          child: Checkbox(
-            value: value,
-            onChanged: onChanged,
-            activeColor: t.accent,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
+        AppCheckbox(
+          value: value,
+          onChanged: (v) => onChanged(v),
         ),
         const SizedBox(width: AppSpacing.s2),
         Expanded(

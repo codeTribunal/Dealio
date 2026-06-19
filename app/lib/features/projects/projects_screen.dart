@@ -116,8 +116,9 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
                 .read(projectsProvider.notifier)
                 .refresh(status: _selectedStatus),
             child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.s4, AppSpacing.s3, AppSpacing.s4, AppSpacing.s6),
+              padding: EdgeInsets.fromLTRB(AppSpacing.s4, AppSpacing.s3,
+                  AppSpacing.s4,
+                  AppSpacing.s6 + MediaQuery.of(context).padding.bottom),
               itemCount: filtered.length,
               separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.s2),
               itemBuilder: (ctx, i) => _ProjectCard(project: filtered[i]),

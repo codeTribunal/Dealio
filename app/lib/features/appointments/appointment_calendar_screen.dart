@@ -31,6 +31,13 @@ class AppointmentCalendarScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(l.appointmentsTitle),
         actions: [
+          TextButton(
+            onPressed: () => notifier.setShowDeleted(!notifier.showDeleted),
+            style: TextButton.styleFrom(
+              foregroundColor: notifier.showDeleted ? t.accent : t.text2,
+            ),
+            child: Text(l.commonShowDeleted),
+          ),
           if (!isToday)
             TextButton(
               onPressed: () => notifier.selectDate(today),
@@ -51,7 +58,7 @@ class AppointmentCalendarScreen extends ConsumerWidget {
             child: Row(
               children: [
                 IconButton(
-                  icon: AppIcon(name: AppIconName.menu, color: t.text2, size: 20),
+                  icon: Icon(Icons.chevron_left, color: t.text2, size: 28),
                   onPressed: () => notifier.selectDate(
                     selectedDay.subtract(const Duration(days: 1)),
                   ),
@@ -92,8 +99,7 @@ class AppointmentCalendarScreen extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
-                  icon:
-                      AppIcon(name: AppIconName.menu, color: t.text2, size: 20),
+                  icon: Icon(Icons.chevron_right, color: t.text2, size: 28),
                   onPressed: () => notifier.selectDate(
                     selectedDay.add(const Duration(days: 1)),
                   ),
@@ -138,16 +144,25 @@ class AppointmentCalendarScreen extends ConsumerWidget {
                   color: t.accent,
                   onRefresh: notifier.refresh,
                   child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(AppSpacing.s4,
-                        AppSpacing.s3, AppSpacing.s4, AppSpacing.s8),
+                    padding: EdgeInsets.fromLTRB(AppSpacing.s4, AppSpacing.s3,
+                        AppSpacing.s4,
+                        AppSpacing.s8 + MediaQuery.of(context).padding.bottom),
                     itemCount: appointments.length,
                     separatorBuilder: (_, __) =>
                         const SizedBox(height: AppSpacing.s2),
-                    itemBuilder: (ctx, i) => _AppointmentTile(
-                      appointment: appointments[i],
-                      onTap: () =>
-                          ctx.push('/appointments/${appointments[i].id}'),
-                    ),
+                    itemBuilder: (ctx, i) {
+                      final a = appointments[i];
+                      if (a.deleted) {
+                        return _DeletedAppointmentTile(
+                          appointment: a,
+                          onRestore: () => notifier.restore(a.id),
+                        );
+                      }
+                      return _AppointmentTile(
+                        appointment: a,
+                        onTap: () => ctx.push('/appointments/${a.id}'),
+                      );
+                    },
                   ),
                 );
               },
@@ -279,6 +294,87 @@ class _AppointmentTile extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DeletedAppointmentTile extends StatelessWidget {
+  final Appointment appointment;
+  final VoidCallback onRestore;
+  const _DeletedAppointmentTile({
+    required this.appointment,
+    required this.onRestore,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    return Opacity(
+      opacity: 0.6,
+      child: AppCard(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s3, vertical: AppSpacing.s3),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          appointment.service.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: AppFontWeights.bold,
+                            fontSize: AppTextSizes.sm,
+                            color: t.text1,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.s2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.s2, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: t.errorSoft,
+                          borderRadius: AppRadii.pill,
+                        ),
+                        child: Text(
+                          l.commonDeletedBadge,
+                          style: TextStyle(
+                            fontSize: AppTextSizes.caption,
+                            fontWeight: AppFontWeights.semibold,
+                            color: t.errorStrong,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${formatTime(appointment.startTime.toLocal())} · ${appointment.customer.name}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style:
+                        TextStyle(color: t.text2, fontSize: AppTextSizes.caption),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.s2),
+            AppButton(
+              label: l.buttonRestore,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              onPressed: onRestore,
+            ),
+          ],
+        ),
       ),
     );
   }

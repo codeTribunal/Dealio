@@ -26,6 +26,24 @@ int? _jwtExp(String token) {
   }
 }
 
+/// Decode the `phone` claim from a JWT payload, or null. The token is signed as
+/// { userId, phone }, so this works even on cold start when the User object
+/// hasn't been re-fetched.
+String? _jwtPhone(String token) {
+  try {
+    final parts = token.split('.');
+    if (parts.length != 3) return null;
+    var payload = parts[1].replaceAll('-', '+').replaceAll('_', '/');
+    payload = payload.padRight((payload.length + 3) ~/ 4 * 4, '=');
+    final json = jsonDecode(utf8.decode(base64.decode(payload)))
+        as Map<String, dynamic>;
+    final phone = json['phone'];
+    return phone is String ? phone : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 /// True if the token is present but past its `exp`. Unknown/undecodable tokens
 /// are treated as NOT expired (the server will reject them with a 401).
 bool _isExpired(String token) {
@@ -58,6 +76,11 @@ class AuthNotifier extends ChangeNotifier {
   AuthState? get state => _state;
   bool get isAuthenticated => _state != null;
   bool get hasBusiness => _state?.business != null;
+
+  /// The owner's phone — from the logged-in user, falling back to the JWT claim
+  /// (the User object isn't restored on cold start, but the token carries it).
+  String? get phone =>
+      _state?.user?.phone ?? (_state != null ? _jwtPhone(_state!.token) : null);
 
   /// True when the app is fully ready to navigate.
   /// The router uses this instead of isInitialized so it waits for the

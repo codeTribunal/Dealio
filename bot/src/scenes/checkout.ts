@@ -171,29 +171,12 @@ export async function checkoutConversation(conversation: MyConversation, ctx: My
   ctx.session.cart = [];
   ctx.session.customerId = customerId;
 
-  const { order, paymentInstructions } = result;
+  const { order } = result;
 
-  // ── Step 7: Payment instructions ─────────────────────────────
-  if (!paymentInstructions) {
-    await ctx.reply(
-      t(lang, 'orderPlacedNoPayment', { number: order.orderNumber }),
-      { parse_mode: 'HTML' },
-    );
-    return;
-  }
-
-  const { cardNumber, cardBank, amount, orderNumber } = paymentInstructions;
-
+  // ── Step 7: Order placed ─────────────────────────────────────
+  // No in-bot payment: the owner follows up about payment directly.
   await ctx.reply(
-    t(lang, 'orderPlacedPayment', {
-      number: orderNumber,
-      amount: formatMoney(lang, amount),
-      card: cardNumber,
-      bank: cardBank,
-    }),
-    {
-      parse_mode: 'HTML',
-      reply_markup: new InlineKeyboard().text(t(lang, 'iHavePaid'), `paid:${order.id}`),
-    },
+    t(lang, 'orderPlacedNoPayment', { number: order.orderNumber }),
+    { parse_mode: 'HTML' },
   );
 }

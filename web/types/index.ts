@@ -1,7 +1,9 @@
 // Working hours: keys "0".."6" (0=Sunday … 6=Saturday, Asia/Tashkent local),
 // each value { start: "HH:MM", end: "HH:MM" } or null = closed that day.
 export type WorkingDay = { start: string; end: string }
-export type WorkingHours = Record<string, WorkingDay | null>
+// A day is an array of open intervals (breaks are the gaps between them), a
+// single interval (legacy format), or null = closed that day.
+export type WorkingHours = Record<string, WorkingDay | WorkingDay[] | null>
 
 // Single business mode (was string[] — migrated to a scalar in Step 2).
 // PRODUCTS is dormant and no longer assignable.
@@ -13,8 +15,7 @@ export interface Business {
   description: string | null
   mode: Mode
   language: string
-  cardNumber: string | null
-  cardBank: string | null
+  plan?: string | null
   botUsername: string | null
   calendarToken?: string | null
   workingHours?: WorkingHours | null
@@ -40,6 +41,7 @@ export interface Customer {
   lastInteractionAt: string
   totalOrders: number | undefined
   totalSpent: number | undefined
+  deleted?: boolean
 }
 
 export interface CustomerDetail extends Customer {
@@ -118,8 +120,9 @@ export interface Appointment {
     telegramUsername: string | null
     phone: string | null
   }
-  service: { name: string }
-  staff: { name: string } | null
+  service: { id: string; name: string; durationMinutes?: number }
+  staff: { id: string; name: string } | null
+  deleted?: boolean
 }
 
 export interface AppointmentsResponse {
@@ -176,6 +179,7 @@ export interface Order {
   }
   items: OrderItem[]
   timeline: TimelineEntry[]
+  deleted?: boolean
 }
 
 export interface OrdersResponse {
@@ -324,19 +328,14 @@ export interface HomeData {
 export interface AnalyticsData {
   revenueThisMonth: number
   revenueLastMonth: number
-  ordersThisMonth: number
-  averageOrderValue: number
+  completedThisMonth: number
+  appointmentsThisMonth: number
   pendingPaymentsTotal: number
   topCustomers: {
     id: string
     name: string
-    telegramUsername: string | null
+    telegramUsername?: string | null
     totalSpent: number
-    orderCount: number
+    appointmentCount: number
   }[]
-  bestSellingProduct: {
-    name: string
-    unitsSold: number
-  } | null
-  completedThisMonth: number
 }

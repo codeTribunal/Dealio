@@ -18,7 +18,7 @@ import {
   updateMilestoneStatus,
   markInvoicePaid,
 } from '@/lib/api'
-import { formatUZS, formatDate } from '@/lib/format'
+import { formatUZS, formatDate, currencyWord } from '@/lib/format'
 import type { Project, ProjectMilestone, ProjectInvoice, Customer } from '@/types'
 
 const LIMIT = 30
@@ -538,7 +538,7 @@ export default function ProjectsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-text-2 mb-1.5">
-                      Total price (UZS) *
+                      Total price ({currencyWord()}) *
                     </label>
                     <Input
                       type="number"
@@ -724,7 +724,7 @@ export default function ProjectsPage() {
                           type="number"
                           value={milestoneAmount}
                           onChange={(e) => setMilestoneAmount(e.target.value)}
-                          placeholder="Amount (UZS)"
+                          placeholder={`Amount (${currencyWord()})`}
                           className="tabular-nums"
                         />
                         <Input
@@ -905,7 +905,7 @@ export default function ProjectsPage() {
               {/* Total price */}
               <div>
                 <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Total price (UZS) *
+                  Total price ({currencyWord()}) *
                 </label>
                 <Input
                   type="number"

@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
 import { Spinner } from '@/components/ui/Spinner'
 import { Icon } from '@/components/icons/Icon'
-import { getOrders, getProducts, getCustomers, createOrder, type Product } from '@/lib/api'
+import { getOrders, getProducts, getCustomers, createOrder, restoreOrder, type Product } from '@/lib/api'
 import { formatUZS } from '@/lib/format'
+import { useI18n } from '@/lib/i18n/i18nContext'
 import type { Order, Customer } from '@/types'
 
 const LIMIT = 30
@@ -29,6 +30,7 @@ const SELECT_CLS =
   'w-full bg-surface border border-border rounded-md py-2.5 px-3.5 text-sm text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors'
 
 export default function OrdersPage() {
+  const { t } = useI18n()
   const [orders, setOrders] = useState<Order[]>([])
   const [total, setTotal] = useState(0)
   const [search, setSearch] = useState('')
@@ -38,6 +40,18 @@ export default function OrdersPage() {
   const [page, setPage] = useState(1)
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [retryToken, setRetryToken] = useState(0)
+  const [showDeleted, setShowDeleted] = useState(false)
+  const [restoringId, setRestoringId] = useState<string | null>(null)
+
+  async function handleRestoreOrder(oid: string) {
+    setRestoringId(oid)
+    try {
+      await restoreOrder(oid)
+      setRetryToken((tk) => tk + 1)
+    } finally {
+      setRestoringId(null)
+    }
+  }
 
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
@@ -174,12 +188,13 @@ export default function OrdersPage() {
     setError(null)
     const params =
       statusFilter === 'AWAITING_PAYMENT'
-        ? { paymentStatus: 'PENDING', search: debouncedSearch, page, limit: LIMIT }
+        ? { paymentStatus: 'PENDING', search: debouncedSearch, page, limit: LIMIT, includeDeleted: showDeleted }
         : {
             status: statusFilter === 'ALL' ? undefined : statusFilter,
             search: debouncedSearch,
             page,
             limit: LIMIT,
+            includeDeleted: showDeleted,
           }
     getOrders(params)
       .then((data) => {
@@ -188,7 +203,7 @@ export default function OrdersPage() {
       })
       .catch(() => setError('Failed to load orders'))
       .finally(() => setLoading(false))
-  }, [debouncedSearch, statusFilter, page, retryToken])
+  }, [debouncedSearch, statusFilter, page, retryToken, showDeleted])
 
   return (
     <AuthLayout title="Orders">
@@ -215,6 +230,16 @@ export default function OrdersPage() {
               }}
             />
           </div>
+          <Button
+            variant={showDeleted ? 'primary' : 'secondary'}
+            onClick={() => {
+              setShowDeleted((v) => !v)
+              setPage(1)
+            }}
+            className="flex-shrink-0 whitespace-nowrap"
+          >
+            {t('common.showDeleted')}
+          </Button>
           <Button
             variant="primary"
             leftIcon="add"
@@ -295,7 +320,34 @@ export default function OrdersPage() {
             </p>
           </div>
         ) : (
-          (orders ?? []).map((order) => (
+          (orders ?? []).map((order) =>
+            order.deleted ? (
+              <div
+                key={order.id}
+                className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border last:border-b-0 opacity-70"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-text-1">#{order.orderNumber}</span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-pill text-xs font-semibold bg-error-soft text-error-strong">
+                      {t('common.deletedBadge')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-text-2 truncate mt-0.5">
+                    {order.customer.name} · {formatUZS(order.total)}
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  loading={restoringId === order.id}
+                  onClick={() => handleRestoreOrder(order.id)}
+                  className="flex-shrink-0"
+                >
+                  {t('common.restore')}
+                </Button>
+              </div>
+            ) : (
             <div key={order.id}>
               {/* Mobile card */}
               <Link

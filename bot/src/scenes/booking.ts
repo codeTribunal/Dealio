@@ -439,32 +439,19 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
     }
   }
 
-  const { appointment, paymentInstructions, ownerTelegramChatId } = result;
+  const { appointment, ownerTelegramChatId } = result;
 
   // ── Step 10: Confirmation message ─────────────────────────────
-  if (paymentInstructions) {
-    await ctx.reply(
-      t(lang, 'bookingConfirmedPayment', {
-        amount: formatMoney(lang, paymentInstructions.amount),
-        card: paymentInstructions.cardNumber,
-        bank: paymentInstructions.cardBank,
-      }),
-      {
-        parse_mode: 'HTML',
-        reply_markup: new InlineKeyboard().text(t(lang, 'iHavePaid'), `appt_paid:${appointment.id}`),
-      },
-    );
-  } else {
-    await ctx.reply(
-      t(lang, 'bookingConfirmedNoPayment', {
-        service: appointment.service.name,
-        date: formatDateLabel(selectedDate),
-        time: selectedSlot.startLabel,
-        price: formatMoney(lang, appointment.price),
-      }),
-      { parse_mode: 'HTML' },
-    );
-  }
+  // No in-bot payment: the owner follows up about payment directly.
+  await ctx.reply(
+    t(lang, 'bookingConfirmedNoPayment', {
+      service: appointment.service.name,
+      date: formatDateLabel(selectedDate),
+      time: selectedSlot.startLabel,
+      price: formatMoney(lang, appointment.price),
+    }),
+    { parse_mode: 'HTML' },
+  );
 
   // ownerTelegramChatId is available for future use (e.g. notify owner)
   void ownerTelegramChatId;

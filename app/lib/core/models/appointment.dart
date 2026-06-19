@@ -63,6 +63,7 @@ class Appointment {
   final String status;
   final bool reminderSent;
   final DateTime createdAt;
+  final bool deleted;
 
   const Appointment({
     required this.id,
@@ -78,6 +79,7 @@ class Appointment {
     required this.status,
     required this.reminderSent,
     required this.createdAt,
+    this.deleted = false,
   });
 
   factory Appointment.fromJson(Map<String, dynamic> json) => Appointment(
@@ -100,6 +102,7 @@ class Appointment {
         status: json['status'] as String? ?? 'REQUESTED',
         reminderSent: json['reminderSent'] as bool? ?? false,
         createdAt: DateTime.parse(json['createdAt'] as String),
+        deleted: json['deleted'] as bool? ?? false,
       );
 
   bool get isActive => status == 'REQUESTED' || status == 'CONFIRMED';

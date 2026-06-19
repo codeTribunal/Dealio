@@ -10,6 +10,7 @@ import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_spinner.dart';
+import '../../shared/widgets/app_switch.dart';
 import 'services_provider.dart';
 
 class ServicesScreen extends ConsumerWidget {
@@ -39,6 +40,9 @@ class ServicesScreen extends ConsumerWidget {
         ],
       ),
       body: servicesAsync.when(
+        // Keep the list visible during the refetch after a toggle, so the
+        // switch animates instead of flashing the loading spinner.
+        skipLoadingOnReload: true,
         loading: () => const Center(child: AppSpinner(size: 32)),
         error: (e, _) => _ErrorView(
           message: e.toString(),
@@ -130,9 +134,8 @@ class _ServiceCard extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
+          AppSwitch(
             value: service.active,
-            activeThumbColor: t.accent,
             onChanged: (_) => onToggle(),
           ),
         ],

@@ -7,9 +7,11 @@ import '../../core/api/api_service.dart';
 import '../../core/icons/app_icon.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_spinner.dart';
+import '../../shared/widgets/app_switch.dart';
 
 class ProductFormScreen extends ConsumerStatefulWidget {
   final String? productId;
@@ -214,7 +216,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                   controller: _priceCtrl,
                   style: TextStyle(color: t.text1),
                   decoration: _decoration(context,
-                      hint: '150000', suffixText: 'UZS'),
+                      hint: '150000', suffixText: currencyWord()),
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: (v) {
@@ -286,9 +288,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                             style: TextStyle(
                                 fontSize: AppTextSizes.caption,
                                 color: t.text2)),
-                        Switch(
+                        AppSwitch(
                           value: _unlimited,
-                          activeThumbColor: t.accent,
                           onChanged: (v) => setState(() {
                             _unlimited = v;
                             if (v) _stockCtrl.clear();
@@ -335,6 +336,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                         value: _prepTimeUnit,
                         style: TextStyle(color: t.text1),
                         dropdownColor: t.surface,
+                        borderRadius: AppRadii.md,
                         decoration: _decoration(context),
                         items: [
                           DropdownMenuItem(
@@ -363,17 +365,27 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           AppCard(
             padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.s4, vertical: AppSpacing.s2),
-            child: SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(l.commonActive, style: TextStyle(color: t.text1)),
-              subtitle: Text(
-                _active ? l.productFormActiveOn : l.productFormActiveOff,
-                style:
-                    TextStyle(color: t.text2, fontSize: AppTextSizes.caption),
-              ),
-              value: _active,
-              activeThumbColor: t.accent,
-              onChanged: (v) => setState(() => _active = v),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l.commonActive, style: TextStyle(color: t.text1)),
+                      Text(
+                        _active ? l.productFormActiveOn : l.productFormActiveOff,
+                        style: TextStyle(
+                            color: t.text2, fontSize: AppTextSizes.caption),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s3),
+                AppSwitch(
+                  value: _active,
+                  onChanged: (v) => setState(() => _active = v),
+                ),
+              ],
             ),
           ),
 

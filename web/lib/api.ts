@@ -70,8 +70,6 @@ export async function completeOnboarding(data: {
   mode: string
   language: string
   botToken: string
-  cardNumber?: string
-  cardBank?: string
 }): Promise<{ id: string; name: string; botUsername: string; botLink: string }> {
   const res = await api.post('/onboarding/complete', data)
   return res.data.business
@@ -126,12 +124,14 @@ export async function getCustomers(params: {
   search?: string
   page?: number
   limit?: number
+  includeDeleted?: boolean
 }): Promise<CustomersResponse> {
   const res = await api.get('/customers', {
     params: {
       search: params.search || undefined,
       page: params.page || 1,
       limit: params.limit || 30,
+      includeDeleted: params.includeDeleted ? 'true' : undefined,
     },
   })
   const data = res.data
@@ -163,12 +163,21 @@ export async function updateCustomerNotes(
   await api.patch(`/customers/${id}/notes`, { notes })
 }
 
+export async function deleteCustomer(id: string): Promise<void> {
+  await api.delete(`/customers/${id}`)
+}
+
+export async function restoreCustomer(id: string): Promise<void> {
+  await api.post(`/customers/${id}/restore`)
+}
+
 export async function getOrders(params: {
   status?: string
   paymentStatus?: string
   search?: string
   page?: number
   limit?: number
+  includeDeleted?: boolean
 }): Promise<OrdersResponse> {
   const res = await api.get('/orders', {
     params: {
@@ -177,6 +186,7 @@ export async function getOrders(params: {
       search: params.search || undefined,
       page: params.page || 1,
       limit: params.limit || 30,
+      includeDeleted: params.includeDeleted ? 'true' : undefined,
     },
   })
   const raw = res.data
@@ -202,6 +212,14 @@ export async function confirmOrderPayment(id: string): Promise<void> {
   await api.patch(`/orders/${id}/payment`, { paymentStatus: 'CONFIRMED' })
 }
 
+export async function deleteOrder(id: string): Promise<void> {
+  await api.delete(`/orders/${id}`)
+}
+
+export async function restoreOrder(id: string): Promise<void> {
+  await api.post(`/orders/${id}/restore`)
+}
+
 export async function createOrder(data: {
   customerId: string
   items: { productId: string; quantity: number; price: number }[]
@@ -222,13 +240,15 @@ export async function getAppointments(params: {
   status?: string
   page?: number
   limit?: number
+  includeDeleted?: boolean
 }): Promise<AppointmentsResponse> {
   const res = await api.get('/appointments', {
     params: {
       date: params.date || undefined,
       status: params.status || undefined,
       page: params.page || 1,
-      limit: params.limit || 50
+      limit: params.limit || 50,
+      includeDeleted: params.includeDeleted ? 'true' : undefined,
     }
   })
   const data = res.data
@@ -246,18 +266,24 @@ export async function updateAppointmentStatus(
   await api.patch(`/appointments/${appointmentId}/status`, { status })
 }
 
+export async function deleteAppointment(id: string): Promise<void> {
+  await api.delete(`/appointments/${id}`)
+}
+
+export async function restoreAppointment(id: string): Promise<void> {
+  await api.post(`/appointments/${id}/restore`)
+}
+
 export async function getAnalytics(): Promise<AnalyticsData> {
   const res = await api.get('/analytics')
   const d = res.data
   return {
     revenueThisMonth: d.revenueThisMonth ?? d.revenue?.thisMonth ?? 0,
     revenueLastMonth: d.revenueLastMonth ?? d.revenue?.lastMonth ?? 0,
-    ordersThisMonth: d.ordersThisMonth ?? d.orders?.thisMonth ?? d.orderCount ?? 0,
-    completedThisMonth: d.completedThisMonth ?? d.ordersCompletedThisMonth ?? d.completed ?? 0,
-    averageOrderValue: d.averageOrderValue ?? d.avgOrderValue ?? 0,
+    completedThisMonth: d.completedThisMonth ?? 0,
+    appointmentsThisMonth: d.appointmentsThisMonth ?? 0,
     pendingPaymentsTotal: d.pendingPaymentsTotal ?? d.pendingTotal ?? 0,
     topCustomers: d.topCustomers ?? d.customers ?? [],
-    bestSellingProduct: d.bestSellingProduct ?? d.topProduct ?? null,
   }
 }
 
@@ -273,11 +299,12 @@ export async function updateBusiness(data: {
   return res.data
 }
 
-export async function updatePaymentMethod(data: {
-  cardNumber: string
-  cardBank: string
-}): Promise<Business> {
-  const res = await api.patch('/business/payment', data)
+// Change the Telegram bot token (after revoking/replacing the bot). The backend
+// re-verifies it, re-derives the username, and restarts the bot.
+export async function updateBotToken(data: {
+  botToken: string
+}): Promise<{ botUsername: string | null; botLink: string }> {
+  const res = await api.patch('/business/bot-token', data)
   return res.data
 }
 
@@ -509,6 +536,19 @@ export async function createService(data: {
   return res.data
 }
 
+export async function updateService(
+  id: string,
+  data: {
+    name?: string
+    durationMinutes?: number
+    price?: number
+    active?: boolean
+  },
+): Promise<Service> {
+  const res = await api.patch(`/services/${id}`, data)
+  return res.data
+}
+
 // ── Products (Catalog) ──────────────────────────────────────────────────────
 
 export interface Product {
@@ -587,8 +627,30 @@ export async function createAppointment(data: {
   startTime: string
   notes?: string
   paymentType: 'AT_APPOINTMENT' | 'IN_ADVANCE'
+  // Owner override: proceed despite an overlap warning.
+  allowConflict?: boolean
 }): Promise<Appointment> {
   const res = await api.post('/appointments', data)
+  return res.data
+}
+
+// Owner edit/reschedule. Every field optional; staffId null clears it. Past /
+// out-of-hours allowed; on overlap the server returns 409 APPOINTMENT_CONFLICT
+// unless allowConflict is set.
+export async function updateAppointment(
+  id: string,
+  data: {
+    startTime?: string
+    serviceId?: string
+    staffId?: string | null
+    price?: number
+    notes?: string | null
+    paymentType?: 'AT_APPOINTMENT' | 'IN_ADVANCE'
+    status?: string
+    allowConflict?: boolean
+  },
+): Promise<Appointment> {
+  const res = await api.patch(`/appointments/${id}`, data)
   return res.data
 }
 

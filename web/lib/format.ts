@@ -1,6 +1,30 @@
+// Localized lowercase currency word, kept in sync with the active app language
+// by the i18n provider (setCurrencyLocale). Read-inside so the many formatUZS
+// call sites don't each need the locale passed in. Defaults to the app's
+// default language ('uz').
+type CurrencyLocale = 'en' | 'uz' | 'ru'
+let _currencyLocale: CurrencyLocale = 'uz'
+
+export function setCurrencyLocale(locale: string): void {
+  _currencyLocale = locale === 'en' || locale === 'ru' ? locale : 'uz'
+}
+
+// The current localized currency word: en→soum, uz→so'm (straight apostrophe
+// U+0027), ru→сум.
+export function currencyWord(): string {
+  switch (_currencyLocale) {
+    case 'en':
+      return 'soum'
+    case 'ru':
+      return 'сум'
+    default:
+      return "so'm"
+  }
+}
+
 export function formatUZS(amount: number | null | undefined): string {
   if (amount === null || amount === undefined) return '—'
-  return amount.toLocaleString('uz-UZ').replace(/,/g, ' ') + ' UZS'
+  return amount.toLocaleString('uz-UZ').replace(/,/g, ' ') + ' ' + currencyWord()
 }
 
 export function formatDate(dateString: string): string {

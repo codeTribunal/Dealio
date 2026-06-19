@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import AuthLayout from '@/components/AuthLayout'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import { Card, CardHeader } from '@/components/ui/Card'
@@ -9,7 +10,7 @@ import { Icon } from '@/components/icons/Icon'
 import {
   getBusiness,
   updateBusiness,
-  updatePaymentMethod,
+  updateBotToken,
   generateCalendarToken,
   disableCalendarSync,
   getReminderSettings,
@@ -22,10 +23,6 @@ import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { WorkingHoursCard } from '@/components/scheduling/WorkingHoursCard'
 import { BlockedTimeCard } from '@/components/scheduling/BlockedTimeCard'
 import type { Business } from '@/types'
-
-function formatCardNumber(raw: string): string {
-  return raw.replace(/(.{4})/g, '$1 ').trim()
-}
 
 type TFn = (key: string, params?: Record<string, string | number>) => string
 
@@ -82,14 +79,10 @@ export default function SettingsPage() {
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
 
   const [editingProfile, setEditingProfile] = useState(false)
-  const [editingPayment, setEditingPayment] = useState(false)
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [language, setLanguage] = useState('UZBEK')
-
-  const [cardNumber, setCardNumber] = useState('')
-  const [cardBank, setCardBank] = useState('UZCARD')
 
   const [mode, setMode] = useState<string>('SERVICES')
   // Pending mode the owner picked, awaiting confirmation in the warning dialog.
@@ -98,6 +91,9 @@ export default function SettingsPage() {
 
   const [calendarToken, setCalendarToken] = useState<string | null>(null)
   const [calendarLoading, setCalendarLoading] = useState(false)
+
+  const [editingBot, setEditingBot] = useState(false)
+  const [botToken, setBotToken] = useState('')
 
   const [reminderSettings, setReminderSettings] =
     useState<ReminderSettings | null>(null)
@@ -115,8 +111,6 @@ export default function SettingsPage() {
         setName(data.name)
         setDescription(data.description || '')
         setLanguage(data.language)
-        setCardNumber(data.cardNumber || '')
-        setCardBank(data.cardBank || 'UZCARD')
         setMode(data.mode)
         setCalendarToken(data.calendarToken || null)
       })
@@ -177,13 +171,20 @@ export default function SettingsPage() {
     }
   }
 
-  async function savePayment() {
+  async function saveBotToken() {
+    if (!botToken.trim()) return
     setSaving(true)
     try {
-      const updated = await updatePaymentMethod({ cardNumber, cardBank })
-      setBusiness(updated)
-      setEditingPayment(false)
-      showSaved(t('settings.paymentSaved'))
+      const updated = await updateBotToken({ botToken: botToken.trim() })
+      setBusiness((b) => (b ? { ...b, botUsername: updated.botUsername } : b))
+      setEditingBot(false)
+      setBotToken('')
+      showSaved(t('settings.botTokenUpdated'))
+      await refetchContext()
+    } catch (e) {
+      const msg = (e as { response?: { data?: { error?: string } } })?.response
+        ?.data?.error
+      showSaved(msg ?? t('common.errorGeneric'))
     } finally {
       setSaving(false)
     }
@@ -264,14 +265,6 @@ export default function SettingsPage() {
       </AuthLayout>
     )
   }
-
-  // Pill segmented button (Uzcard/Humo). Stays local to settings.
-  const segButton = (active: boolean) =>
-    `px-4 py-2 rounded-md text-sm font-semibold transition-colors ${
-      active
-        ? 'bg-accent text-accent-on'
-        : 'border border-border bg-surface text-text-1 hover:bg-surface-2'
-    }`
 
   return (
     <AuthLayout title={t('settings.title')}>
@@ -384,16 +377,60 @@ export default function SettingsPage() {
               OTHER mode opens the hard-warning modal (requestModeSwitch); it
               does NOT save until the owner confirms. value={mode} keeps the
               control bound to the current scalar mode, so Cancel reverts it. */}
-          <select
-            value={mode}
-            onChange={(e) => requestModeSwitch(e.target.value)}
-            aria-label={t('settings.businessMode')}
-            className={`w-full ${SELECT_CLASS}`}
-          >
-            <option value="SERVICES">{t('settings.modeNameServices')}</option>
-            <option value="FREELANCE">{t('settings.modeNameFreelance')}</option>
-          </select>
+          <div className="inline-flex bg-surface-2 rounded-lg p-1">
+            {(['SERVICES', 'FREELANCE'] as const).map((m) => {
+              const active = mode === m
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => requestModeSwitch(m)}
+                  className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
+                    active
+                      ? 'bg-surface text-text-1 shadow-sm'
+                      : 'text-text-2 hover:text-text-1'
+                  }`}
+                  style={{ transitionDuration: 'var(--dur-base)' }}
+                >
+                  {m === 'SERVICES'
+                    ? t('settings.modeNameServices')
+                    : t('settings.modeNameFreelance')}
+                </button>
+              )
+            })}
+          </div>
         </Card>
+
+        {/* ── Services & staff (SERVICES mode only) ────────────── */}
+        {business.mode === 'SERVICES' && (
+          <Card>
+            <CardHeader title="Services & staff" />
+            <div className="divide-y divide-border">
+              <Link
+                href="/services"
+                className="flex items-center justify-between py-3 group"
+              >
+                <span className="text-sm font-medium text-text-1">
+                  Manage services
+                </span>
+                <span className="text-text-3 group-hover:text-text-1 transition-colors">
+                  ›
+                </span>
+              </Link>
+              <Link
+                href="/staff"
+                className="flex items-center justify-between py-3 group"
+              >
+                <span className="text-sm font-medium text-text-1">
+                  Manage staff
+                </span>
+                <span className="text-text-3 group-hover:text-text-1 transition-colors">
+                  ›
+                </span>
+              </Link>
+            </div>
+          </Card>
+        )}
 
         {/* ── Scheduling (SERVICES mode only) ──────────────────── */}
         {business.mode === 'SERVICES' && (
@@ -409,103 +446,6 @@ export default function SettingsPage() {
             <BlockedTimeCard notify={showSaved} />
           </>
         )}
-
-        {/* ── Payment Method ───────────────────────────────────── */}
-        <Card>
-          <CardHeader
-            title={t('settings.paymentMethod')}
-            right={
-              !editingPayment ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setEditingPayment(true)}
-                >
-                  {t('common.edit')}
-                </Button>
-              ) : undefined
-            }
-          />
-
-          {!editingPayment ? (
-            <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b border-border">
-                <p className="text-sm text-text-2">{t('settings.cardNumber')}</p>
-                <p className="text-sm font-medium text-text-1 font-mono tabular-nums">
-                  {business.cardNumber
-                    ? formatCardNumber(business.cardNumber)
-                    : '—'}
-                </p>
-              </div>
-              <div className="flex justify-between items-center py-2">
-                <p className="text-sm text-text-2">{t('settings.bank')}</p>
-                <p className="text-sm font-medium text-text-1">
-                  {business.cardBank === 'UZCARD'
-                    ? 'Uzcard'
-                    : business.cardBank === 'HUMO'
-                    ? 'Humo'
-                    : '—'}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  {t('settings.cardNumber')}
-                </label>
-                <Input
-                  type="text"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value)}
-                  maxLength={16}
-                  placeholder="8600123456781234"
-                  className="font-mono tabular-nums"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  {t('settings.bank')}
-                </label>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setCardBank('UZCARD')}
-                    className={segButton(cardBank === 'UZCARD')}
-                  >
-                    Uzcard
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCardBank('HUMO')}
-                    className={segButton(cardBank === 'HUMO')}
-                  >
-                    Humo
-                  </button>
-                </div>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="primary"
-                  loading={saving}
-                  onClick={savePayment}
-                >
-                  {t('common.save')}
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setCardNumber(business.cardNumber || '')
-                    setCardBank(business.cardBank || 'UZCARD')
-                    setEditingPayment(false)
-                  }}
-                >
-                  {t('common.cancel')}
-                </Button>
-              </div>
-            </div>
-          )}
-        </Card>
 
         {/* ── Calendar sync ────────────────────────────────────── */}
         <Card>
@@ -644,40 +584,88 @@ export default function SettingsPage() {
 
         {/* ── Telegram Bot ─────────────────────────────────────── */}
         <Card>
-          <CardHeader title={t('settings.telegramBot')} />
-          <div className="space-y-3">
-            <div className="flex justify-between items-center py-2 border-b border-border">
-              <p className="text-sm text-text-2">{t('settings.botUsername')}</p>
-              <p className="text-sm font-medium text-text-1">
-                {business.botUsername
-                  ? `@${business.botUsername}`
-                  : t('settings.notConfigured')}
-              </p>
+          <CardHeader
+            title={t('settings.telegramBot')}
+            right={
+              !editingBot ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditingBot(true)}
+                >
+                  {t('settings.changeBot')}
+                </Button>
+              ) : undefined
+            }
+          />
+
+          {!editingBot ? (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center py-2 border-b border-border">
+                <p className="text-sm text-text-2">{t('settings.botUsername')}</p>
+                <p className="text-sm font-medium text-text-1">
+                  {business.botUsername
+                    ? `@${business.botUsername}`
+                    : t('settings.notConfigured')}
+                </p>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <p className="text-sm text-text-2">{t('settings.botLink')}</p>
+                {business.botUsername ? (
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-accent font-medium">
+                      https://t.me/{business.botUsername}
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        navigator.clipboard.writeText(
+                          `https://t.me/${business.botUsername}`
+                        )
+                      }
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-text-3">—</p>
+                )}
+              </div>
             </div>
-            <div className="flex justify-between items-center py-2">
-              <p className="text-sm text-text-2">{t('settings.botLink')}</p>
-              {business.botUsername ? (
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-accent font-medium">
-                    https://t.me/{business.botUsername}
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      navigator.clipboard.writeText(
-                        `https://t.me/${business.botUsername}`
-                      )
-                    }
-                  >
-                    Copy
-                  </Button>
-                </div>
-              ) : (
-                <p className="text-sm text-text-3">—</p>
-              )}
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
+                  {t('settings.pasteToken')}
+                </label>
+                <Input
+                  type="text"
+                  value={botToken}
+                  onChange={(e) => setBotToken(e.target.value)}
+                  placeholder="1234567890:AAHxyz..."
+                  className="font-mono"
+                />
+                <p className="text-xs text-text-3 mt-2">
+                  {t('settings.botTokenHint')}
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button variant="primary" loading={saving} onClick={saveBotToken}>
+                  {t('common.save')}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setBotToken('')
+                    setEditingBot(false)
+                  }}
+                >
+                  {t('common.cancel')}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </Card>
       </div>
 

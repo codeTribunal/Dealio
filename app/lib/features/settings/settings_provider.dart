@@ -60,19 +60,18 @@ class SettingsNotifier extends AsyncNotifier<SettingsState> {
     ref.invalidate(businessProvider);
   }
 
-  Future<void> savePayment({
-    required String cardNumber,
-    required String cardBank,
-  }) async {
+  /// Change the Telegram bot token; updates the shown username/link on success.
+  Future<void> saveBotToken(String botToken) async {
     final current = state.valueOrNull;
     if (current == null) return;
-    final result = await ref.read(apiServiceProvider).updatePayment(cardNumber, cardBank);
+    final result = await ref.read(apiServiceProvider).updateBotToken(botToken);
     state = AsyncData(
       current.copyWith(
-        business: current.business.copyWith(
-          cardNumber: result.cardNumber,
-          cardBank: result.cardBank,
-        ),
+        botUsername: result.botUsername,
+        botLink: result.botLink,
+        business: result.botUsername != null
+            ? current.business.copyWith(botUsername: result.botUsername)
+            : current.business,
       ),
     );
     ref.invalidate(businessProvider);

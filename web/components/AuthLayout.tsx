@@ -6,6 +6,7 @@ import { useBusiness } from '@/lib/businessContext'
 import { useI18n, enumToCode, hasLocaleCookie } from '@/lib/i18n/i18nContext'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
+import MobileTabBar from './MobileTabBar'
 
 export default function AuthLayout({
   children,
@@ -66,13 +67,19 @@ export default function AuthLayout({
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         <TopBar
           title={title}
+          userName={business?.name}
           onMenuClick={() => setSidebarOpen((open) => !open)}
           menuOpen={sidebarOpen}
         />
-        <main className="overflow-y-auto flex-1 p-4 lg:p-8">
+        {/* Extra bottom padding on mobile so content clears the floating tab
+            bar; desktop (lg) keeps the original padding (no tab bar there). */}
+        <main className="overflow-y-auto flex-1 p-4 pb-28 lg:p-8 lg:pb-8">
           {children}
         </main>
       </div>
+
+      {/* Mobile-only floating tab bar (self-gated lg:hidden) */}
+      <MobileTabBar />
     </div>
   )
 }

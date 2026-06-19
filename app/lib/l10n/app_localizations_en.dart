@@ -140,6 +140,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navSettings => 'Settings';
 
   @override
+  String get profileTitle => 'Profile';
+
+  @override
+  String get profilePhoneLabel => 'Phone';
+
+  @override
+  String get profilePlanLabel => 'Plan';
+
+  @override
+  String get profileBusinessSettings => 'Business settings';
+
+  @override
   String get navMessages => 'Messages';
 
   @override
@@ -678,6 +690,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTelegramBot => 'TELEGRAM BOT';
 
   @override
+  String get settingsChangeBot => 'Change bot';
+
+  @override
+  String get settingsBotTokenHint =>
+      'Paste a new token from @BotFather if you revoked or replaced your bot.';
+
+  @override
+  String get settingsBotTokenUpdated => 'Bot updated';
+
+  @override
   String get settingsNoBotConfigured =>
       'No bot configured. Contact support to set up your bot.';
 
@@ -853,6 +875,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeHeroTodayOrders => 'Today\'s orders';
+
+  @override
+  String get homeHeroTodayAppointments => 'Today\'s appointments';
+
+  @override
+  String get homeHeroTodayProjects => 'New projects today';
 
   @override
   String get homeStatPending => 'Pending payments';
@@ -1175,7 +1203,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serviceFormDurationLabel => 'Duration (minutes)';
 
   @override
-  String get serviceFormPriceLabel => 'Price (UZS)';
+  String get serviceFormPriceLabel => 'Price (soum)';
 
   @override
   String get serviceFormActiveSubtitle => 'Visible to customers in the bot';
@@ -1331,6 +1359,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get apptFormCreate => 'Create appointment';
 
   @override
+  String get apptEditTitle => 'Edit appointment';
+
+  @override
+  String get apptEdit => 'Edit';
+
+  @override
+  String get apptStatusLabel => 'Status';
+
+  @override
+  String get apptConflictTitle => 'This overlaps an existing booking';
+
+  @override
+  String get apptConflictBody =>
+      'This time overlaps another appointment. Add it anyway?';
+
+  @override
+  String get apptConflictConfirm => 'Add anyway';
+
+  @override
   String get apptErrSelectCustomer => 'Select a customer';
 
   @override
@@ -1465,7 +1512,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get projectQty => 'Qty';
 
   @override
-  String get projectUnitPrice => 'Unit price (UZS)';
+  String get projectUnitPrice => 'Unit price (soum)';
 
   @override
   String get projectDueDateLabel => 'Due date (YYYY-MM-DD)';
@@ -1492,7 +1539,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get projectScopeHint => 'Describe deliverables...';
 
   @override
-  String get projectPriceLabel => 'Total agreed price (UZS)';
+  String get projectPriceLabel => 'Total agreed price (soum)';
 
   @override
   String get projectTermsHint => 'e.g. 50% upfront, 50% on delivery';
@@ -1525,7 +1572,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get milestoneNameHint => 'e.g. Initial design mockups';
 
   @override
-  String get milestoneAmountLabel => 'Amount (UZS)';
+  String get milestoneAmountLabel => 'Amount (soum)';
 
   @override
   String get milestoneDueDateLabel => 'Due date';
@@ -1548,6 +1595,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsRevenueThisMonth => 'Revenue this month';
 
   @override
+  String get analyticsThisMonthShort => 'This month';
+
+  @override
+  String get analyticsLastMonthShort => 'Last month';
+
+  @override
   String analyticsLastMonth(String amount) {
     return 'Last month: $amount';
   }
@@ -1559,20 +1612,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsAvgOrderValue => 'Avg order\nvalue';
 
   @override
+  String get analyticsAppointmentsThisMonth => 'Appointments\nthis month';
+
+  @override
+  String analyticsApptCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count appointments',
+      one: '1 appointment',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get analyticsPendingPayments => 'Pending payments';
 
   @override
   String get analyticsAllReceived => 'All payments received';
 
   @override
-  String get analyticsTopCustomers => 'TOP CUSTOMERS — LAST 90 DAYS';
+  String get analyticsTopCustomers => 'Top customers — last 90 days';
 
   @override
   String get analyticsNoConfirmedOrders =>
-      'No confirmed orders in the last 90 days';
+      'No completed appointments in the last 90 days';
 
   @override
-  String get analyticsBestSelling => 'BEST SELLING PRODUCT';
+  String get analyticsBestSelling => 'Best selling product';
 
   @override
   String analyticsUnitsSold(int count) {
@@ -1640,6 +1707,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get schedulingWorkingHoursSaved => 'Working hours saved';
+
+  @override
+  String get schedulingCopyToWeekdays => 'Copy to weekdays';
+
+  @override
+  String get schedulingCopiedToWeekdays => 'Copied to Mon–Fri';
+
+  @override
+  String get schedulingUnavailable => 'Unavailable';
+
+  @override
+  String get schedulingAddHours => 'Add hours';
+
+  @override
+  String get schedulingRemoveSlot => 'Remove';
+
+  @override
+  String get schedulingOverlap => 'Working hours can\'t overlap.';
 
   @override
   String get schedulingBlockedTime => 'Blocked time';
@@ -1713,4 +1798,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsModeDataFreelance => 'projects';
+
+  @override
+  String get buttonRestore => 'Restore';
+
+  @override
+  String get buttonYesDelete => 'Yes, delete';
+
+  @override
+  String get commonShowDeleted => 'Show deleted';
+
+  @override
+  String get commonDeletedBadge => 'Deleted';
+
+  @override
+  String get deleteCustomerTitle => 'Delete this customer?';
+
+  @override
+  String get deleteCustomerBody =>
+      'They will be hidden from your lists along with their orders and appointments. You can restore them later.';
+
+  @override
+  String get deleteOrderTitle => 'Delete this order?';
+
+  @override
+  String get deleteOrderBody =>
+      'It will be hidden from your orders. You can restore it later.';
+
+  @override
+  String get deleteAppointmentTitle => 'Delete this appointment?';
+
+  @override
+  String get deleteAppointmentBody =>
+      'It will be hidden from your appointments. You can restore it later.';
+
+  @override
+  String get notificationView => 'View';
+
+  @override
+  String get notificationDismiss => 'Dismiss';
 }

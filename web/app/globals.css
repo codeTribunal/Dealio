@@ -2,16 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Vestigial Next-starter vars (the design system uses --bg/--surface/--text-*
+   from tokens.css). Converted to HSL for format consistency — grayscale, so
+   hue/sat are 0 and only L varies. */
 :root {
   color-scheme: light;
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(0 0% 9%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: hsl(0 0% 4%);
+    --foreground: hsl(0 0% 93%);
   }
 }
 
@@ -34,4 +37,18 @@ input[type="time"]::-webkit-datetime-edit-ampm-field {
 }
 input[type="time"] {
   -webkit-appearance: none;
+}
+
+/* Mobile floating tab bar — frosted glass by default, with a SOLID fallback
+   when the browser lacks backdrop-filter (so budget devices get a clean,
+   non-janky bar). Tokens only — no hardcoded colors. */
+.mobile-tabbar {
+  background-color: color-mix(in srgb, var(--surface) 72%, transparent);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .mobile-tabbar {
+    background-color: var(--surface);
+  }
 }

@@ -122,6 +122,41 @@ class AppTheme {
           side: BorderSide(color: t.border),
         ),
       ),
+
+      // On-brand toast: inverse-contrast pill (matches the web `bg-text-1
+      // text-surface` toast), floating + rounded, accent action text.
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: t.text1,
+        contentTextStyle: textTheme.bodyMedium?.copyWith(
+          color: t.surface,
+          fontWeight: AppFontWeights.medium,
+        ),
+        actionTextColor: t.accent,
+        behavior: SnackBarBehavior.floating,
+        elevation: 0,
+        shape: const RoundedRectangleBorder(borderRadius: AppRadii.md),
+      ),
+
+      // Native date picker, tinted to the design system (still native).
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: t.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(borderRadius: AppRadii.xl),
+        headerBackgroundColor: t.accent,
+        headerForegroundColor: t.accentOn,
+      ),
+
+      // Native time picker, tinted to the design system (still native, 24h).
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: t.surface,
+        shape: const RoundedRectangleBorder(borderRadius: AppRadii.xl),
+        hourMinuteColor: t.surface2,
+        hourMinuteTextColor: t.text1,
+        dialBackgroundColor: t.surface2,
+        dialHandColor: t.accent,
+        dayPeriodColor: t.accentSoft,
+        dayPeriodTextColor: t.accent,
+      ),
     );
   }
 

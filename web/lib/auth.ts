@@ -45,3 +45,20 @@ export function isAuthenticated(): boolean {
   }
   return true
 }
+
+/** Decode the `phone` claim from the stored JWT, or null. The token is signed
+ *  as { userId, phone }, so this works without re-fetching the user. */
+export function getPhone(): string | null {
+  const token = getToken()
+  if (!token) return null
+  try {
+    const payload = token.split('.')[1]
+    if (!payload) return null
+    const json = JSON.parse(
+      atob(payload.replace(/-/g, '+').replace(/_/g, '/')),
+    ) as { phone?: string }
+    return typeof json.phone === 'string' ? json.phone : null
+  } catch {
+    return null
+  }
+}

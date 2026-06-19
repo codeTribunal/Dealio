@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_switch.dart';
 import 'services_provider.dart';
 
 class ServiceFormScreen extends ConsumerStatefulWidget {
@@ -139,7 +141,7 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
                   TextFormField(
                     controller: _priceCtrl,
                     style: TextStyle(color: t.text1),
-                    decoration: _decoration(context, suffixText: 'UZS'),
+                    decoration: _decoration(context, suffixText: currencyWord()),
                     keyboardType: TextInputType.number,
                     validator: (v) {
                       final n = int.tryParse(v?.trim() ?? '');
@@ -155,15 +157,25 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
             AppCard(
               padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.s4, vertical: AppSpacing.s2),
-              child: SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(l.commonActive, style: TextStyle(color: t.text1)),
-                subtitle: Text(l.serviceFormActiveSubtitle,
-                    style:
-                        TextStyle(color: t.text2, fontSize: AppTextSizes.caption)),
-                value: _active,
-                activeThumbColor: t.accent,
-                onChanged: (v) => setState(() => _active = v),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(l.commonActive, style: TextStyle(color: t.text1)),
+                        Text(l.serviceFormActiveSubtitle,
+                            style: TextStyle(
+                                color: t.text2, fontSize: AppTextSizes.caption)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s3),
+                  AppSwitch(
+                    value: _active,
+                    onChanged: (v) => setState(() => _active = v),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: AppSpacing.s5),

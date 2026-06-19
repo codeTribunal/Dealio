@@ -10,6 +10,7 @@ import en from './en.json'
 import uz from './uz.json'
 import ru from './ru.json'
 import Cookies from 'js-cookie'
+import { setCurrencyLocale } from '@/lib/format'
 
 export type Locale = 'en' | 'uz' | 'ru'
 const dictionaries: Record<Locale, unknown> = { en, uz, ru }
@@ -74,6 +75,11 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setLocaleState(resolveInitial())
   }, [])
+
+  // Keep the (read-inside) currency formatter's word in sync with the language.
+  useEffect(() => {
+    setCurrencyLocale(locale)
+  }, [locale])
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next)

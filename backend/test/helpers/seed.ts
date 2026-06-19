@@ -82,8 +82,6 @@ async function seedBusiness(key: 'A' | 'B'): Promise<TenantIds> {
       mode: 'SERVICES',
       ownerId: user.id,
       botUsername: `test_biz_${key.toLowerCase()}_bot`,
-      cardNumber: '8600123456781234',
-      cardBank: 'UZCARD',
       ownerTelegramChatId: `owner_chat_${key}`,
       botTokenEncrypted: enc.encrypted,
       botTokenIv: enc.iv,

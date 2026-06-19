@@ -149,7 +149,7 @@ export default function DesignComponentsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Orders this month" value="142" delta={{ value: '12% vs last', positive: true }} />
             <StatCard label="Pending payments" value="8" delta={{ value: '3% vs last', positive: false }} />
-            <StatCard label="Avg order value" value="180 000 UZS" money />
+            <StatCard label="Avg order value" value="180 000 soum" money />
             <StatCard label="Active customers" value="56" />
           </div>
         </Section>
@@ -177,8 +177,8 @@ export default function DesignComponentsPage() {
         {/* HeroCard */}
         <Section title="HeroCard — solid cobalt money hero">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <HeroCard label="Revenue this month" value="12 480 000 UZS" sub="↑ 18% vs last month" />
-            <HeroCard label="Outstanding" value="1 250 000 UZS" sub="3 invoices awaiting" />
+            <HeroCard label="Revenue this month" value="12 480 000 soum" sub="↑ 18% vs last month" />
+            <HeroCard label="Outstanding" value="1 250 000 soum" sub="3 invoices awaiting" />
           </div>
         </Section>
 

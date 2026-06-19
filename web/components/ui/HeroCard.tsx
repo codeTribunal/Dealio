@@ -8,13 +8,9 @@ interface HeroCardProps {
 export function HeroCard({ label, value, sub, className = '' }: HeroCardProps) {
   return (
     <div
-      className={`relative overflow-hidden bg-accent text-accent-on rounded-xl p-5 shadow-accent ${className}`}
+      className={`bg-accent text-accent-on rounded-xl p-5 shadow-accent ${className}`}
     >
-      <div
-        aria-hidden
-        className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/[0.12]"
-      />
-      <div className="relative">
+      <div>
         <p className="text-xs uppercase tracking-wide opacity-80 mb-2">{label}</p>
         <p
           className="tabular-nums font-extrabold"

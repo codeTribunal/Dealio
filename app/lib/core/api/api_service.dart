@@ -148,8 +148,6 @@ class ApiService {
     required String mode,
     required String language,
     required String botToken,
-    String? cardNumber,
-    String? cardBank,
   }) async {
     try {
       final res = await _dio.post('/onboarding/complete', data: {
@@ -157,8 +155,6 @@ class ApiService {
         'mode': mode,
         'language': language,
         'botToken': botToken,
-        if (cardNumber != null && cardNumber.isNotEmpty) 'cardNumber': cardNumber,
-        if (cardBank != null) 'cardBank': cardBank,
       });
       final b = res.data['business'] as Map<String, dynamic>;
       return (
@@ -217,25 +213,27 @@ class ApiService {
     }
   }
 
-  Future<({String? cardNumber, String? cardBank})> updatePayment(
-      String cardNumber, String cardBank) async {
+
+  Future<({String? botUsername, String? botLink})> getBotInfo() async {
     try {
-      final res = await _dio.patch(
-        '/business/payment',
-        data: {'cardNumber': cardNumber, 'cardBank': cardBank},
-      );
+      final res = await _dio.get('/business/bot');
       return (
-        cardNumber: res.data['cardNumber'] as String?,
-        cardBank: res.data['cardBank'] as String?,
+        botUsername: res.data['botUsername'] as String?,
+        botLink: res.data['botLink'] as String?,
       );
     } on DioException catch (e) {
       throw _wrap(e);
     }
   }
 
-  Future<({String? botUsername, String? botLink})> getBotInfo() async {
+  /// Change the Telegram bot token (after revoking/replacing the bot). The
+  /// backend re-verifies the token, re-derives the username, and restarts the
+  /// bot. Returns the new username/link.
+  Future<({String? botUsername, String? botLink})> updateBotToken(
+      String botToken) async {
     try {
-      final res = await _dio.get('/business/bot');
+      final res = await _dio
+          .patch('/business/bot-token', data: {'botToken': botToken});
       return (
         botUsername: res.data['botUsername'] as String?,
         botLink: res.data['botLink'] as String?,
@@ -295,6 +293,7 @@ class ApiService {
     String? status,
     String? date,
     String? customerId,
+    bool includeDeleted = false,
   }) async {
     try {
       final res = await _dio.get(
@@ -303,6 +302,7 @@ class ApiService {
           if (status != null) 'status': status,
           if (date != null) 'date': date,
           if (customerId != null) 'customerId': customerId,
+          if (includeDeleted) 'includeDeleted': 'true',
         },
       );
       return (res.data as List)
@@ -335,6 +335,22 @@ class ApiService {
     try {
       final res = await _dio.patch('/orders/$id/payment', data: {});
       return Order.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  Future<void> deleteOrder(String id) async {
+    try {
+      await _dio.delete('/orders/$id');
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  Future<void> restoreOrder(String id) async {
+    try {
+      await _dio.post('/orders/$id/restore');
     } on DioException catch (e) {
       throw _wrap(e);
     }
@@ -439,6 +455,7 @@ class ApiService {
     String? search,
     int page = 1,
     int limit = 30,
+    bool includeDeleted = false,
   }) async {
     try {
       final res = await _dio.get(
@@ -447,6 +464,7 @@ class ApiService {
           if (search != null && search.isNotEmpty) 'search': search,
           'page': page,
           'limit': limit,
+          if (includeDeleted) 'includeDeleted': 'true',
         },
       );
       final data = res.data;
@@ -481,6 +499,22 @@ class ApiService {
         },
       );
       return Customer.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  Future<void> deleteCustomer(String id) async {
+    try {
+      await _dio.delete('/customers/$id');
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  Future<void> restoreCustomer(String id) async {
+    try {
+      await _dio.post('/customers/$id/restore');
     } on DioException catch (e) {
       throw _wrap(e);
     }
@@ -791,6 +825,7 @@ class ApiService {
     String? endDate,
     String? staffId,
     String? status,
+    bool includeDeleted = false,
   }) async {
     try {
       final res = await _dio.get(
@@ -801,6 +836,7 @@ class ApiService {
           if (endDate != null) 'endDate': endDate,
           if (staffId != null) 'staffId': staffId,
           if (status != null) 'status': status,
+          if (includeDeleted) 'includeDeleted': 'true',
         },
       );
       return (res.data as List)
@@ -829,6 +865,17 @@ class ApiService {
     }
   }
 
+  /// Owner edit/reschedule. [data] may include any of: startTime, serviceId,
+  /// staffId (null clears it), price, notes, paymentType, status, allowConflict.
+  Future<Appointment> updateAppointment(String id, Map<String, dynamic> data) async {
+    try {
+      final res = await _dio.patch('/appointments/$id', data: data);
+      return Appointment.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
   Future<Appointment> updateAppointmentStatus(String id, String status) async {
     try {
       final res = await _dio.patch('/appointments/$id/status', data: {'status': status});
@@ -851,6 +898,22 @@ class ApiService {
     try {
       final res = await _dio.patch('/appointments/$id/notes', data: {'notes': notes});
       return Appointment.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  Future<void> deleteAppointment(String id) async {
+    try {
+      await _dio.delete('/appointments/$id');
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  Future<void> restoreAppointment(String id) async {
+    try {
+      await _dio.post('/appointments/$id/restore');
     } on DioException catch (e) {
       throw _wrap(e);
     }

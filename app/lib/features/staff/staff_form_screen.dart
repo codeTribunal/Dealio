@@ -8,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_dialog.dart';
 import '../services/services_provider.dart';
 import 'staff_provider.dart';
 
@@ -122,25 +123,27 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
 
   Future<void> _confirmDelete() async {
     final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
     final name = _nameCtrl.text.trim().isNotEmpty
         ? _nameCtrl.text.trim()
         : l.staffThisMember;
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: t.surface,
-        title: Text(l.staffDeleteTitle(name), style: TextStyle(color: t.text1)),
-        content: Text(l.staffDeleteConfirm, style: TextStyle(color: t.text2)),
+      builder: (ctx) => AppDialog(
+        title: l.staffDeleteTitle(name),
+        content: Text(l.staffDeleteConfirm),
         actions: [
-          TextButton(
+          AppButton(
+            label: l.buttonCancel,
+            variant: AppButtonVariant.ghost,
+            size: AppButtonSize.sm,
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l.buttonCancel, style: TextStyle(color: t.text2)),
           ),
-          TextButton(
+          AppButton(
+            label: l.buttonDelete,
+            variant: AppButtonVariant.danger,
+            size: AppButtonSize.sm,
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l.buttonDelete, style: TextStyle(color: t.errorStrong)),
           ),
         ],
       ),

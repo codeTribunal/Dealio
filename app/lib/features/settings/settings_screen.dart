@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_service.dart';
-import '../../core/auth/auth_notifier.dart';
 import '../../core/icons/app_icon.dart';
 import '../../core/locale/locale_provider.dart';
 import '../../core/models/blocked_slot.dart';
@@ -15,7 +14,9 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_dialog.dart';
 import '../../shared/widgets/app_spinner.dart';
+import '../../shared/widgets/app_switch.dart';
 import '../staff/staff_provider.dart';
 import 'blocked_time_provider.dart';
 import 'customization_provider.dart';
@@ -30,6 +31,10 @@ class SettingsScreen extends ConsumerWidget {
     final l = AppLocalizations.of(context)!;
     final t = AppTokens.of(context);
     final settingsAsync = ref.watch(settingsProvider);
+    // The tab shell adds a bottom inset (via MediaQuery) so the floating nav bar
+    // doesn't cover the last list item. Consume it as bottom padding — a plain
+    // ListView with fixed padding would otherwise ignore it and clip content.
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       appBar: AppBar(title: Text(l.settingsTitle)),
@@ -43,7 +48,8 @@ class SettingsScreen extends ConsumerWidget {
           color: t.accent,
           onRefresh: () => ref.read(settingsProvider.notifier).refresh(),
           child: ListView(
-            padding: const EdgeInsets.all(AppSpacing.s4),
+            padding: EdgeInsets.fromLTRB(AppSpacing.s4, AppSpacing.s4,
+                AppSpacing.s4, AppSpacing.s4 + bottomInset),
             children: [
               _ProfileSection(data: data),
               const SizedBox(height: AppSpacing.s3),
@@ -59,8 +65,6 @@ class SettingsScreen extends ConsumerWidget {
                 const _BlockedTimeSection(),
               ],
               const SizedBox(height: AppSpacing.s3),
-              _PaymentSection(data: data),
-              const SizedBox(height: AppSpacing.s3),
               _CalendarSection(data: data),
               const SizedBox(height: AppSpacing.s3),
               _RemindersSection(data: data),
@@ -74,8 +78,6 @@ class SettingsScreen extends ConsumerWidget {
               const _CheckoutQuestionsSection(),
               const SizedBox(height: AppSpacing.s3),
               _LanguageSection(data: data),
-              const SizedBox(height: AppSpacing.s3),
-              _AccountSection(),
               const SizedBox(height: AppSpacing.s6),
             ],
           ),
@@ -358,17 +360,14 @@ class _BusinessModeSection extends ConsumerWidget {
       String current) async {
     if (mode == current) return;
     final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: t.surface,
-        title: Text(l.settingsModeSwitchTitle, style: TextStyle(color: t.text1)),
+      builder: (ctx) => AppDialog(
+        title: l.settingsModeSwitchTitle,
         content: Text(
           l.settingsModeSwitchBody(
               _modeName(l, current), _modeName(l, mode), _modeData(l, current)),
-          style: TextStyle(color: t.text2),
         ),
         actions: [
           AppButton(
@@ -401,45 +400,53 @@ class _BusinessModeSection extends ConsumerWidget {
     final t = AppTokens.of(context);
     final current = data.business.mode;
 
-    // Single-select dropdown (PRODUCTS disabled — only SERVICES/FREELANCE).
-    // Picking the other mode opens the hard-warning dialog via _select; it does
-    // NOT save until confirmed. The dropdown is bound to `current` (the saved
-    // mode) and a plain DropdownButton holds no internal selection state, so on
-    // Cancel it reverts to the current mode with no API call.
+    // Pill segmented control (PRODUCTS disabled). Tapping the other mode opens
+    // the hard-warning dialog via _select; it does NOT save until confirmed, and
+    // the control stays bound to `current` so Cancel reverts it.
+    Widget seg(String mode, String label) {
+      final active = current == mode;
+      return GestureDetector(
+        onTap: () => _select(context, ref, mode, current),
+        child: AnimatedContainer(
+          duration: AppMotion.durFast,
+          curve: AppMotion.ease,
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s4, vertical: AppSpacing.s2),
+          decoration: BoxDecoration(
+            color: active ? t.surface : Colors.transparent,
+            borderRadius: AppRadii.sm,
+            boxShadow: active ? t.shadowSm : null,
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: AppTextSizes.sm,
+              fontWeight: AppFontWeights.semibold,
+              color: active ? t.text1 : t.text2,
+            ),
+          ),
+        ),
+      );
+    }
+
     return _SectionCard(
       icon: AppIconName.catalog,
       title: l.settingsBusinessMode,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
-        decoration: BoxDecoration(
-          color: t.surface,
-          borderRadius: AppRadii.md,
-          border: Border.all(color: t.border),
-        ),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            // ignore: deprecated_member_use
-            value: current,
-            isExpanded: true,
-            dropdownColor: t.surface,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: t.surface2,
             borderRadius: AppRadii.md,
-            iconEnabledColor: t.text3,
-            style: TextStyle(fontSize: AppTextSizes.sm, color: t.text1),
-            items: [
-              DropdownMenuItem(
-                value: 'SERVICES',
-                child: Text(l.settingsModeNameServices,
-                    style: TextStyle(color: t.text1)),
-              ),
-              DropdownMenuItem(
-                value: 'FREELANCE',
-                child: Text(l.settingsModeNameFreelance,
-                    style: TextStyle(color: t.text1)),
-              ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              seg('SERVICES', l.settingsModeNameServices),
+              const SizedBox(width: 2),
+              seg('FREELANCE', l.settingsModeNameFreelance),
             ],
-            onChanged: (v) {
-              if (v != null && v != current) _select(context, ref, v, current);
-            },
           ),
         ),
       ),
@@ -447,179 +454,6 @@ class _BusinessModeSection extends ConsumerWidget {
   }
 }
 
-// ── Payment section ──────────────────────────────────────────────────
-
-class _PaymentSection extends ConsumerStatefulWidget {
-  final SettingsState data;
-  const _PaymentSection({required this.data});
-
-  @override
-  ConsumerState<_PaymentSection> createState() => _PaymentSectionState();
-}
-
-class _PaymentSectionState extends ConsumerState<_PaymentSection> {
-  late final TextEditingController _cardCtrl;
-  String _selectedBank = 'UZCARD';
-  bool _editing = false;
-  bool _saving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _cardCtrl =
-        TextEditingController(text: widget.data.business.cardNumber ?? '');
-    _selectedBank = widget.data.business.cardBank ?? 'UZCARD';
-  }
-
-  @override
-  void dispose() {
-    _cardCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    if (_cardCtrl.text.trim().isEmpty) return;
-    setState(() => _saving = true);
-    try {
-      await ref.read(settingsProvider.notifier).savePayment(
-            cardNumber: _cardCtrl.text.trim(),
-            cardBank: _selectedBank,
-          );
-      if (!mounted) return;
-      setState(() {
-        _editing = false;
-        _saving = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _saving = false);
-      _snackErr(context, e);
-    }
-  }
-
-  void _cancel() {
-    setState(() {
-      _cardCtrl.text = widget.data.business.cardNumber ?? '';
-      _selectedBank = widget.data.business.cardBank ?? 'UZCARD';
-      _editing = false;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
-    final hasCard = widget.data.business.cardNumber != null &&
-        widget.data.business.cardNumber!.isNotEmpty;
-
-    Widget body;
-    if (_editing) {
-      body = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'UZCARD', label: Text('Uzcard')),
-              ButtonSegment(value: 'HUMO', label: Text('Humo')),
-            ],
-            selected: {_selectedBank},
-            onSelectionChanged: (s) => setState(() => _selectedBank = s.first),
-          ),
-          const SizedBox(height: AppSpacing.s3),
-          TextField(
-            controller: _cardCtrl,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            maxLength: 16,
-            style: TextStyle(color: t.text1),
-            decoration: _decoration(context,
-                    label: l.settingsCardNumberLabel,
-                    hint: '8600 0000 0000 0000')
-                .copyWith(counterText: ''),
-          ),
-          const SizedBox(height: AppSpacing.s2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              AppButton(
-                label: l.buttonCancel,
-                variant: AppButtonVariant.ghost,
-                size: AppButtonSize.sm,
-                onPressed: _saving ? null : _cancel,
-              ),
-              const SizedBox(width: AppSpacing.s2),
-              AppButton(
-                label: l.buttonSave,
-                variant: AppButtonVariant.secondary,
-                size: AppButtonSize.sm,
-                loading: _saving,
-                onPressed: _saving ? null : _save,
-              ),
-            ],
-          ),
-        ],
-      );
-    } else if (hasCard) {
-      body = Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.s2, vertical: 3),
-            decoration: BoxDecoration(
-              color: t.accentSoft,
-              borderRadius: AppRadii.sm,
-            ),
-            child: Text(
-              widget.data.business.cardBank ?? 'UZCARD',
-              style: TextStyle(
-                fontSize: AppTextSizes.caption,
-                fontWeight: AppFontWeights.bold,
-                color: t.accent,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.s2),
-          Text(
-            _formatCardNumber(widget.data.business.cardNumber!),
-            style: TextStyle(
-              fontSize: AppTextSizes.base,
-              fontWeight: AppFontWeights.medium,
-              letterSpacing: 1,
-              color: t.text1,
-            ),
-          ),
-        ],
-      );
-    } else {
-      body = Text(
-        l.settingsNoCardWarning,
-        style: TextStyle(color: t.warningStrong, fontSize: AppTextSizes.sm),
-      );
-    }
-
-    return _SectionCard(
-      icon: AppIconName.payment,
-      title: l.settingsPaymentMethod,
-      trailing: _editing
-          ? null
-          : _EditButton(
-              onPressed: () => setState(() => _editing = true),
-              tooltip: l.settingsEditPaymentTooltip,
-            ),
-      child: body,
-    );
-  }
-
-  String _formatCardNumber(String raw) {
-    final digits = raw.replaceAll(' ', '');
-    final buf = StringBuffer();
-    for (int i = 0; i < digits.length; i++) {
-      if (i > 0 && i % 4 == 0) buf.write(' ');
-      buf.write(digits[i]);
-    }
-    return buf.toString();
-  }
-}
 
 // ── Calendar sync section ────────────────────────────────────────────
 
@@ -741,9 +575,8 @@ class _CalendarSectionState extends ConsumerState<_CalendarSection> {
                   child: AppSpinner(),
                 )
               else
-                Switch(
+                AppSwitch(
                   value: enabled,
-                  activeThumbColor: t.accent,
                   onChanged: _toggleCalendar,
                 ),
             ],
@@ -1002,10 +835,7 @@ class _ReminderToggle extends StatelessWidget {
                   ],
                 ),
               ),
-              Switch(
-                  value: enabled,
-                  activeThumbColor: t.accent,
-                  onChanged: onToggle),
+              AppSwitch(value: enabled, onChanged: onToggle),
             ],
           ),
           if (enabled) ...[
@@ -1014,6 +844,7 @@ class _ReminderToggle extends StatelessWidget {
               // ignore: deprecated_member_use
               value: dropdownValue,
               dropdownColor: t.surface,
+              borderRadius: AppRadii.md,
               style: TextStyle(color: t.text1),
               decoration: _decoration(context),
               items: timingOptions
@@ -1033,85 +864,181 @@ class _ReminderToggle extends StatelessWidget {
 
 // ── Bot section ──────────────────────────────────────────────────────
 
-class _BotSection extends StatelessWidget {
+class _BotSection extends ConsumerStatefulWidget {
   final SettingsState data;
   const _BotSection({required this.data});
+
+  @override
+  ConsumerState<_BotSection> createState() => _BotSectionState();
+}
+
+class _BotSectionState extends ConsumerState<_BotSection> {
+  final _tokenCtrl = TextEditingController();
+  bool _editing = false;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _tokenCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final token = _tokenCtrl.text.trim();
+    if (token.isEmpty) return;
+    setState(() => _saving = true);
+    try {
+      await ref.read(settingsProvider.notifier).saveBotToken(token);
+      if (!mounted) return;
+      setState(() {
+        _editing = false;
+        _saving = false;
+        _tokenCtrl.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content:
+                Text(AppLocalizations.of(context)!.settingsBotTokenUpdated)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      _snackErr(context, e);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final t = AppTokens.of(context);
+    final data = widget.data;
     final hasBot = data.botUsername != null && data.botUsername!.isNotEmpty;
+    // No bot yet → show the editor directly; otherwise show details + an edit
+    // affordance to change the token (after revoking/replacing the bot).
+    final editing = _editing || !hasBot;
 
     return _SectionCard(
       icon: AppIconName.inbox,
       title: l.settingsTelegramBot,
-      child: !hasBot
-          ? Text(
-              l.settingsNoBotConfigured,
-              style: TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    AppIcon(name: AppIconName.inbox, size: 18, color: t.accent),
-                    const SizedBox(width: AppSpacing.s1),
-                    Text(
-                      '@${data.botUsername}',
-                      style: TextStyle(
-                          fontWeight: AppFontWeights.medium,
-                          fontSize: AppTextSizes.sm,
-                          color: t.text1),
-                    ),
-                  ],
-                ),
-                if (data.botLink != null) ...[
-                  const SizedBox(height: AppSpacing.s2),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.s3, vertical: AppSpacing.s2),
-                          decoration: BoxDecoration(
-                            color: t.surface2,
-                            borderRadius: AppRadii.sm,
-                            border: Border.all(color: t.border),
-                          ),
-                          child: Text(
-                            data.botLink!,
-                            style: TextStyle(
-                              fontSize: AppTextSizes.caption,
-                              color: t.text2,
-                              fontFamily: 'monospace',
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.s2),
-                      IconButton(
-                        icon: AppIcon(
-                            name: AppIconName.add, size: 18, color: t.accent),
-                        tooltip: l.settingsCopyLinkTooltip,
-                        onPressed: () {
-                          Clipboard.setData(ClipboardData(text: data.botLink!));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(l.settingsBotLinkCopied),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        },
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ],
-                  ),
-                ],
-              ],
+      trailing: editing
+          ? null
+          : _EditButton(
+              onPressed: () => setState(() => _editing = true),
+              tooltip: l.settingsChangeBot,
             ),
+      child: editing ? _editor(context, l, t, hasBot) : _display(context, l, t, data),
+    );
+  }
+
+  Widget _editor(
+      BuildContext context, AppLocalizations l, AppTokens t, bool hasBot) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _tokenCtrl,
+          autofocus: true,
+          style: TextStyle(color: t.text1),
+          decoration: _decoration(context,
+              label: l.onboardingBotPasteToken, hint: '1234567890:AAHxyz...'),
+        ),
+        const SizedBox(height: AppSpacing.s2),
+        Text(
+          l.settingsBotTokenHint,
+          style: TextStyle(fontSize: AppTextSizes.caption, color: t.text3),
+        ),
+        const SizedBox(height: AppSpacing.s3),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            if (hasBot) ...[
+              AppButton(
+                label: l.buttonCancel,
+                variant: AppButtonVariant.ghost,
+                size: AppButtonSize.sm,
+                onPressed: _saving
+                    ? null
+                    : () => setState(() {
+                          _editing = false;
+                          _tokenCtrl.clear();
+                        }),
+              ),
+              const SizedBox(width: AppSpacing.s2),
+            ],
+            AppButton(
+              label: l.buttonSave,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              loading: _saving,
+              onPressed: _saving ? null : _save,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _display(
+      BuildContext context, AppLocalizations l, AppTokens t, SettingsState data) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            AppIcon(name: AppIconName.inbox, size: 18, color: t.accent),
+            const SizedBox(width: AppSpacing.s1),
+            Text(
+              '@${data.botUsername}',
+              style: TextStyle(
+                  fontWeight: AppFontWeights.medium,
+                  fontSize: AppTextSizes.sm,
+                  color: t.text1),
+            ),
+          ],
+        ),
+        if (data.botLink != null) ...[
+          const SizedBox(height: AppSpacing.s2),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s3, vertical: AppSpacing.s2),
+                  decoration: BoxDecoration(
+                    color: t.surface2,
+                    borderRadius: AppRadii.sm,
+                    border: Border.all(color: t.border),
+                  ),
+                  child: Text(
+                    data.botLink!,
+                    style: TextStyle(
+                      fontSize: AppTextSizes.caption,
+                      color: t.text2,
+                      fontFamily: 'monospace',
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s2),
+              IconButton(
+                icon: AppIcon(name: AppIconName.add, size: 18, color: t.accent),
+                tooltip: l.settingsCopyLinkTooltip,
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: data.botLink!));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(l.settingsBotLinkCopied),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }
@@ -1168,28 +1095,6 @@ class _LanguageSection extends ConsumerWidget {
   }
 }
 
-// ── Account section ──────────────────────────────────────────────────
-
-class _AccountSection extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context)!;
-    return _SectionCard(
-      icon: AppIconName.logout,
-      title: l.settingsAccount,
-      child: AppButton(
-        label: l.settingsLogOut,
-        variant: AppButtonVariant.danger,
-        leftIcon: AppIconName.logout,
-        fullWidth: true,
-        onPressed: () async {
-          await ref.read(authNotifierProvider).logout();
-          if (context.mounted) context.go('/welcome');
-        },
-      ),
-    );
-  }
-}
 
 // ── Customer fields section ──────────────────────────────────────────
 
@@ -1300,9 +1205,8 @@ class _AddFieldDialogState extends State<_AddFieldDialog> {
       ('DATE', l.settingsFieldTypeDate),
       ('YESNO', l.settingsFieldTypeYesNo),
     ];
-    return AlertDialog(
-      backgroundColor: t.surface,
-      title: Text(l.settingsAddCustomerField, style: TextStyle(color: t.text1)),
+    return AppDialog(
+      title: l.settingsAddCustomerField,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1474,9 +1378,8 @@ class _AddStageDialogState extends State<_AddStageDialog> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final t = AppTokens.of(context);
-    return AlertDialog(
-      backgroundColor: t.surface,
-      title: Text(l.settingsAddStage, style: TextStyle(color: t.text1)),
+    return AppDialog(
+      title: l.settingsAddStage,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1662,10 +1565,8 @@ class _AddQuestionDialogState extends State<_AddQuestionDialog> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final t = AppTokens.of(context);
-    return AlertDialog(
-      backgroundColor: t.surface,
-      title:
-          Text(l.settingsAddCheckoutQuestion, style: TextStyle(color: t.text1)),
+    return AppDialog(
+      title: l.settingsAddCheckoutQuestion,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1678,14 +1579,17 @@ class _AddQuestionDialogState extends State<_AddQuestionDialog> {
                 label: l.settingsQuestionLabel, hint: l.settingsQuestionHint),
           ),
           const SizedBox(height: AppSpacing.s3),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(l.commonRequired,
-                style: TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
-            value: _isRequired,
-            activeThumbColor: t.accent,
-            onChanged: (v) => setState(() => _isRequired = v),
-            dense: true,
+          Row(
+            children: [
+              Expanded(
+                child: Text(l.commonRequired,
+                    style: TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
+              ),
+              AppSwitch(
+                value: _isRequired,
+                onChanged: (v) => setState(() => _isRequired = v),
+              ),
+            ],
           ),
         ],
       ),
@@ -1755,7 +1659,7 @@ class _ServicesSection extends StatelessWidget {
       child: ListTile(
         contentPadding: EdgeInsets.zero,
         title: Text(l.settingsManageServices, style: TextStyle(color: t.text1)),
-        trailing: AppIcon(name: AppIconName.menu, size: 18, color: t.text3),
+        trailing: Icon(Icons.chevron_right, size: 20, color: t.text3),
         dense: true,
         onTap: () => context.push('/services'),
       ),
@@ -1776,7 +1680,7 @@ class _StaffSection extends StatelessWidget {
       child: ListTile(
         contentPadding: EdgeInsets.zero,
         title: Text(l.settingsManageStaff, style: TextStyle(color: t.text1)),
-        trailing: AppIcon(name: AppIconName.menu, size: 18, color: t.text3),
+        trailing: Icon(Icons.chevron_right, size: 20, color: t.text3),
         dense: true,
         onTap: () => context.push('/staff'),
       ),
@@ -1791,10 +1695,12 @@ class _StaffSection extends StatelessWidget {
 // Never write Monday as "0".
 const _kDayKeys = <String>['1', '2', '3', '4', '5', '6', '0'];
 
-class _DayHours {
+// One open interval within a day. A day with several intervals has breaks/lunch
+// in the gaps between them; an empty list = closed.
+class _Interval {
   final TimeOfDay start;
   final TimeOfDay end;
-  const _DayHours(this.start, this.end);
+  const _Interval(this.start, this.end);
 }
 
 int _todMinutes(TimeOfDay t) => t.hour * 60 + t.minute;
@@ -1818,14 +1724,14 @@ class _WorkingHoursSection extends ConsumerStatefulWidget {
 }
 
 class _WorkingHoursSectionState extends ConsumerState<_WorkingHoursSection> {
-  // Per backend day key → hours, or null = closed.
-  late final Map<String, _DayHours?> _days;
+  // Per backend day key → list of open intervals. Empty list = closed.
+  late final Map<String, List<_Interval>> _days;
   late final TextEditingController _bufferCtrl;
   bool _saving = false;
   String? _error;
 
-  static const _defaultOpen =
-      _DayHours(TimeOfDay(hour: 9, minute: 0), TimeOfDay(hour: 18, minute: 0));
+  static const _defaultInterval =
+      _Interval(TimeOfDay(hour: 9, minute: 0), TimeOfDay(hour: 18, minute: 0));
 
   @override
   void initState() {
@@ -1834,23 +1740,28 @@ class _WorkingHoursSectionState extends ConsumerState<_WorkingHoursSection> {
     final configured = wh != null && wh.isNotEmpty;
     _days = {
       for (final key in _kDayKeys)
-        key: !configured
-            ? _defaultOpen
-            : _parseDay(wh[key]),
+        key: !configured ? [_defaultInterval] : _parseDay(wh[key]),
     };
-    _bufferCtrl =
-        TextEditingController(text: widget.data.business.bufferMinutes.toString());
+    _bufferCtrl = TextEditingController(
+        text: widget.data.business.bufferMinutes.toString());
   }
 
-  _DayHours? _parseDay(dynamic v) {
-    if (v is Map) {
-      return _DayHours(
-        _parseHHMM(v['start']?.toString() ?? '09:00', _defaultOpen.start),
-        _parseHHMM(v['end']?.toString() ?? '18:00', _defaultOpen.end),
-      );
+  // Parse a stored day value: a list of intervals (new), a single { start,end }
+  // object (legacy), or null/absent (closed → empty list).
+  List<_Interval> _parseDay(dynamic v) {
+    if (v is List) {
+      return v.whereType<Map>().map(_intervalFromMap).toList();
     }
-    return null; // null or absent = closed
+    if (v is Map) {
+      return [_intervalFromMap(v)];
+    }
+    return []; // null or absent = closed
   }
+
+  _Interval _intervalFromMap(Map v) => _Interval(
+        _parseHHMM(v['start']?.toString() ?? '09:00', _defaultInterval.start),
+        _parseHHMM(v['end']?.toString() ?? '18:00', _defaultInterval.end),
+      );
 
   @override
   void dispose() {
@@ -1877,41 +1788,79 @@ class _WorkingHoursSectionState extends ConsumerState<_WorkingHoursSection> {
     }
   }
 
-  Future<void> _pickTime(String key, bool isStart) async {
-    final current = _days[key];
-    if (current == null) return;
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: isStart ? current.start : current.end,
-    );
-    if (picked == null) return;
+  void _setDayOpen(String key, bool open) {
     setState(() {
       _error = null;
-      _days[key] = isStart
-          ? _DayHours(picked, current.end)
-          : _DayHours(current.start, picked);
+      _days[key] =
+          open ? (_days[key]!.isEmpty ? [_defaultInterval] : _days[key]!) : [];
+    });
+  }
+
+  void _setTime(String key, int idx, bool isStart, TimeOfDay picked) {
+    setState(() {
+      _error = null;
+      final list = _days[key]!;
+      final iv = list[idx];
+      list[idx] =
+          isStart ? _Interval(picked, iv.end) : _Interval(iv.start, picked);
+    });
+  }
+
+  void _addInterval(String key) {
+    setState(() {
+      _error = null;
+      final list = _days[key]!;
+      // New interval starts where the last ends (a 1h block); the owner then
+      // moves its start later to leave a break between them.
+      final lastEnd = list.isNotEmpty ? _todMinutes(list.last.end) : 9 * 60;
+      final startMin = lastEnd > 22 * 60 ? 22 * 60 : lastEnd;
+      final endMin = startMin + 60;
+      list.add(_Interval(
+        TimeOfDay(hour: startMin ~/ 60, minute: startMin % 60),
+        TimeOfDay(hour: endMin ~/ 60, minute: endMin % 60),
+      ));
+    });
+  }
+
+  void _removeInterval(String key, int idx) {
+    setState(() {
+      _error = null;
+      _days[key]!.removeAt(idx);
     });
   }
 
   Future<void> _save() async {
     final l = AppLocalizations.of(context)!;
-    // Validate open days: start < end.
+    // Validate: each interval start < end, and a day's intervals don't overlap.
     for (final key in _kDayKeys) {
-      final d = _days[key];
-      if (d != null && _todMinutes(d.start) >= _todMinutes(d.end)) {
-        setState(() => _error = l.schedulingTimeInvalid);
-        return;
+      final list = _days[key]!;
+      for (final iv in list) {
+        if (_todMinutes(iv.start) >= _todMinutes(iv.end)) {
+          setState(() => _error = l.schedulingTimeInvalid);
+          return;
+        }
+      }
+      final sorted = [...list]
+        ..sort((a, b) => _todMinutes(a.start).compareTo(_todMinutes(b.start)));
+      for (var i = 1; i < sorted.length; i++) {
+        if (_todMinutes(sorted[i].start) < _todMinutes(sorted[i - 1].end)) {
+          setState(() => _error = l.schedulingOverlap);
+          return;
+        }
       }
     }
-    // Assemble the backend map keyed "0".."6" (Sunday="0"). Closed = null.
+    // Assemble the backend map keyed "0".."6". Closed = null; open = intervals.
     final workingHours = <String, dynamic>{
       for (final key in _kDayKeys)
-        key: _days[key] == null
+        key: _days[key]!.isEmpty
             ? null
-            : {
-                'start': formatTimeOfDay(_days[key]!.start),
-                'end': formatTimeOfDay(_days[key]!.end),
-              },
+            : [
+                for (final iv in _days[key]!)
+                  {
+                    'start': formatTimeOfDay(iv.start),
+                    'end': formatTimeOfDay(iv.end),
+                  }
+              ],
     };
     final buffer = (int.tryParse(_bufferCtrl.text.trim()) ?? 0).clamp(0, 120);
 
@@ -2010,58 +1959,99 @@ class _WorkingHoursSectionState extends ConsumerState<_WorkingHoursSection> {
 
   Widget _dayRow(
       BuildContext context, AppLocalizations l, AppTokens t, String key) {
-    final hours = _days[key];
-    final open = hours != null;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s1),
+    final list = _days[key]!;
+    final open = list.isNotEmpty;
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.s2),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s3, vertical: AppSpacing.s3),
+      decoration: BoxDecoration(
+        color: open ? t.surface : t.surface2,
+        borderRadius: AppRadii.md,
+        border: Border.all(color: t.border),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Toggle + day on the left; "Unavailable" when closed.
           Row(
             children: [
-              Expanded(
-                child: Text(_dayLabel(l, key),
-                    style:
-                        TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
-              ),
+              AppSwitch(value: open, onChanged: (v) => _setDayOpen(key, v)),
+              const SizedBox(width: AppSpacing.s3),
               Text(
-                open ? l.schedulingOpen : l.schedulingClosed,
+                _dayLabel(l, key),
                 style: TextStyle(
-                    fontSize: AppTextSizes.caption,
-                    color: open ? t.text2 : t.text3),
+                    fontSize: AppTextSizes.sm,
+                    fontWeight: AppFontWeights.bold,
+                    color: t.text1),
               ),
-              Switch(
-                value: open,
-                activeThumbColor: t.accent,
-                onChanged: (v) => setState(() {
-                  _error = null;
-                  _days[key] = v ? _defaultOpen : null;
-                }),
-              ),
+              const Spacer(),
+              if (!open)
+                Text(
+                  l.schedulingUnavailable,
+                  style: TextStyle(
+                      fontSize: AppTextSizes.sm,
+                      fontStyle: FontStyle.italic,
+                      color: t.text3),
+                ),
             ],
           ),
-          if (open)
-            Padding(
-              padding: const EdgeInsets.only(
-                  left: AppSpacing.s1, bottom: AppSpacing.s2),
-              child: Row(
+          if (open) ...[
+            // One row per open interval; gaps between them are breaks/lunch.
+            for (var i = 0; i < list.length; i++) ...[
+              const SizedBox(height: AppSpacing.s2),
+              Row(
                 children: [
-                  _TimeChip(
-                    label: formatTimeOfDay(hours.start),
-                    onTap: () => _pickTime(key, true),
+                  Expanded(
+                    child: _TimeDropdown(
+                      value: list[i].start,
+                      onChanged: (v) => _setTime(key, i, true, v),
+                    ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.s2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: AppSpacing.s2),
                     child: Text('–', style: TextStyle(color: t.text3)),
                   ),
-                  _TimeChip(
-                    label: formatTimeOfDay(hours.end),
-                    onTap: () => _pickTime(key, false),
+                  Expanded(
+                    child: _TimeDropdown(
+                      value: list[i].end,
+                      onChanged: (v) => _setTime(key, i, false, v),
+                    ),
+                  ),
+                  // Remove this interval (only when there's more than one; to
+                  // close the day entirely, use the toggle).
+                  if (list.length > 1)
+                    IconButton(
+                      icon: Icon(Icons.close, size: 18, color: t.text3),
+                      visualDensity: VisualDensity.compact,
+                      tooltip: l.schedulingRemoveSlot,
+                      onPressed: () => _removeInterval(key, i),
+                    )
+                  else
+                    const SizedBox(width: 40),
+                ],
+              ),
+            ],
+            const SizedBox(height: AppSpacing.s2),
+            GestureDetector(
+              onTap: () => _addInterval(key),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add, size: 16, color: t.accent),
+                  const SizedBox(width: AppSpacing.s1),
+                  Text(
+                    l.schedulingAddHours,
+                    style: TextStyle(
+                        fontSize: AppTextSizes.caption,
+                        fontWeight: AppFontWeights.semibold,
+                        color: t.accent),
                   ),
                 ],
               ),
             ),
+          ],
         ],
       ),
     );
@@ -2099,6 +2089,59 @@ class _TimeChip extends StatelessWidget {
   }
 }
 
+/// 24h "HH:mm" dropdown in 30-minute steps, styled as a pill — mirrors the web
+/// TimeSelect so the owner always picks Tashkent 24h time (locale-independent).
+class _TimeDropdown extends StatelessWidget {
+  final TimeOfDay value;
+  final ValueChanged<TimeOfDay> onChanged;
+  const _TimeDropdown({required this.value, required this.onChanged});
+
+  static final List<String> _options = [
+    for (var h = 0; h < 24; h++)
+      for (final m in const [0, 30])
+        '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
+    final current = formatTimeOfDay(value);
+    // Keep an off-grid stored value selectable.
+    final options =
+        _options.contains(current) ? _options : [current, ..._options];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3, vertical: 2),
+      decoration: BoxDecoration(
+        color: t.surface2,
+        borderRadius: AppRadii.pill,
+        border: Border.all(color: t.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: current,
+          isExpanded: true,
+          isDense: true,
+          dropdownColor: t.surface,
+          borderRadius: AppRadii.md,
+          iconEnabledColor: t.text3,
+          style: TextStyle(
+            fontSize: AppTextSizes.sm,
+            fontWeight: AppFontWeights.semibold,
+            color: t.text1,
+          ),
+          items: [
+            for (final o in options)
+              DropdownMenuItem(value: o, child: Text(o)),
+          ],
+          onChanged: (v) {
+            if (v != null) onChanged(_parseHHMM(v, value));
+          },
+        ),
+      ),
+    );
+  }
+}
+
 // ── Blocked time section ─────────────────────────────────────────────
 
 class _BlockedTimeSection extends ConsumerWidget {
@@ -2125,15 +2168,11 @@ class _BlockedTimeSection extends ConsumerWidget {
   Future<void> _delete(
       BuildContext context, WidgetRef ref, BlockedSlot slot) async {
     final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: t.surface,
-        title: Text(l.schedulingDeleteBlockedTitle,
-            style: TextStyle(color: t.text1)),
-        content: Text(l.schedulingDeleteBlockedConfirm,
-            style: TextStyle(color: t.text2)),
+      builder: (ctx) => AppDialog(
+        title: l.schedulingDeleteBlockedTitle,
+        content: Text(l.schedulingDeleteBlockedConfirm),
         actions: [
           AppButton(
             label: l.buttonCancel,
@@ -2321,9 +2360,8 @@ class _AddBlockedDialogState extends ConsumerState<_AddBlockedDialog> {
     final staffAsync = ref.watch(staffProvider);
     final staff = staffAsync.valueOrNull ?? const <Staff>[];
 
-    return AlertDialog(
-      backgroundColor: t.surface,
-      title: Text(l.schedulingAddBlocked, style: TextStyle(color: t.text1)),
+    return AppDialog(
+      title: l.schedulingAddBlocked,
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2394,6 +2432,7 @@ class _AddBlockedDialogState extends ConsumerState<_AddBlockedDialog> {
               // ignore: deprecated_member_use
               value: _staffId,
               dropdownColor: t.surface,
+              borderRadius: AppRadii.md,
               style: TextStyle(color: t.text1),
               decoration: _decoration(context),
               items: [

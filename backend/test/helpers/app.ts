@@ -25,10 +25,12 @@ import proposalRoutes from '../../src/routes/proposals.js';
 import deviceTokenRoutes from '../../src/routes/device-token.js';
 import internalRoutes from '../../src/routes/internal.js';
 import adminRoutes from '../../src/routes/admin.js';
+import adminDataRoutes from '../../src/routes/adminData.js';
 import onboardingRoutes from '../../src/routes/onboarding.js';
 import { calendarRoutes } from '../../src/routes/calendar.js';
 import { securityHeaders } from '../../src/middleware/security.js';
 import { detectMaliciousInput } from '../../src/middleware/inputSanitizer.js';
+import { impersonationGuard } from '../../src/middleware/impersonation.js';
 
 /**
  * Builds the real Fastify app exactly as src/index.ts does — same hooks,
@@ -45,6 +47,7 @@ export async function buildTestApp(): Promise<FastifyInstance> {
 
   app.addHook('preHandler', securityHeaders);
   app.addHook('preHandler', detectMaliciousInput);
+  app.addHook('preHandler', impersonationGuard);
 
   await app.register(helmetPlugin);
   await app.register(corsPlugin);
@@ -72,6 +75,7 @@ export async function buildTestApp(): Promise<FastifyInstance> {
   await app.register(deviceTokenRoutes, { prefix: '/api/v1' });
   await app.register(internalRoutes, { prefix: '/api/v1' });
   await app.register(adminRoutes, { prefix: '/api/v1' });
+  await app.register(adminDataRoutes, { prefix: '/api/v1' });
   await app.register(onboardingRoutes, { prefix: '/api/v1' });
   await app.register(calendarRoutes);
 
