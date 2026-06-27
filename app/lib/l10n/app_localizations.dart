@@ -100,6 +100,102 @@ abstract class AppLocalizations {
     Locale('uz')
   ];
 
+  /// No description provided for @emptySearchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No results for \"{query}\"'**
+  String emptySearchTitle(String query);
+
+  /// No description provided for @emptyClearSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get emptyClearSearch;
+
+  /// No description provided for @emptyClearFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filter'**
+  String get emptyClearFilter;
+
+  /// No description provided for @apptEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings from your bot and manual ones appear here.'**
+  String get apptEmptyMessage;
+
+  /// No description provided for @projectsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Track client projects, milestones, and invoices here.'**
+  String get projectsEmptyMessage;
+
+  /// No description provided for @projectsEmptyCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your first project'**
+  String get projectsEmptyCta;
+
+  /// No description provided for @projectsFilterEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects match this filter'**
+  String get projectsFilterEmpty;
+
+  /// No description provided for @servicesEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No services yet'**
+  String get servicesEmptyTitle;
+
+  /// No description provided for @servicesEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Define the services customers can book through your bot.'**
+  String get servicesEmptyMessage;
+
+  /// No description provided for @servicesEmptyCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a service'**
+  String get servicesEmptyCta;
+
+  /// No description provided for @staffEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No staff yet'**
+  String get staffEmptyTitle;
+
+  /// No description provided for @staffEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Add team members so they can be assigned to appointments.'**
+  String get staffEmptyMessage;
+
+  /// No description provided for @staffEmptyCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a staff member'**
+  String get staffEmptyCta;
+
+  /// No description provided for @catalogEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Build your catalog so customers can order through your bot.'**
+  String get catalogEmptyMessage;
+
+  /// No description provided for @catalogEmptyCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a product'**
+  String get catalogEmptyCta;
+
+  /// No description provided for @ordersEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Orders placed through your bot appear here.'**
+  String get ordersEmptyMessage;
+
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
@@ -1912,6 +2008,72 @@ abstract class AppLocalizations {
   /// **'Customer'**
   String get customerDetailTitle;
 
+  /// No description provided for @customerNewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New customer'**
+  String get customerNewTitle;
+
+  /// No description provided for @customerFormName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get customerFormName;
+
+  /// No description provided for @customerFormNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer name'**
+  String get customerFormNameHint;
+
+  /// No description provided for @customerFormNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Name is required'**
+  String get customerFormNameRequired;
+
+  /// No description provided for @customerFormPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get customerFormPhone;
+
+  /// No description provided for @customerFormPhoneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number (optional)'**
+  String get customerFormPhoneHint;
+
+  /// No description provided for @customerFormTelegram.
+  ///
+  /// In en, this message translates to:
+  /// **'Telegram'**
+  String get customerFormTelegram;
+
+  /// No description provided for @customerFormTelegramHint.
+  ///
+  /// In en, this message translates to:
+  /// **'username'**
+  String get customerFormTelegramHint;
+
+  /// No description provided for @customerFormNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get customerFormNotes;
+
+  /// No description provided for @customerFormNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes (optional)'**
+  String get customerFormNotesHint;
+
+  /// No description provided for @customerCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Add customer'**
+  String get customerCreate;
+
   /// No description provided for @customerAddTag.
   ///
   /// In en, this message translates to:
@@ -2295,6 +2457,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Visible to customers in the bot'**
   String get serviceFormActiveSubtitle;
+
+  /// No description provided for @serviceDeleteButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete service'**
+  String get serviceDeleteButton;
+
+  /// No description provided for @serviceDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this service?'**
+  String get serviceDeleteTitle;
+
+  /// No description provided for @serviceDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'It will be hidden from your bot and moved to deleted. You can restore it later.'**
+  String get serviceDeleteConfirm;
+
+  /// No description provided for @productDeleteButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete product'**
+  String get productDeleteButton;
+
+  /// No description provided for @productDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this product?'**
+  String get productDeleteTitle;
+
+  /// No description provided for @productDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'It will be hidden from your bot and moved to deleted. You can restore it later.'**
+  String get productDeleteConfirm;
 
   /// No description provided for @staffTitle.
   ///
@@ -3394,6 +3592,12 @@ abstract class AppLocalizations {
   /// **'projects'**
   String get settingsModeDataFreelance;
 
+  /// No description provided for @settingsModeDataProducts.
+  ///
+  /// In en, this message translates to:
+  /// **'orders'**
+  String get settingsModeDataProducts;
+
   /// No description provided for @buttonRestore.
   ///
   /// In en, this message translates to:
@@ -3465,6 +3669,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dismiss'**
   String get notificationDismiss;
+
+  /// No description provided for @modeNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available in your business mode.'**
+  String get modeNotAvailable;
+
+  /// No description provided for @navCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar'**
+  String get navCalendar;
+
+  /// No description provided for @calendarProjectDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Project deadline'**
+  String get calendarProjectDeadline;
+
+  /// No description provided for @calendarEmptyOrdersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No scheduled deliveries'**
+  String get calendarEmptyOrdersTitle;
+
+  /// No description provided for @calendarEmptyOrdersMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Orders with a delivery date will appear here.'**
+  String get calendarEmptyOrdersMessage;
+
+  /// No description provided for @calendarEmptyDeadlinesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No deadlines'**
+  String get calendarEmptyDeadlinesTitle;
+
+  /// No description provided for @calendarEmptyDeadlinesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Project deadlines and milestone due dates will appear here.'**
+  String get calendarEmptyDeadlinesMessage;
+
+  /// No description provided for @orderNewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New order'**
+  String get orderNewTitle;
+
+  /// No description provided for @orderCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create order'**
+  String get orderCreate;
+
+  /// No description provided for @orderCustomerExisting.
+  ///
+  /// In en, this message translates to:
+  /// **'Existing'**
+  String get orderCustomerExisting;
+
+  /// No description provided for @orderCustomerNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get orderCustomerNew;
+
+  /// No description provided for @orderSelectCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a customer'**
+  String get orderSelectCustomer;
+
+  /// No description provided for @orderNoProducts.
+  ///
+  /// In en, this message translates to:
+  /// **'No products in your catalog yet.'**
+  String get orderNoProducts;
+
+  /// No description provided for @orderDeliveryPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup'**
+  String get orderDeliveryPickup;
+
+  /// No description provided for @orderDeliveryDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery'**
+  String get orderDeliveryDelivery;
+
+  /// No description provided for @orderAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery address'**
+  String get orderAddressLabel;
+
+  /// No description provided for @orderDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery date'**
+  String get orderDateLabel;
+
+  /// No description provided for @orderErrSelectCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Select or enter a customer'**
+  String get orderErrSelectCustomer;
+
+  /// No description provided for @orderErrItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least one product'**
+  String get orderErrItems;
+
+  /// No description provided for @orderErrAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a delivery address'**
+  String get orderErrAddress;
+
+  /// No description provided for @orderLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer limit reached. Upgrade to Pro to add more.'**
+  String get orderLimitReached;
+
+  /// No description provided for @orderCreateError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t create the order. Please try again.'**
+  String get orderCreateError;
+
+  /// No description provided for @settingsPaymentCard.
+  ///
+  /// In en, this message translates to:
+  /// **'PAYMENT CARD'**
+  String get settingsPaymentCard;
+
+  /// No description provided for @settingsPaymentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Customers transfer to this card when they pay. It\'s shown in your Telegram bot at checkout.'**
+  String get settingsPaymentHint;
+
+  /// No description provided for @settingsCardHolderLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cardholder name'**
+  String get settingsCardHolderLabel;
+
+  /// No description provided for @settingsCardNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'No payment card added yet.'**
+  String get settingsCardNotSet;
 }
 
 class _AppLocalizationsDelegate

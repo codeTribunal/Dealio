@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import AuthLayout from '@/components/AuthLayout'
+import { useModeGuard } from '@/lib/businessContext'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -13,11 +14,11 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
-  toggleProductActive,
   type Product,
 } from '@/lib/api'
 
 export default function CatalogPage() {
+  const guardReady = useModeGuard('PRODUCTS')
   const { t } = useI18n()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -154,25 +155,17 @@ export default function CatalogPage() {
     }
   }
 
-  const handleToggleActive = async (
-    product: Product,
-    e: React.MouseEvent
-  ) => {
-    e.stopPropagation()
-    try {
-      const updated = await toggleProductActive(product.id)
-      setProducts(prev => prev.map(p =>
-        p.id === product.id ? { ...p, active: updated.active } : p))
-    } catch {
-      // silent fail on toggle
-    }
-  }
+  // Row toggle removed — active/paused is edited only on the product form (via
+  // its Active switch, saved through updateProduct). The toggleProductActive API
+  // method is intentionally kept in lib/api.ts per spec.
 
   const filtered = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
   )
 
   const title = t('nav.catalog')
+
+  if (!guardReady) return null
 
   return (
     <AuthLayout title={title}>
@@ -184,25 +177,30 @@ export default function CatalogPage() {
             {products.length} product{products.length === 1 ? '' : 's'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex-1 md:flex-none md:w-64">
-            <Input
-              leftIcon="search"
-              type="text"
-              placeholder="Search products..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        {/* One add-affordance by state: search + this button show only when the
+            catalog is populated; an empty catalog uses the big center CTA below
+            (never both), mirroring the app's empty-vs-populated rule. */}
+        {products.length > 0 && (
+          <div className="flex items-center gap-3">
+            <div className="flex-1 md:flex-none md:w-64">
+              <Input
+                leftIcon="search"
+                type="text"
+                placeholder="Search products..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Button
+              variant="primary"
+              leftIcon="add"
+              onClick={handleNew}
+              className="whitespace-nowrap"
+            >
+              New product
+            </Button>
           </div>
-          <Button
-            variant="primary"
-            leftIcon="add"
-            onClick={handleNew}
-            className="whitespace-nowrap"
-          >
-            New product
-          </Button>
-        </div>
+        )}
       </div>
 
       {/* ── List / states ────────────────────────────────────────── */}
@@ -220,98 +218,95 @@ export default function CatalogPage() {
             </button>
           </p>
         </Card>
+      ) : products.length === 0 ? (
+        // Empty catalog → big center CTA only (header button is hidden).
+        <Card>
+          <div className="text-center py-16">
+            <div className="mx-auto mb-4 w-16 h-16 rounded-lg bg-accent-soft flex items-center justify-center text-accent">
+              <Icon name="catalog" size={28} />
+            </div>
+            <p className="text-base font-semibold text-text-1 mb-1">
+              {t('catalog.empty')}
+            </p>
+            <p className="text-sm text-text-2 mb-5">{t('catalog.emptyHint')}</p>
+            <Button variant="primary" leftIcon="add" onClick={handleNew}>
+              {t('catalog.addProduct')}
+            </Button>
+          </div>
+        </Card>
+      ) : filtered.length === 0 ? (
+        <Card>
+          <p className="text-sm text-text-2 text-center py-10">
+            {t('catalog.noMatch')}
+          </p>
+        </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.length === 0 ? (
-            <Card className="col-span-full">
-              <div className="text-center py-12">
-                <div className="mx-auto mb-4 w-16 h-16 rounded-lg bg-accent-soft flex items-center justify-center text-accent">
-                  <Icon name="catalog" size={28} />
-                </div>
-                <p className="text-sm text-text-2 mb-3">No products yet</p>
-                <Button variant="ghost" leftIcon="add" onClick={handleNew}>
-                  Add your first product
-                </Button>
-              </div>
-            </Card>
-          ) : (
-            filtered.map((product) => (
+        // Compact list rows (mirrors the app): small icon, name + price + stock
+        // chip + prep, Active/Paused tag on the right. No image, no row toggle.
+        <div className="space-y-2">
+          {filtered.map((product) => {
+            const outOfStock =
+              !product.unlimited && (product.stockQty ?? 0) === 0
+            return (
               <Card
                 key={product.id}
                 padded={false}
                 onClick={() => handleEdit(product)}
-                className="p-5 cursor-pointer hover:border-border-strong hover:shadow-md transition-shadow"
+                className="p-4 cursor-pointer hover:border-border-strong hover:shadow-sm transition-shadow"
               >
-                {/* Placeholder image tile — no image upload exists yet */}
-                <div
-                  aria-hidden="true"
-                  className="w-full aspect-square max-h-32 mb-3 rounded-md bg-accent-soft flex items-center justify-center text-accent"
-                >
-                  <Icon name="catalog" size={36} />
-                </div>
+                <div className="flex items-center gap-3">
+                  {/* Small leading icon tile (no product images in this app) */}
+                  <div className="w-12 h-12 flex-shrink-0 rounded-md bg-accent-soft flex items-center justify-center text-accent">
+                    <Icon name="catalog" size={22} />
+                  </div>
 
-                {/* Header row */}
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1 min-w-0 mr-3">
-                    <p className="text-sm font-bold text-text-1 truncate">
+                  {/* Name + price + stock + prep */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-text-1 truncate">
                       {product.name}
                     </p>
                     {product.description && (
-                      <p className="text-xs text-text-2 mt-0.5 line-clamp-2">
+                      <p className="text-xs text-text-2 truncate mt-0.5">
                         {product.description}
                       </p>
                     )}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-sm font-bold text-text-1 tabular-nums">
+                        {formatUZS(product.price)}
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
+                          outOfStock
+                            ? 'bg-error-soft text-error-strong'
+                            : 'bg-surface-2 text-text-2'
+                        }`}
+                      >
+                        {product.unlimited
+                          ? 'Made to order'
+                          : `${product.stockQty ?? 0} in stock`}
+                      </span>
+                    </div>
+                    {product.prepTime && (
+                      <p className="text-xs text-text-3 mt-1">
+                        {product.prepTime} prep time
+                      </p>
+                    )}
                   </div>
-                  {/* Active toggle — token-styled switch */}
-                  <button
-                    type="button"
-                    aria-pressed={product.active}
-                    onClick={(e) => handleToggleActive(product, e)}
-                    className={`w-10 h-5 rounded-pill relative cursor-pointer transition-colors flex-shrink-0 ${
-                      product.active ? 'bg-accent' : 'bg-border-strong'
+
+                  {/* Active/Paused tag — vertically centered, no toggle */}
+                  <span
+                    className={`flex-shrink-0 inline-flex items-center px-2.5 py-0.5 rounded-pill text-xs font-semibold ${
+                      product.active
+                        ? 'bg-success-soft text-success-strong'
+                        : 'bg-warning-soft text-warning-strong'
                     }`}
                   >
-                    <span
-                      className={`absolute top-0.5 w-4 h-4 bg-surface rounded-pill shadow-sm transition-transform ${
-                        product.active ? 'right-0.5' : 'left-0.5'
-                      }`}
-                    />
-                  </button>
+                    {product.active ? 'Active' : 'Paused'}
+                  </span>
                 </div>
-
-                {/* Price */}
-                <p className="text-base font-bold text-text-1 tabular-nums mb-2">
-                  {formatUZS(product.price)}
-                </p>
-
-                {/* Stock + prep info */}
-                <div className="flex items-center gap-2 text-xs text-text-2">
-                  {product.unlimited ? (
-                    <span>Made to order</span>
-                  ) : (
-                    <span>{product.stockQty ?? 0} in stock</span>
-                  )}
-                  {product.prepTime && (
-                    <>
-                      <span>•</span>
-                      <span>{product.prepTime} prep time</span>
-                    </>
-                  )}
-                </div>
-
-                {/* State badge */}
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-pill text-xs font-semibold mt-3 ${
-                    product.active
-                      ? 'bg-success-soft text-success-strong'
-                      : 'bg-warning-soft text-warning-strong'
-                  }`}
-                >
-                  {product.active ? 'Active' : 'Paused'}
-                </span>
               </Card>
-            ))
-          )}
+            )
+          })}
         </div>
       )}
 

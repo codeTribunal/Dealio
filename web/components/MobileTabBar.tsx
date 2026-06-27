@@ -22,20 +22,28 @@ export default function MobileTabBar() {
   const pathname = usePathname()
   const { business } = useBusiness()
   const { t } = useI18n()
-  const isFreelance = business?.mode === 'FREELANCE'
+
+  // Tab 3 follows business.mode 3-ways, mirroring the Flutter MainScaffold:
+  // PRODUCTS → Orders, FREELANCE → Projects, SERVICES (default) → Appointments.
+  const modeTab: Tab =
+    business?.mode === 'FREELANCE'
+      ? { icon: 'projects', label: t('nav.projects'), href: '/projects' }
+      : business?.mode === 'PRODUCTS'
+        ? { icon: 'orders', label: t('nav.orders'), href: '/orders' }
+        : { icon: 'calendar', label: t('nav.appointments'), href: '/appointments' }
 
   const tabs: Tab[] = [
     { icon: 'home', label: t('nav.home'), href: '/' },
     { icon: 'customers', label: t('nav.customers'), href: '/customers' },
-    isFreelance
-      ? { icon: 'projects', label: t('nav.projects'), href: '/projects' }
-      : { icon: 'calendar', label: t('nav.appointments'), href: '/appointments' },
+    modeTab,
     { icon: 'settings', label: t('nav.settings'), href: '/settings' },
   ]
 
   // Longest-prefix match so detail routes keep their parent tab active; Home
-  // ('/') only matches exactly.
-  let activeIndex = 0
+  // ('/') only matches exactly. Starts at -1 (no match) so a NON-tab page
+  // (Catalog, Calendar, Staff, Services, …) highlights NO tab — never falling
+  // back to Home/index 0.
+  let activeIndex = -1
   let bestLen = -1
   tabs.forEach((tab, i) => {
     const match = tab.href === '/' ? pathname === '/' : pathname.startsWith(tab.href)
@@ -57,17 +65,20 @@ export default function MobileTabBar() {
       style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
     >
       <div className="mobile-tabbar pointer-events-auto relative rounded-3xl border border-border shadow-lg overflow-hidden">
-        {/* Sliding selector — never intercepts taps */}
-        <div
-          className="absolute top-1.5 bottom-1.5 rounded-2xl bg-accent-soft ease-out pointer-events-none"
-          style={{
-            left: `calc(${activeIndex} * 25% + 0.375rem)`,
-            width: 'calc(25% - 0.75rem)',
-            transitionProperty: 'left',
-            transitionDuration: '280ms',
-            transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
-          }}
-        />
+        {/* Sliding selector — only rendered when a tab is active (hidden on
+            non-tab pages, so nothing is highlighted). Never intercepts taps. */}
+        {activeIndex >= 0 && (
+          <div
+            className="absolute top-1.5 bottom-1.5 rounded-2xl bg-accent-soft ease-out pointer-events-none"
+            style={{
+              left: `calc(${activeIndex} * 25% + 0.375rem)`,
+              width: 'calc(25% - 0.75rem)',
+              transitionProperty: 'left',
+              transitionDuration: '280ms',
+              transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
+            }}
+          />
+        )}
         {/* Tabs — each a full-height (h-16 ≥ 44px) full-width slot */}
         <div className="relative grid grid-cols-4">
           {tabs.map((tab, i) => {

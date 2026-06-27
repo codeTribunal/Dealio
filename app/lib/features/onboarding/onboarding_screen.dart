@@ -166,7 +166,16 @@ class _Step1BusinessState extends ConsumerState<_Step1Business> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: AppSpacing.s4),
+          // Back to the welcome screen (same as Login's back control).
+          Align(
+            alignment: Alignment.centerLeft,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              icon: AppIcon(name: AppIconName.arrowLeft, color: t.text1),
+              onPressed: () => context.go('/welcome'),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s2),
           Text(
             l.onboardingSetupTitle,
             style: TextStyle(
@@ -192,10 +201,9 @@ class _Step1BusinessState extends ConsumerState<_Step1Business> {
           const SizedBox(height: AppSpacing.s5),
           _FieldLabel(l.onboardingBusinessType),
           const SizedBox(height: AppSpacing.s2),
-          // Product-seller mode disabled — only SERVICES/FREELANCE are offered.
           _ModeCard(
             icon: AppIconName.calendar,
-            title: l.onboardingModeServicesTitle,
+            title: l.navServices,
             subtitle: l.onboardingModeServicesSubtitle,
             selected: state.mode == 'SERVICES',
             onTap: () => notifier.toggleMode('SERVICES'),
@@ -203,10 +211,18 @@ class _Step1BusinessState extends ConsumerState<_Step1Business> {
           const SizedBox(height: AppSpacing.s2),
           _ModeCard(
             icon: AppIconName.projects,
-            title: l.onboardingModeFreelanceTitle,
+            title: l.onboardingModeFreelanceShort,
             subtitle: l.onboardingModeFreelanceSubtitle,
             selected: state.mode == 'FREELANCE',
             onTap: () => notifier.toggleMode('FREELANCE'),
+          ),
+          const SizedBox(height: AppSpacing.s2),
+          _ModeCard(
+            icon: AppIconName.orders,
+            title: l.onboardingModeProductsTitle,
+            subtitle: l.onboardingModeProductsSubtitle,
+            selected: state.mode == 'PRODUCTS',
+            onTap: () => notifier.toggleMode('PRODUCTS'),
           ),
           const SizedBox(height: AppSpacing.s5),
           _FieldLabel(l.onboardingLanguageLabel),
@@ -389,7 +405,7 @@ class _Step2BotState extends ConsumerState<_Step2Bot> {
           Row(
             children: [
               IconButton(
-                icon: AppIcon(name: AppIconName.menu, color: t.text1),
+                icon: AppIcon(name: AppIconName.arrowLeft, color: t.text1),
                 onPressed: () => notifier.setStep(1),
               ),
               const SizedBox(width: AppSpacing.s1),
@@ -554,7 +570,7 @@ class _Step3Review extends ConsumerWidget {
           Row(
             children: [
               IconButton(
-                icon: AppIcon(name: AppIconName.menu, color: t.text1),
+                icon: AppIcon(name: AppIconName.arrowLeft, color: t.text1),
                 onPressed: () => notifier.setStep(2),
               ),
               const SizedBox(width: AppSpacing.s1),
@@ -666,7 +682,7 @@ class _Step4VerifyState extends ConsumerState<_Step4Verify> {
           Row(
             children: [
               IconButton(
-                icon: AppIcon(name: AppIconName.menu, color: t.text1),
+                icon: AppIcon(name: AppIconName.arrowLeft, color: t.text1),
                 onPressed: () => notifier.setStep(3),
               ),
               const SizedBox(width: AppSpacing.s1),

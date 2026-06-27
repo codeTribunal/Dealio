@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma.js';
 import { sendError } from '../lib/errors.js';
 import { requireAdmin, requireSuperAdmin } from '../middleware/adminAuth.js';
 import { writeAuditLog } from '../lib/audit.js';
+import { getCardPaymentsEnabled, setCardPaymentsEnabled } from '../lib/platformSettings.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -60,6 +61,10 @@ const createAdminBody = z.object({
 
 const updateAdminBody = z.object({
   role: z.enum(['SUPER_ADMIN', 'SUPPORT']),
+});
+
+const platformSettingsBody = z.object({
+  cardPaymentsEnabled: z.boolean(),
 });
 
 // ── Routes ────────────────────────────────────────────────────────────────────
@@ -405,6 +410,36 @@ export default async function adminRoutes(app: FastifyInstance) {
       });
     },
   );
+
+  // ── Platform Settings (global flags) ────────────────────────────────────────
+
+  // GET /admin/platform-settings — any authenticated admin may read the flags
+  // (so the panel can render the current state even for SUPPORT, who can't edit).
+  app.get('/admin/platform-settings', { preHandler: requireAdmin }, async (_request, reply) => {
+    const cardPaymentsEnabled = await getCardPaymentsEnabled();
+    return reply.send({ cardPaymentsEnabled });
+  });
+
+  // PATCH /admin/platform-settings — SUPER_ADMIN only (enforced here on the
+  // backend, not just hidden in the UI). Toggles the global card-payments flag.
+  app.patch('/admin/platform-settings', { preHandler: requireSuperAdmin }, async (request, reply) => {
+    const parsed = platformSettingsBody.safeParse(request.body);
+    if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
+
+    const previous = await getCardPaymentsEnabled();
+    const cardPaymentsEnabled = await setCardPaymentsEnabled(parsed.data.cardPaymentsEnabled);
+
+    await writeAuditLog({
+      adminUserId: request.adminUser!.id,
+      action: 'UPDATE_PLATFORM_SETTINGS',
+      targetType: 'PlatformSettings',
+      targetId: 'singleton',
+      metadata: { setting: 'cardPaymentsEnabled', from: previous, to: cardPaymentsEnabled },
+      ipAddress: request.ip,
+    });
+
+    return reply.send({ cardPaymentsEnabled });
+  });
 
   // ── Audit Logs ────────────────────────────────────────────────────────────
 

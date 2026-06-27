@@ -18,7 +18,7 @@ const setFieldValuesBody = z.object({
 export default async function customFieldRoutes(app: FastifyInstance) {
   // ── List field definitions for this business ───────────────────
   app.get('/custom-fields', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const fields = await prisma.businessCustomField.findMany({
@@ -30,7 +30,7 @@ export default async function customFieldRoutes(app: FastifyInstance) {
 
   // ── Create a new field definition ─────────────────────────────
   app.post('/custom-fields', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = createFieldBody.safeParse(request.body);
@@ -49,7 +49,7 @@ export default async function customFieldRoutes(app: FastifyInstance) {
 
   // ── Delete a field definition (soft delete) ────────────────────
   app.delete('/custom-fields/:fieldId', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { fieldId } = request.params as { fieldId: string };
@@ -67,7 +67,7 @@ export default async function customFieldRoutes(app: FastifyInstance) {
 
   // ── Set field values for a customer ───────────────────────────
   app.patch('/customers/:customerId/fields', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { customerId } = request.params as { customerId: string };

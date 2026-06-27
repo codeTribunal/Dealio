@@ -19,7 +19,7 @@ const createBlockedSlotBody = z
 export default async function blockedSlotRoutes(app: FastifyInstance) {
   // GET /blocked-slots?from=&to=&staffId=
   app.get('/blocked-slots', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const query = request.query as Record<string, string>;
@@ -45,7 +45,7 @@ export default async function blockedSlotRoutes(app: FastifyInstance) {
 
   // POST /blocked-slots
   app.post('/blocked-slots', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = createBlockedSlotBody.safeParse(request.body);
@@ -76,7 +76,7 @@ export default async function blockedSlotRoutes(app: FastifyInstance) {
 
   // DELETE /blocked-slots/:id
   app.delete('/blocked-slots/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };

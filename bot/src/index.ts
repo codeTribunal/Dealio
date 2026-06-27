@@ -4,6 +4,8 @@ import express, { type Request, type Response } from 'express';
 import { timingSafeEqual } from 'crypto';
 import { Bot, session } from 'grammy';
 import { conversations, createConversation } from '@grammyjs/conversations';
+import { RedisAdapter } from '@grammyjs/storage-redis';
+import { Redis } from 'ioredis';
 import { MyContext, SessionData } from './lib/types.js';
 import { registerCatalogHandlers } from './scenes/catalog.js';
 import { checkoutConversation } from './scenes/checkout.js';
@@ -32,6 +34,21 @@ const backendClient = axios.create({
 
 // Map of businessId → running Bot instance
 const activeBots = new Map<string, Bot<MyContext>>();
+
+// Persistent session storage, shared across all per-business bots, so carts and
+// in-flight checkout conversations survive a redeploy/restart. The conversations
+// plugin keeps its state in the same session entry, so this covers it too.
+// Falls back to in-memory when REDIS_URL is unset (e.g. local dev) — that mode
+// is restart-lossy, as before.
+let sessionStorage: RedisAdapter<SessionData> | undefined;
+if (process.env.REDIS_URL) {
+  const redis = new Redis(process.env.REDIS_URL);
+  redis.on('error', (err) => console.error('[bot] Redis error:', err));
+  sessionStorage = new RedisAdapter<SessionData>({ instance: redis });
+  console.log('[bot] Session storage: Redis (persistent)');
+} else {
+  console.warn('[bot] REDIS_URL not set — sessions are IN-MEMORY and lost on restart');
+}
 
 // The central platform (owner-auth) bot — separate from the per-business bots.
 let platformBot: ReturnType<typeof createPlatformBot> | null = null;
@@ -81,7 +98,26 @@ function registerHandlers(
   businessId: string,
   botUsername: string,
 ): void {
-  // Inject business identity into every ctx before any other middleware
+  // Update-arrival log — FIRST middleware, so every incoming update is visible
+  // even if a later layer (session/Redis, conversations) hangs or drops it. This
+  // is the guard against "the bot went silent and nothing was logged".
+  bot.use(async (ctx, next) => {
+    const kind = ctx.message?.text
+      ? `text "${ctx.message.text.slice(0, 48)}"`
+      : ctx.callbackQuery?.data
+        ? `callback "${ctx.callbackQuery.data}"`
+        : ctx.message?.contact
+          ? 'contact'
+          : ctx.message
+            ? 'message(other)'
+            : 'update(other)';
+    console.log(
+      `[${botUsername}] ← update ${ctx.update.update_id} from ${ctx.from?.id ?? '?'}: ${kind}`,
+    );
+    await next();
+  });
+
+  // Inject business identity into every ctx before all handlers
   bot.use(async (ctx, next) => {
     ctx.businessId = businessId;
     ctx.botUsername = botUsername;
@@ -91,8 +127,43 @@ function registerHandlers(
   bot.use(
     session<SessionData, MyContext>({
       initial: (): SessionData => ({ cart: [] }),
+      storage: sessionStorage,
+      // In private chats chat.id == the Telegram user id, which is the SAME
+      // across every business's bot. A shared store must namespace by
+      // businessId or one user's cart would bleed between businesses.
+      getSessionKey: (ctx) => (ctx.chat ? `${businessId}:${ctx.chat.id}` : undefined),
     }),
   );
+
+  // Commands ALWAYS escape any active conversation — handled BEFORE the
+  // conversation engine is installed. createConversation() (below) resumes a
+  // waiting conversation by reading `session.conversation[id]` and CONSUMES the
+  // update (its `wait` eats /start), so a command never reaches
+  // bot.command('start') and the bot looks dead. The previous attempt ran AFTER
+  // conversations() and relied on ctx.conversation.exit() round-tripping the
+  // Redis-(de)listified state in the same update — fragile, and it still got
+  // swallowed. Instead, clear the conversations-plugin session slot DIRECTLY
+  // here (exactly what exit() does internally: `session.conversation = undefined`)
+  // before conversations() can read it. This also wipes a stuck/persisted
+  // (Redis) conversation, self-healing the silent state on the next /start.
+  // ctx.session is available (session() ran above); this can never block.
+  bot.use(async (ctx, next) => {
+    const text = ctx.message?.text;
+    if (text && text.startsWith('/')) {
+      // `conversation` is the conversations-plugin session slot (added by the
+      // flavor). ctx.session is MaybePromise under the flavor, so await it; with
+      // the eager session() above this resolves to the same in-memory object the
+      // engine will read next, so clearing it here takes effect this update.
+      const sess = await ctx.session;
+      const hadConversation = sess.conversation != null;
+      if (hadConversation) sess.conversation = undefined;
+      console.log(
+        `[${botUsername}] command "${text.split(/\s/)[0]}" before conversations()` +
+          (hadConversation ? ' — cleared an active conversation' : ' (none active)'),
+      );
+    }
+    await next();
+  });
 
   bot.use(conversations());
   bot.use(createConversation(checkoutConversation));
@@ -116,6 +187,32 @@ function registerHandlers(
 
     const telegramUserId = String(ctx.from?.id ?? '');
     if (!telegramUserId) return;
+
+    // If a conversation (checkout/booking) is active, this text is that flow's
+    // input (e.g. the phone-number step) — NOT a free-text inbox message. Skip
+    // the inbox-save (saving would 404 'Customer not found' before the order
+    // step). Use the RAW session slot (ctx.session.conversation) — the same
+    // reliable signal as the command-escape fix — NOT ctx.conversation.active(),
+    // whose Redis round-trip returned empty during active checkouts and let the
+    // 404 fire. The log also tells T1 vs T2: "active" => the conversation IS in
+    // the session (a wait failed to consume); "none in session" => the state was
+    // lost (not persisted) — distinct root causes.
+    try {
+      const sess = await ctx.session;
+      if (sess.conversation != null) {
+        console.log(`[${botUsername}] inbox-save skipped — conversation active in session`);
+        return;
+      }
+      console.log(`[${botUsername}] inbox-save proceeding — NO conversation in session for this update`);
+    } catch (err) {
+      // Could NOT read the session — do NOT silently drop the update: log and
+      // fall through to the guarded save below (a guard that can't decide must
+      // default to NOT blocking).
+      console.error(
+        `[${botUsername}] session read failed in inbox-save guard; not blocking:`,
+        err,
+      );
+    }
 
     try {
       const result = await saveCustomerMessage({

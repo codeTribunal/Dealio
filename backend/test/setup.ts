@@ -36,6 +36,8 @@ process.env.JWT_SECRET ??= 'test-jwt-secret-not-for-prod';
 process.env.JWT_EXPIRES_IN ??= '30d';
 process.env.ADMIN_JWT_SECRET ??= 'test-admin-jwt-secret-not-for-prod';
 process.env.ADMIN_JWT_EXPIRES_IN ??= '8h';
+// OTP_HASH_SECRET is now REQUIRED (no fallback to JWT_SECRET); set a test value.
+process.env.OTP_HASH_SECRET ??= 'test-otp-hash-secret-not-for-prod';
 process.env.BOT_MANAGER_SECRET ??= 'test-bot-manager-secret';
 process.env.BOT_TOKEN_ENCRYPTION_KEY ??= '00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff';
 

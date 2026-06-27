@@ -31,22 +31,35 @@ function buildQuickActions(
   router: ReturnType<typeof useRouter>,
   t: ReturnType<typeof useI18n>['t'],
 ): QuickActionItem[] {
-  // Quick CREATE actions — distinct from the sidebar's browse nav, so the row
-  // doesn't just mirror the menu (Customers / Appointments / Staff / Analytics /
-  // Settings all live in the sidebar). Defaults to SERVICES until it loads.
+  // Per-mode quick actions, kept IDENTICAL to the Flutter home (intentionally
+  // duplicating the sidebar — the prior no-duplication rule is reversed):
+  //   SERVICES  → Services + Staff
+  //   PRODUCTS  → Catalog + Calendar
+  //   FREELANCE → Staff + Calendar
+  // (A FREELANCE "Todo" button is still omitted — no Todo screen exists yet.)
+  // Reads the live business.mode (same source as the sidebar); defaults to
+  // SERVICES until business loads.
   const mode = business?.mode ?? 'SERVICES'
 
-  if (mode === 'SERVICES') {
+  if (mode === 'PRODUCTS') {
     return [
-      { icon: 'calendar', label: t('home.quickActionNewAppointment'), onClick: () => router.push('/appointments') },
-      { icon: 'customers', label: t('home.quickActionNewCustomer'), onClick: () => router.push('/customers') },
+      { icon: 'catalog', label: t('nav.catalog'), onClick: () => router.push('/catalog') },
+      { icon: 'calendar', label: t('nav.calendar'), onClick: () => router.push('/calendar') },
     ]
   }
-  // FREELANCE
-  return [
-    { icon: 'projects', label: t('home.quickActionNewProject'), onClick: () => router.push('/projects') },
-    { icon: 'customers', label: t('home.quickActionNewCustomer'), onClick: () => router.push('/customers') },
-  ]
+  if (mode === 'SERVICES') {
+    return [
+      { icon: 'catalog', label: t('nav.services'), onClick: () => router.push('/services') },
+      { icon: 'staff', label: t('nav.staff'), onClick: () => router.push('/staff') },
+    ]
+  }
+  if (mode === 'FREELANCE') {
+    return [
+      { icon: 'staff', label: t('nav.staff'), onClick: () => router.push('/staff') },
+      { icon: 'calendar', label: t('nav.calendar'), onClick: () => router.push('/calendar') },
+    ]
+  }
+  return []
 }
 
 function buildActivity(
@@ -171,8 +184,10 @@ export default function HomePage() {
             />
           </div>
 
-          {/* QuickActions — neumorphic tiles */}
-          <QuickActions items={quickActions} />
+          {/* QuickActions — neumorphic tiles. Hidden when empty (PRODUCTS &
+              FREELANCE have no non-sidebar actions), so the row collapses with
+              no empty card or leftover spacing. */}
+          {quickActions.length > 0 && <QuickActions items={quickActions} />}
 
           {/* Activity feed */}
           <Card padded={false}>

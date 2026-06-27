@@ -32,6 +32,7 @@ import { securityHeaders } from './middleware/security.js';
 import { detectMaliciousInput } from './middleware/inputSanitizer.js';
 import { impersonationGuard } from './middleware/impersonation.js';
 import { prisma } from './lib/prisma.js';
+import { validateEnv } from './lib/validateEnv.js';
 import { runOwnerReminders } from './jobs/ownerReminders.js';
 
 const app = Fastify({
@@ -56,6 +57,10 @@ app.addHook('preHandler', detectMaliciousInput);
 app.addHook('preHandler', impersonationGuard);
 
 async function bootstrap() {
+  // Fail-fast: refuse to boot if any signing/hashing secret is missing or a
+  // known dev placeholder (BOT_TOKEN_ENCRYPTION_KEY is validated in lib/crypto).
+  validateEnv();
+
   await app.register(helmetPlugin);
   await app.register(corsPlugin);
   await app.register(jwtPlugin);

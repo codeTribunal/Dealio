@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { getBusinessOrFail } from '../lib/businessFromUser.js';
 import { sendError } from '../lib/errors.js';
+import { softDelete } from '../services/softDelete.js';
 
 const createServiceBody = z.object({
   name: z.string().min(1).max(200),
@@ -30,7 +31,7 @@ const serviceInclude = {
 
 export default async function serviceRoutes(app: FastifyInstance) {
   app.get('/services', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const services = await prisma.service.findMany({
@@ -42,7 +43,7 @@ export default async function serviceRoutes(app: FastifyInstance) {
   });
 
   app.post('/services', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = createServiceBody.safeParse(request.body);
@@ -77,7 +78,7 @@ export default async function serviceRoutes(app: FastifyInstance) {
   });
 
   app.patch('/services/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -118,7 +119,7 @@ export default async function serviceRoutes(app: FastifyInstance) {
   });
 
   app.patch('/services/:id/toggle', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -132,5 +133,20 @@ export default async function serviceRoutes(app: FastifyInstance) {
       data: { active: !existing.active },
     });
     return reply.send({ id: updated.id, active: updated.active });
+  });
+
+  // ── Soft-delete service (recoverable) ───────────────────────────
+  // Soft delete only — appointments reference serviceId, so the row is kept
+  // and merely hidden (deletedAt) from the owner UI and the customer bot.
+  app.delete('/services/:id', { preHandler: authenticate }, async (request, reply) => {
+    const business = await getBusinessOrFail(request, reply);
+    if (!business) return;
+
+    const { id } = request.params as { id: string };
+    // Tenant-scoped: businessId comes from auth, never the body — a foreign or
+    // unknown id matches 0 rows → not found.
+    const { deleted } = await softDelete('service', id, business.id);
+    if (!deleted) return sendError(reply, 404, 'Service not found');
+    return reply.send({ id, deleted: true });
   });
 }

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import AuthLayout from '@/components/AuthLayout'
+import { useModeGuard } from '@/lib/businessContext'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -9,7 +10,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
 import { Spinner } from '@/components/ui/Spinner'
 import { Icon } from '@/components/icons/Icon'
-import { getOrders, getProducts, getCustomers, createOrder, restoreOrder, type Product } from '@/lib/api'
+import { getOrders, getProducts, getCustomers, createOrder, createCustomer, restoreOrder, type Product } from '@/lib/api'
 import { formatUZS } from '@/lib/format'
 import { useI18n } from '@/lib/i18n/i18nContext'
 import type { Order, Customer } from '@/types'
@@ -30,6 +31,7 @@ const SELECT_CLS =
   'w-full bg-surface border border-border rounded-md py-2.5 px-3.5 text-sm text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors'
 
 export default function OrdersPage() {
+  const guardReady = useModeGuard('PRODUCTS')
   const { t } = useI18n()
   const [orders, setOrders] = useState<Order[]>([])
   const [total, setTotal] = useState(0)
@@ -60,6 +62,11 @@ export default function OrdersPage() {
 
   // Order form state
   const [orderCustomerId, setOrderCustomerId] = useState('')
+  // Pick an existing customer or type a new walk-in (name + optional phone).
+  const [orderCustomerMode, setOrderCustomerMode] =
+    useState<'select' | 'manual'>('select')
+  const [orderManualCustomerName, setOrderManualCustomerName] = useState('')
+  const [orderManualCustomerPhone, setOrderManualCustomerPhone] = useState('')
   const [orderItems, setOrderItems] = useState<{
     productId: string
     quantity: number
@@ -138,8 +145,12 @@ export default function OrdersPage() {
   )
 
   const handleCreateOrder = async () => {
-    if (!orderCustomerId) {
+    if (orderCustomerMode === 'select' && !orderCustomerId) {
       setOrderError('Select a customer')
+      return
+    }
+    if (orderCustomerMode === 'manual' && !orderManualCustomerName.trim()) {
+      setOrderError('Enter a customer name')
       return
     }
     if (orderItems.length === 0) {
@@ -154,8 +165,18 @@ export default function OrdersPage() {
     setOrderSaving(true)
     setOrderError(null)
     try {
+      // Walk-in: create the customer first (real record, no Telegram), then the
+      // order attaches to it. A returning walk-in is then pickable as existing.
+      let customerId = orderCustomerId
+      if (orderCustomerMode === 'manual') {
+        const newCustomer = await createCustomer({
+          name: orderManualCustomerName.trim(),
+          phone: orderManualCustomerPhone.trim() || undefined,
+        })
+        customerId = newCustomer.id
+      }
       const created = await createOrder({
-        customerId: orderCustomerId,
+        customerId,
         items: orderItems.map(i => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -170,14 +191,27 @@ export default function OrdersPage() {
       setTotal(prev => prev + 1)
       setShowCreateForm(false)
       setOrderCustomerId('')
+      setOrderCustomerMode('select')
+      setOrderManualCustomerName('')
+      setOrderManualCustomerPhone('')
       setOrderItems([])
       setOrderDeliveryMethod('PICKUP')
       setOrderDeliveryAddress('')
       setOrderDeliveryDate('')
       setOrderNotes('')
       showSaved('Order created')
-    } catch {
-      setOrderError('Failed to create order. Please try again.')
+    } catch (e) {
+      // 402 = customer plan limit (from createCustomer) — surface the upgrade
+      // message; otherwise a generic order error. Never a false success.
+      const err = e as { response?: { status?: number; data?: { message?: string } } }
+      if (err?.response?.status === 402) {
+        setOrderError(
+          err.response?.data?.message ||
+            'Customer limit reached. Upgrade to Pro to add more.'
+        )
+      } else {
+        setOrderError('Failed to create order. Please try again.')
+      }
     } finally {
       setOrderSaving(false)
     }
@@ -204,6 +238,8 @@ export default function OrdersPage() {
       .catch(() => setError('Failed to load orders'))
       .finally(() => setLoading(false))
   }, [debouncedSearch, statusFilter, page, retryToken, showDeleted])
+
+  if (!guardReady) return null
 
   return (
     <AuthLayout title="Orders">
@@ -469,21 +505,54 @@ export default function OrdersPage() {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
-              {/* Customer */}
+              {/* Customer — pick existing OR type a new walk-in */}
               <div>
                 <label className="block text-sm font-medium text-text-2 mb-1.5">
                   Customer *
                 </label>
-                <select
-                  value={orderCustomerId}
-                  onChange={(e) => setOrderCustomerId(e.target.value)}
-                  className={SELECT_CLS}
-                >
-                  <option value="">Select a customer</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                <div className="flex gap-2 mb-2">
+                  {(['select', 'manual'] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setOrderCustomerMode(m)}
+                      className={`px-3 py-1.5 text-xs rounded-md font-semibold transition-colors ${
+                        orderCustomerMode === m
+                          ? 'bg-accent-soft text-accent'
+                          : 'bg-surface border border-border text-text-2 hover:bg-surface-2'
+                      }`}
+                    >
+                      {m === 'select' ? 'Select existing' : 'Enter manually'}
+                    </button>
                   ))}
-                </select>
+                </div>
+                {orderCustomerMode === 'select' ? (
+                  <select
+                    value={orderCustomerId}
+                    onChange={(e) => setOrderCustomerId(e.target.value)}
+                    className={SELECT_CLS}
+                  >
+                    <option value="">Select a customer</option>
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="space-y-2">
+                    <Input
+                      type="text"
+                      value={orderManualCustomerName}
+                      onChange={(e) => setOrderManualCustomerName(e.target.value)}
+                      placeholder="Customer name"
+                    />
+                    <Input
+                      type="tel"
+                      value={orderManualCustomerPhone}
+                      onChange={(e) => setOrderManualCustomerPhone(e.target.value)}
+                      placeholder="Phone (optional)"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Products */}

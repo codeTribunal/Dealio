@@ -197,6 +197,23 @@ class ApiService {
     }
   }
 
+  /// Set/update/clear the owner's P2P payment card. Pass null for either field
+  /// to clear it. Returns the refreshed business (incl. cardPaymentsEnabled).
+  Future<Business> updatePayment({
+    required String? cardNumber,
+    required String? cardHolderName,
+  }) async {
+    try {
+      final res = await _dio.patch('/business/payment', data: {
+        'cardNumber': cardNumber,
+        'cardHolderName': cardHolderName,
+      });
+      return Business.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
   Future<void> registerFcmToken(String token) async {
     try {
       await _dio.patch('/business/fcm-token', data: {'fcmToken': token});
@@ -313,6 +330,32 @@ class ApiService {
     }
   }
 
+  /// Manual order create. [items] is a list of {productId, quantity, price}.
+  /// Pass an existing [customerId] (create the customer first for walk-ins).
+  Future<Order> createOrder({
+    required String customerId,
+    required List<Map<String, dynamic>> items,
+    required String deliveryMethod,
+    String? deliveryAddress,
+    String? deliveryDate,
+    String? notes,
+  }) async {
+    try {
+      final res = await _dio.post('/orders', data: {
+        'customerId': customerId,
+        'items': items,
+        'deliveryMethod': deliveryMethod,
+        if (deliveryAddress != null && deliveryAddress.isNotEmpty)
+          'deliveryAddress': deliveryAddress,
+        if (deliveryDate != null) 'deliveryDate': deliveryDate,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      });
+      return Order.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
   Future<Order> getOrder(String id) async {
     try {
       final res = await _dio.get('/orders/$id');
@@ -408,6 +451,14 @@ class ApiService {
     }
   }
 
+  Future<void> deleteProduct(String id) async {
+    try {
+      await _dio.delete('/products/$id');
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
   // ── Customers ─────────────────────────────────────────────────
 
   // ── Home ──────────────────────────────────────────────────────
@@ -488,6 +539,7 @@ class ApiService {
     required String name,
     String? phone,
     String? telegramUsername,
+    String? notes,
   }) async {
     try {
       final res = await _dio.post(
@@ -496,6 +548,7 @@ class ApiService {
           'name': name,
           if (phone != null) 'phone': phone,
           if (telegramUsername != null) 'telegramUsername': telegramUsername,
+          if (notes != null) 'notes': notes,
         },
       );
       return Customer.fromJson(res.data as Map<String, dynamic>);
@@ -761,6 +814,14 @@ class ApiService {
     try {
       final res = await _dio.patch('/services/$id', data: data);
       return Service.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  Future<void> deleteService(String id) async {
+    try {
+      await _dio.delete('/services/$id');
     } on DioException catch (e) {
       throw _wrap(e);
     }

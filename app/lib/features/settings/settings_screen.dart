@@ -54,11 +54,17 @@ class SettingsScreen extends ConsumerWidget {
               _ProfileSection(data: data),
               const SizedBox(height: AppSpacing.s3),
               _BusinessModeSection(data: data),
+              // Services + scheduling (working hours, blocked time) are
+              // appointments-specific — gated to SERVICES mode.
               if (data.business.mode == 'SERVICES') ...[
                 const SizedBox(height: AppSpacing.s3),
                 const _ServicesSection(),
-                const SizedBox(height: AppSpacing.s3),
-                const _StaffSection(),
+              ],
+              // Staff applies to every mode (Orders & Projects businesses have
+              // staff too), so it is NOT mode-gated.
+              const SizedBox(height: AppSpacing.s3),
+              const _StaffSection(),
+              if (data.business.mode == 'SERVICES') ...[
                 const SizedBox(height: AppSpacing.s3),
                 _WorkingHoursSection(data: data),
                 const SizedBox(height: AppSpacing.s3),
@@ -70,6 +76,12 @@ class SettingsScreen extends ConsumerWidget {
               _RemindersSection(data: data),
               const SizedBox(height: AppSpacing.s3),
               _BotSection(data: data),
+              // Payment card — gated by the GLOBAL cardPaymentsEnabled flag.
+              // When off, the section is not built at all (no card UI anywhere).
+              if (data.business.cardPaymentsEnabled) ...[
+                const SizedBox(height: AppSpacing.s3),
+                _PaymentSection(data: data),
+              ],
               const SizedBox(height: AppSpacing.s3),
               const _CustomerFieldsSection(),
               const SizedBox(height: AppSpacing.s3),
@@ -342,16 +354,128 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
   }
 }
 
+// ── Payment card section ─────────────────────────────────────────────
+// Only built when the GLOBAL business.cardPaymentsEnabled flag is on (see the
+// build list). Owner sets the P2P card (number + holder name) shown to customers
+// in the Telegram bot; saved via PATCH /business/payment. Always-editable form.
+
+class _PaymentSection extends ConsumerStatefulWidget {
+  final SettingsState data;
+  const _PaymentSection({required this.data});
+
+  @override
+  ConsumerState<_PaymentSection> createState() => _PaymentSectionState();
+}
+
+class _PaymentSectionState extends ConsumerState<_PaymentSection> {
+  late final TextEditingController _cardCtrl;
+  late final TextEditingController _holderCtrl;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cardCtrl =
+        TextEditingController(text: widget.data.business.cardNumber ?? '');
+    _holderCtrl =
+        TextEditingController(text: widget.data.business.cardHolderName ?? '');
+  }
+
+  @override
+  void dispose() {
+    _cardCtrl.dispose();
+    _holderCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    try {
+      // An empty card number clears the card (no holder without a number).
+      final number = _cardCtrl.text.trim();
+      final holder = _holderCtrl.text.trim();
+      await ref.read(settingsProvider.notifier).savePayment(
+            cardNumber: number.isEmpty ? null : number,
+            cardHolderName: number.isEmpty || holder.isEmpty ? null : holder,
+          );
+      if (!mounted) return;
+      setState(() => _saving = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      _snackErr(context, e);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    return _SectionCard(
+      icon: AppIconName.payment,
+      title: l.settingsPaymentCard,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l.settingsPaymentHint,
+            style: TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
+          ),
+          const SizedBox(height: AppSpacing.s3),
+          TextField(
+            controller: _cardCtrl,
+            keyboardType: TextInputType.number,
+            style: TextStyle(color: t.text1),
+            decoration: _decoration(
+              context,
+              label: l.settingsCardNumberLabel,
+              hint: '8600 1234 5678 9012',
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s3),
+          TextField(
+            controller: _holderCtrl,
+            textCapitalization: TextCapitalization.words,
+            style: TextStyle(color: t.text1),
+            decoration: _decoration(
+              context,
+              label: l.settingsCardHolderLabel,
+              hint: 'KARIMOV AZIZ',
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s3),
+          Align(
+            alignment: Alignment.centerRight,
+            child: AppButton(
+              label: l.buttonSave,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              loading: _saving,
+              onPressed: _saving ? null : _save,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Business mode section ────────────────────────────────────────────
 
 class _BusinessModeSection extends ConsumerWidget {
   final SettingsState data;
   const _BusinessModeSection({required this.data});
 
-  String _modeName(AppLocalizations l, String m) =>
-      m == 'SERVICES' ? l.settingsModeNameServices : l.settingsModeNameFreelance;
-  String _modeData(AppLocalizations l, String m) =>
-      m == 'SERVICES' ? l.settingsModeDataServices : l.settingsModeDataFreelance;
+  String _modeName(AppLocalizations l, String m) => m == 'SERVICES'
+      ? l.settingsModeNameServices
+      : m == 'PRODUCTS'
+          ? l.navOrders
+          : l.settingsModeNameFreelance;
+  String _modeData(AppLocalizations l, String m) => m == 'SERVICES'
+      ? l.settingsModeDataServices
+      : m == 'PRODUCTS'
+          ? l.settingsModeDataProducts
+          : l.settingsModeDataFreelance;
 
   // Single-select with a HARD WARNING: picking the other mode opens a
   // confirmation dialog. Only on confirm do we save the new scalar mode;
@@ -400,9 +524,9 @@ class _BusinessModeSection extends ConsumerWidget {
     final t = AppTokens.of(context);
     final current = data.business.mode;
 
-    // Pill segmented control (PRODUCTS disabled). Tapping the other mode opens
-    // the hard-warning dialog via _select; it does NOT save until confirmed, and
-    // the control stays bound to `current` so Cancel reverts it.
+    // Pill segmented control. Tapping another mode opens the hard-warning dialog
+    // via _select; it does NOT save until confirmed, and the control stays bound
+    // to `current` so Cancel reverts it.
     Widget seg(String mode, String label) {
       final active = current == mode;
       return GestureDetector(
@@ -411,18 +535,24 @@ class _BusinessModeSection extends ConsumerWidget {
           duration: AppMotion.durFast,
           curve: AppMotion.ease,
           padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.s4, vertical: AppSpacing.s2),
+              horizontal: AppSpacing.s2, vertical: AppSpacing.s2),
           decoration: BoxDecoration(
             color: active ? t.surface : Colors.transparent,
             borderRadius: AppRadii.sm,
             boxShadow: active ? t.shadowSm : null,
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: AppTextSizes.sm,
-              fontWeight: AppFontWeights.semibold,
-              color: active ? t.text1 : t.text2,
+          // Labels vary by language (e.g. uz "Buyurtmalar"); scaleDown shrinks a
+          // long label to fit its third instead of overflowing the row.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: AppTextSizes.sm,
+                fontWeight: AppFontWeights.semibold,
+                color: active ? t.text1 : t.text2,
+              ),
             ),
           ),
         ),
@@ -432,22 +562,20 @@ class _BusinessModeSection extends ConsumerWidget {
     return _SectionCard(
       icon: AppIconName.catalog,
       title: l.settingsBusinessMode,
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: t.surface2,
-            borderRadius: AppRadii.md,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              seg('SERVICES', l.settingsModeNameServices),
-              const SizedBox(width: 2),
-              seg('FREELANCE', l.settingsModeNameFreelance),
-            ],
-          ),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: t.surface2,
+          borderRadius: AppRadii.md,
+        ),
+        child: Row(
+          children: [
+            Expanded(child: seg('SERVICES', l.settingsModeNameServices)),
+            const SizedBox(width: 2),
+            Expanded(child: seg('FREELANCE', l.settingsModeNameFreelance)),
+            const SizedBox(width: 2),
+            Expanded(child: seg('PRODUCTS', l.navOrders)),
+          ],
         ),
       ),
     );
@@ -1362,7 +1490,7 @@ class _AddStageDialogState extends State<_AddStageDialog> {
   static const _palette = [
     '#6366F1', '#8B5CF6', '#EC4899', '#EF4444',
     '#F97316', '#EAB308', '#22C55E', '#14B8A6',
-    '#3B82F6', '#6B7280',
+    '#3C83F6', '#6B7280',
   ];
 
   final _nameCtrl = TextEditingController();

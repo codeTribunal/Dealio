@@ -11,6 +11,7 @@ import {
   getBusiness,
   updateBusiness,
   updateBotToken,
+  updatePayment,
   generateCalendarToken,
   disableCalendarSync,
   getReminderSettings,
@@ -95,6 +96,11 @@ export default function SettingsPage() {
   const [editingBot, setEditingBot] = useState(false)
   const [botToken, setBotToken] = useState('')
 
+  // Payment card (P2P transfer) — gated by business.cardPaymentsEnabled.
+  const [cardNumber, setCardNumber] = useState('')
+  const [cardHolderName, setCardHolderName] = useState('')
+  const [savingCard, setSavingCard] = useState(false)
+
   const [reminderSettings, setReminderSettings] =
     useState<ReminderSettings | null>(null)
 
@@ -113,6 +119,8 @@ export default function SettingsPage() {
         setLanguage(data.language)
         setMode(data.mode)
         setCalendarToken(data.calendarToken || null)
+        setCardNumber(data.cardNumber || '')
+        setCardHolderName(data.cardHolderName || '')
       })
       .catch(() => setError(t('settings.failedLoad')))
       .finally(() => setLoading(false))
@@ -190,6 +198,27 @@ export default function SettingsPage() {
     }
   }
 
+  async function saveCard() {
+    setSavingCard(true)
+    try {
+      const num = cardNumber.trim()
+      const holder = cardHolderName.trim()
+      // An empty number clears the card (no holder without a number).
+      const updated = await updatePayment({
+        cardNumber: num || null,
+        cardHolderName: num ? holder || null : null,
+      })
+      setBusiness(updated)
+      setCardNumber(updated.cardNumber || '')
+      setCardHolderName(updated.cardHolderName || '')
+      showSaved(t('settings.cardSaved'))
+    } catch {
+      showSaved(t('common.errorGeneric'))
+    } finally {
+      setSavingCard(false)
+    }
+  }
+
   async function handleToggleCalendar(enable: boolean) {
     setCalendarLoading(true)
     try {
@@ -239,9 +268,17 @@ export default function SettingsPage() {
 
   // Localized mode display name + data noun, for the warning copy.
   const modeDisplayName = (m: string) =>
-    m === 'SERVICES' ? t('settings.modeNameServices') : t('settings.modeNameFreelance')
+    m === 'SERVICES'
+      ? t('settings.modeNameServices')
+      : m === 'PRODUCTS'
+        ? t('nav.orders')
+        : t('settings.modeNameFreelance')
   const modeDataNoun = (m: string) =>
-    m === 'SERVICES' ? t('settings.modeDataServices') : t('settings.modeDataFreelance')
+    m === 'SERVICES'
+      ? t('settings.modeDataServices')
+      : m === 'PRODUCTS'
+        ? t('settings.modeDataProducts')
+        : t('settings.modeDataFreelance')
 
   if (loading) {
     return (
@@ -373,12 +410,12 @@ export default function SettingsPage() {
           </p>
 
           {/* Single-select business type — a dropdown styled like the page's
-              other selects. PRODUCTS is disabled (not offered). Picking the
-              OTHER mode opens the hard-warning modal (requestModeSwitch); it
-              does NOT save until the owner confirms. value={mode} keeps the
-              control bound to the current scalar mode, so Cancel reverts it. */}
+              other selects. Picking another mode opens the hard-warning modal
+              (requestModeSwitch); it does NOT save until the owner confirms.
+              value={mode} keeps the control bound to the current scalar mode,
+              so Cancel reverts it. */}
           <div className="inline-flex bg-surface-2 rounded-lg p-1">
-            {(['SERVICES', 'FREELANCE'] as const).map((m) => {
+            {(['SERVICES', 'FREELANCE', 'PRODUCTS'] as const).map((m) => {
               const active = mode === m
               return (
                 <button
@@ -392,19 +429,17 @@ export default function SettingsPage() {
                   }`}
                   style={{ transitionDuration: 'var(--dur-base)' }}
                 >
-                  {m === 'SERVICES'
-                    ? t('settings.modeNameServices')
-                    : t('settings.modeNameFreelance')}
+                  {modeDisplayName(m)}
                 </button>
               )
             })}
           </div>
         </Card>
 
-        {/* ── Services & staff (SERVICES mode only) ────────────── */}
+        {/* ── Services (SERVICES mode only) ────────────────────── */}
         {business.mode === 'SERVICES' && (
           <Card>
-            <CardHeader title="Services & staff" />
+            <CardHeader title="Services" />
             <div className="divide-y divide-border">
               <Link
                 href="/services"
@@ -417,20 +452,27 @@ export default function SettingsPage() {
                   ›
                 </span>
               </Link>
-              <Link
-                href="/staff"
-                className="flex items-center justify-between py-3 group"
-              >
-                <span className="text-sm font-medium text-text-1">
-                  Manage staff
-                </span>
-                <span className="text-text-3 group-hover:text-text-1 transition-colors">
-                  ›
-                </span>
-              </Link>
             </div>
           </Card>
         )}
+
+        {/* ── Staff (all modes — Orders & Projects businesses have staff too) ── */}
+        <Card>
+          <CardHeader title="Staff" />
+          <div className="divide-y divide-border">
+            <Link
+              href="/staff"
+              className="flex items-center justify-between py-3 group"
+            >
+              <span className="text-sm font-medium text-text-1">
+                Manage staff
+              </span>
+              <span className="text-text-3 group-hover:text-text-1 transition-colors">
+                ›
+              </span>
+            </Link>
+          </div>
+        </Card>
 
         {/* ── Scheduling (SERVICES mode only) ──────────────────── */}
         {business.mode === 'SERVICES' && (
@@ -667,6 +709,44 @@ export default function SettingsPage() {
             </div>
           )}
         </Card>
+
+        {/* ── Payment card — gated by the GLOBAL cardPaymentsEnabled flag.
+            Default ON: only an explicit `false` hides it (PATCH /business
+            responses omit the flag, so absent must mean visible). ── */}
+        {business.cardPaymentsEnabled !== false && (
+          <Card>
+            <CardHeader title={t('settings.paymentCard')} />
+            <p className="text-sm text-text-2 mb-4">{t('settings.paymentHint')}</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
+                  {t('settings.cardNumber')}
+                </label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  value={cardNumber}
+                  onChange={(e) => setCardNumber(e.target.value)}
+                  placeholder="8600 1234 5678 9012"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
+                  {t('settings.cardHolder')}
+                </label>
+                <Input
+                  type="text"
+                  value={cardHolderName}
+                  onChange={(e) => setCardHolderName(e.target.value)}
+                  placeholder="KARIMOV AZIZ"
+                />
+              </div>
+              <Button variant="primary" loading={savingCard} onClick={saveCard}>
+                {t('common.save')}
+              </Button>
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Success toast */}

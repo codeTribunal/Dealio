@@ -14,11 +14,13 @@ import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/orders/order_list_screen.dart';
 import '../../features/orders/order_detail_screen.dart';
+import '../../features/orders/order_form_screen.dart';
 import '../../features/catalog/catalog_screen.dart';
 import '../../features/catalog/product_form_screen.dart';
 import '../../features/customers/customers_screen.dart';
 import '../../features/customers/customer_detail_screen.dart';
 import '../../features/analytics/analytics_screen.dart';
+import '../../features/calendar/calendar_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../models/appointment.dart';
@@ -38,9 +40,37 @@ import '../../features/_design/design_icons_screen.dart';
 import '../../features/_design/design_components_screen.dart';
 import '../../features/shell/main_scaffold.dart';
 import '../../shared/widgets/app_spinner.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Exposed so FCM tap handlers can navigate without a BuildContext.
 final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+
+/// Global messenger so the router's mode-guard can surface a snackbar when it
+/// blocks an off-mode route. The redirect callback has no Scaffold of its own,
+/// so it shows the message through this app-level ScaffoldMessenger (wired into
+/// MaterialApp.router). Mirrors the web useModeGuard's toast.
+final rootScaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>(debugLabel: 'rootMessenger');
+
+/// Maps an in-app route to the business mode(s) allowed to view it, or null for
+/// all-mode routes. IDENTICAL to the web useModeGuard mapping:
+///   /orders, /catalog        -> PRODUCTS
+///   /appointments, /services -> SERVICES
+///   /projects                -> FREELANCE
+///   /calendar                -> PRODUCTS or FREELANCE (NOT SERVICES — that uses
+///                               the real appointments calendar)
+///   home, customers, staff, analytics, settings, profile -> all modes (null)
+List<String>? _allowedModesForRoute(String loc) {
+  if (loc.startsWith('/orders') || loc.startsWith('/catalog')) {
+    return const ['PRODUCTS'];
+  }
+  if (loc.startsWith('/appointments') || loc.startsWith('/services')) {
+    return const ['SERVICES'];
+  }
+  if (loc.startsWith('/projects')) return const ['FREELANCE'];
+  if (loc.startsWith('/calendar')) return const ['PRODUCTS', 'FREELANCE'];
+  return null;
+}
 
 final routerProvider = Provider<GoRouter>((ref) {
   // READ not WATCH — the router is created once; refreshListenable handles updates.
@@ -91,7 +121,27 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Logged in WITH a business: an active user has no place on the auth
       // screens — send them home.
       if (hasBusiness) {
-        return publicRoutes.contains(loc) ? '/home' : null;
+        if (publicRoutes.contains(loc)) return '/home';
+        // Mode guard: mode-specific destinations are only reachable in their
+        // matching business mode. Off-mode access (deep link, go(), or push)
+        // REDIRECTS home and shows a brief snackbar — never a silent bounce.
+        // All-mode routes (home, customers, staff, analytics, settings,
+        // profile) map to null and pass through. Same mapping as web.
+        final allowedModes = _allowedModesForRoute(loc);
+        if (allowedModes != null) {
+          final mode = authNotifier.state?.business?.mode ?? 'SERVICES';
+          if (!allowedModes.contains(mode)) {
+            final msg = AppLocalizations.of(context)?.modeNotAvailable ??
+                'Not available in your business mode.';
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              final messenger = rootScaffoldMessengerKey.currentState;
+              messenger?.removeCurrentSnackBar();
+              messenger?.showSnackBar(SnackBar(content: Text(msg)));
+            });
+            return '/home';
+          }
+        }
+        return null;
       }
 
       // Logged in but WITHOUT a business yet: keep them out of the in-app
@@ -118,9 +168,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       // Persistent tab shell — the 4 top-level destinations. Each branch is an
       // IndexedStack child so switching tabs preserves state/scroll. Branch 2
-      // holds BOTH /appointments and /projects; the tab (mode-dependent) goes
-      // to whichever matches business.mode. Detail/secondary screens below are
-      // top-level (root navigator) so they push OVER this shell and hide the bar.
+      // holds /appointments, /projects AND /orders; the tab (mode-dependent)
+      // goes to whichever matches business.mode. Detail/secondary screens below
+      // are top-level (root navigator) so they push OVER this shell and hide the bar.
       StatefulShellRoute.indexedStack(
         builder: (ctx, state, navigationShell) =>
             MainScaffold(navigationShell: navigationShell),
@@ -140,6 +190,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(
                 path: '/projects',
                 builder: (ctx, state) => const ProjectsScreen()),
+            GoRoute(
+                path: '/orders',
+                builder: (ctx, state) => const OrderListScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
@@ -148,9 +201,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           ]),
         ],
       ),
+      // Manual order create. '/orders/new' matches the '/orders' prefix in
+      // _allowedModesForRoute, so it's already guarded to PRODUCTS. Declared
+      // before '/orders/:id' so "new" isn't captured as an :id.
       GoRoute(
-        path: '/orders',
-        builder: (ctx, state) => const OrderListScreen(),
+        path: '/orders/new',
+        builder: (ctx, state) => const OrderFormScreen(),
       ),
       GoRoute(
         path: '/orders/:id',
@@ -184,6 +240,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/analytics',
         builder: (ctx, state) => const AnalyticsScreen(),
+      ),
+      // Schedule list — mode-aware (PRODUCTS orders-by-delivery / FREELANCE
+      // deadlines). Guarded to PRODUCTS + FREELANCE via _allowedModesForRoute.
+      GoRoute(
+        path: '/calendar',
+        builder: (ctx, state) => const CalendarScreen(),
       ),
       GoRoute(
         path: '/profile',
@@ -320,33 +382,26 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Branding surface colors (the splash uses the paper lockup palette, not the
-    // app's bluish surface tokens): paper hsl(60,20%,98%), slate hsl(222,47%,11%).
-    const paper = Color(0xFFFBFBF9);
-    const slate = Color(0xFF0F172A);
-    const brandBlue = Color(0xFF3B82F6); // hsl(217,91%,60%) — matches the mark's wedge/dot
+    // Wordmark-only loading screen: the "Dealio." wordmark (brand-blue period) +
+    // spinner, centered on the cool #F0F0F8 surface. The mark + clay tile now
+    // live in the NATIVE splash (baked PNG), so the Dart side stays wordmark-only.
+    const surface = Color(0xFFF0F0F8); // hsl(240,36%,96%) — splash background
+    const slate = Color(0xFF0F1729); // brand slate, hsl(222,47%,11%)
+    const brandBlue = Color(0xFF3C83F6); // brand blue, hsl(217,91%,60%) — the wordmark period
 
     final screenW = MediaQuery.of(context).size.width;
-    final markW = screenW * 0.28; // lockup anchor — drives gap + wordmark (unchanged)
-    final markImageW = screenW * 0.24; // mark image ~24% (slightly smaller than the anchor)
-    final gap = markW * 0.30; // 24:80 native ratio between mark and wordmark
-    final wordSize = markW * 0.45; // sizes "Dealio." to ~40% width (the lockup)
+    final wordSize = screenW * 0.28 * 0.45; // "Dealio." size — unchanged from prior lockup
 
     return Scaffold(
-      backgroundColor: paper,
+      backgroundColor: surface,
       body: Stack(
         children: [
           Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Mark — transparent PNG (slate D-stroke + blue wedge + dot), ~24%
-                Image.asset(
-                  'assets/branding/splash_mark.png',
-                  width: markImageW,
-                ),
-                SizedBox(height: gap),
                 // Wordmark "Dealio." — Inter Bold, slate with a brand-blue period
+                // (mark/clay tile intentionally absent here — it's the native splash)
                 Text.rich(
                   const TextSpan(
                     text: 'Dealio',

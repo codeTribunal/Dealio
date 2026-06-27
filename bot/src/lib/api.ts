@@ -30,6 +30,21 @@ export class SlotUnavailableError extends Error {
   }
 }
 
+/**
+ * Thrown when the backend rejects an order create with 409 INSUFFICIENT_STOCK
+ * (a non-unlimited product's requested quantity exceeds current stock, incl.
+ * the last-unit race). The checkout scene catches this to tell the customer
+ * which product is unavailable, with the cart preserved.
+ */
+export class InsufficientStockError extends Error {
+  productName?: string;
+  constructor(productName?: string) {
+    super('INSUFFICIENT_STOCK');
+    this.name = 'InsufficientStockError';
+    this.productName = productName;
+  }
+}
+
 const client = axios.create({
   baseURL: process.env.BACKEND_URL ?? 'http://localhost:3000',
   headers: {
@@ -57,6 +72,14 @@ client.interceptors.response.use(
       (error.response.data as { error?: string } | undefined)?.error === 'SLOT_UNAVAILABLE'
     ) {
       return Promise.reject(new SlotUnavailableError());
+    }
+    if (
+      axios.isAxiosError(error) &&
+      error.response?.status === 409 &&
+      (error.response.data as { error?: string } | undefined)?.error === 'INSUFFICIENT_STOCK'
+    ) {
+      const productName = (error.response.data as { productName?: string }).productName;
+      return Promise.reject(new InsufficientStockError(productName));
     }
     return Promise.reject(error);
   },
@@ -107,6 +130,7 @@ export async function setCustomerLanguage(data: {
 export async function createOrder(data: {
   botUsername: string;
   customerId: string;
+  idempotencyKey: string;
   items: Array<{ productId: string; quantity: number; price: number; variant?: Record<string, unknown> }>;
   deliveryMethod: 'PICKUP' | 'DELIVERY';
   deliveryAddress?: string;

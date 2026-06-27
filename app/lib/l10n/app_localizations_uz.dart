@@ -9,6 +9,62 @@ class AppLocalizationsUz extends AppLocalizations {
   AppLocalizationsUz([String locale = 'uz']) : super(locale);
 
   @override
+  String emptySearchTitle(String query) {
+    return '\"$query\" uchun natija yo\'q';
+  }
+
+  @override
+  String get emptyClearSearch => 'Qidiruvni tozalash';
+
+  @override
+  String get emptyClearFilter => 'Filtrni tozalash';
+
+  @override
+  String get apptEmptyMessage =>
+      'Botdan va qo\'lda qo\'shilgan bandlovlar shu yerda ko\'rinadi.';
+
+  @override
+  String get projectsEmptyMessage =>
+      'Mijoz loyihalari, bosqichlari va hisob-fakturalarini shu yerda kuzating.';
+
+  @override
+  String get projectsEmptyCta => 'Birinchi loyihangizni yarating';
+
+  @override
+  String get projectsFilterEmpty => 'Bu filtrga mos loyiha yo\'q';
+
+  @override
+  String get servicesEmptyTitle => 'Hali xizmatlar yo\'q';
+
+  @override
+  String get servicesEmptyMessage =>
+      'Mijozlar bot orqali band qila oladigan xizmatlarni belgilang.';
+
+  @override
+  String get servicesEmptyCta => 'Xizmat qo\'shish';
+
+  @override
+  String get staffEmptyTitle => 'Hali xodimlar yo\'q';
+
+  @override
+  String get staffEmptyMessage =>
+      'Bandlovlarga biriktirish uchun jamoa a\'zolarini qo\'shing.';
+
+  @override
+  String get staffEmptyCta => 'Xodim qo\'shish';
+
+  @override
+  String get catalogEmptyMessage =>
+      'Mijozlar bot orqali buyurtma berishi uchun katalog tuzing.';
+
+  @override
+  String get catalogEmptyCta => 'Mahsulot qo\'shish';
+
+  @override
+  String get ordersEmptyMessage =>
+      'Bot orqali berilgan buyurtmalar shu yerda ko\'rinadi.';
+
+  @override
   String get appTitle => 'Dealio';
 
   @override
@@ -1017,6 +1073,39 @@ class AppLocalizationsUz extends AppLocalizations {
   String get customerDetailTitle => 'Mijoz';
 
   @override
+  String get customerNewTitle => 'Yangi mijoz';
+
+  @override
+  String get customerFormName => 'Ism';
+
+  @override
+  String get customerFormNameHint => 'Mijoz ismi';
+
+  @override
+  String get customerFormNameRequired => 'Ism kiritilishi shart';
+
+  @override
+  String get customerFormPhone => 'Telefon';
+
+  @override
+  String get customerFormPhoneHint => 'Telefon raqami (ixtiyoriy)';
+
+  @override
+  String get customerFormTelegram => 'Telegram';
+
+  @override
+  String get customerFormTelegramHint => 'foydalanuvchi nomi';
+
+  @override
+  String get customerFormNotes => 'Eslatmalar';
+
+  @override
+  String get customerFormNotesHint => 'Eslatmalar (ixtiyoriy)';
+
+  @override
+  String get customerCreate => 'Mijoz qo\'shish';
+
+  @override
   String get customerAddTag => 'Teg qo\'shish';
 
   @override
@@ -1224,6 +1313,26 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get serviceFormActiveSubtitle => 'Botda mijozlarga ko\'rinadi';
+
+  @override
+  String get serviceDeleteButton => 'Xizmatni o\'chirish';
+
+  @override
+  String get serviceDeleteTitle => 'Bu xizmat o\'chirilsinmi?';
+
+  @override
+  String get serviceDeleteConfirm =>
+      'U botingizdan yashiriladi va o\'chirilganlarga o\'tkaziladi. Keyinroq uni tiklashingiz mumkin.';
+
+  @override
+  String get productDeleteButton => 'Mahsulotni o\'chirish';
+
+  @override
+  String get productDeleteTitle => 'Bu mahsulot o\'chirilsinmi?';
+
+  @override
+  String get productDeleteConfirm =>
+      'U botingizdan yashiriladi va o\'chirilganlarga o\'tkaziladi. Keyinroq uni tiklashingiz mumkin.';
 
   @override
   String get staffTitle => 'Xodimlar';
@@ -1821,6 +1930,9 @@ class AppLocalizationsUz extends AppLocalizations {
   String get settingsModeDataFreelance => 'loyihalar';
 
   @override
+  String get settingsModeDataProducts => 'buyurtmalar';
+
+  @override
   String get buttonRestore => 'Tiklash';
 
   @override
@@ -1858,4 +1970,89 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get notificationDismiss => 'Yopish';
+
+  @override
+  String get modeNotAvailable =>
+      'Bu bo\'lim sizning biznes rejimingizda mavjud emas.';
+
+  @override
+  String get navCalendar => 'Kalendar';
+
+  @override
+  String get calendarProjectDeadline => 'Loyiha muddati';
+
+  @override
+  String get calendarEmptyOrdersTitle =>
+      'Rejalashtirilgan yetkazib berishlar yo\'q';
+
+  @override
+  String get calendarEmptyOrdersMessage =>
+      'Yetkazib berish sanasi bor buyurtmalar shu yerda ko\'rinadi.';
+
+  @override
+  String get calendarEmptyDeadlinesTitle => 'Muddatlar yo\'q';
+
+  @override
+  String get calendarEmptyDeadlinesMessage =>
+      'Loyiha muddatlari va bosqich muddatlari shu yerda ko\'rinadi.';
+
+  @override
+  String get orderNewTitle => 'Yangi buyurtma';
+
+  @override
+  String get orderCreate => 'Buyurtma yaratish';
+
+  @override
+  String get orderCustomerExisting => 'Mavjud';
+
+  @override
+  String get orderCustomerNew => 'Yangi';
+
+  @override
+  String get orderSelectCustomer => 'Mijozni tanlang';
+
+  @override
+  String get orderNoProducts => 'Katalogingizda hali mahsulot yo\'q.';
+
+  @override
+  String get orderDeliveryPickup => 'Olib ketish';
+
+  @override
+  String get orderDeliveryDelivery => 'Yetkazib berish';
+
+  @override
+  String get orderAddressLabel => 'Yetkazib berish manzili';
+
+  @override
+  String get orderDateLabel => 'Yetkazib berish sanasi';
+
+  @override
+  String get orderErrSelectCustomer => 'Mijozni tanlang yoki kiriting';
+
+  @override
+  String get orderErrItems => 'Kamida bitta mahsulot qo\'shing';
+
+  @override
+  String get orderErrAddress => 'Yetkazib berish manzilini kiriting';
+
+  @override
+  String get orderLimitReached =>
+      'Mijozlar chekloviga yetdingiz. Ko\'proq qo\'shish uchun Pro\'ga o\'ting.';
+
+  @override
+  String get orderCreateError =>
+      'Buyurtmani yaratib bo\'lmadi. Qayta urinib ko\'ring.';
+
+  @override
+  String get settingsPaymentCard => 'TO\'LOV KARTASI';
+
+  @override
+  String get settingsPaymentHint =>
+      'Mijozlar to\'lov qilganda shu kartaga o\'tkazadi. Telegram botingizda ko\'rsatiladi.';
+
+  @override
+  String get settingsCardHolderLabel => 'Karta egasi ismi';
+
+  @override
+  String get settingsCardNotSet => 'Hali to\'lov kartasi qo\'shilmagan.';
 }

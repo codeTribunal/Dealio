@@ -16,6 +16,15 @@ class Business {
   // value { start: "HH:MM", end: "HH:MM" } or null = closed that day.
   final Map<String, dynamic>? workingHours;
   final int bufferMinutes;
+  // Payment — P2P card transfer. Edited in Settings via PATCH /business/payment
+  // and shown to customers in the Telegram bot. Visibility is gated by
+  // [cardPaymentsEnabled] below (global flag).
+  final String? cardNumber;
+  final String? cardHolderName;
+  // Global, superadmin-controlled flag (default ON) carried on GET /business.
+  // When false, card-payment SETUP UI (onboarding/Settings) should be hidden.
+  // Visibility only — no payment data is affected.
+  final bool cardPaymentsEnabled;
 
   const Business({
     required this.id,
@@ -31,6 +40,9 @@ class Business {
     this.ownerTelegramChatId,
     this.workingHours,
     this.bufferMinutes = 0,
+    this.cardNumber,
+    this.cardHolderName,
+    this.cardPaymentsEnabled = true,
   });
 
   factory Business.fromJson(Map<String, dynamic> json) => Business(
@@ -49,6 +61,9 @@ class Business {
             ? Map<String, dynamic>.from(json['workingHours'] as Map)
             : null,
         bufferMinutes: json['bufferMinutes'] as int? ?? 0,
+        cardNumber: json['cardNumber'] as String?,
+        cardHolderName: json['cardHolderName'] as String?,
+        cardPaymentsEnabled: json['cardPaymentsEnabled'] as bool? ?? true,
       );
 
   Business copyWith({
@@ -78,5 +93,8 @@ class Business {
         ownerTelegramChatId: ownerTelegramChatId,
         workingHours: workingHours ?? this.workingHours,
         bufferMinutes: bufferMinutes ?? this.bufferMinutes,
+        cardNumber: cardNumber,
+        cardHolderName: cardHolderName,
+        cardPaymentsEnabled: cardPaymentsEnabled,
       );
 }

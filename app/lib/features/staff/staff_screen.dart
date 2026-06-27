@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_avatar.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_empty_state.dart';
 import '../../shared/widgets/app_spinner.dart';
 import 'staff_provider.dart';
 
@@ -24,20 +25,19 @@ class StaffScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(l.staffTitle),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpacing.s3),
-            child: Center(
-              child: AppButton(
-                label: l.staffFormNewTitle,
-                leftIcon: AppIconName.add,
-                size: AppButtonSize.sm,
-                onPressed: () => context.push('/staff/new'),
-              ),
-            ),
-          ),
-        ],
       ),
+      // One create affordance at a time (matches Customers): the empty-state CTA
+      // shows when the list is empty, so the FAB appears ONLY when there is ≥1
+      // staff member — never both at once. Staff is a pushed route (no nav
+      // shell), so endFloat already clears the safe area.
+      floatingActionButton: (staffAsync.valueOrNull?.isNotEmpty ?? false)
+          ? FloatingActionButton(
+              backgroundColor: t.accent,
+              foregroundColor: t.accentOn,
+              onPressed: () => context.push('/staff/new'),
+              child: AppIcon(name: AppIconName.add, color: t.accentOn),
+            )
+          : null,
       body: staffAsync.when(
         loading: () => const Center(child: AppSpinner(size: 32)),
         error: (e, _) => _ErrorView(
@@ -46,15 +46,13 @@ class StaffScreen extends ConsumerWidget {
         ),
         data: (staff) {
           if (staff.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppIcon(name: AppIconName.staff, size: 56, color: t.text3),
-                  const SizedBox(height: AppSpacing.s3),
-                  Text(l.staffEmpty, style: TextStyle(color: t.text2)),
-                ],
-              ),
+            return AppEmptyState(
+              icon: AppIconName.staff,
+              title: l.staffEmptyTitle,
+              message: l.staffEmptyMessage,
+              ctaLabel: l.staffEmptyCta,
+              ctaIcon: AppIconName.add,
+              onCta: () => context.push('/staff/new'),
             );
           }
           return ListView.separated(

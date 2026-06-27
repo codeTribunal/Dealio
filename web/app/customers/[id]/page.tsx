@@ -12,22 +12,22 @@ import { Icon } from '@/components/icons/Icon'
 import { getCustomerDetail, updateCustomerNotes, deleteCustomer } from '@/lib/api'
 import { formatUZS, formatDate, formatDateTime, formatRelativeTime } from '@/lib/format'
 import { useI18n } from '@/lib/i18n/i18nContext'
+import { useBusiness } from '@/lib/businessContext'
 import type { CustomerDetail } from '@/types'
-
-type Tab = 'appointments' | 'projects'
-
-const TABS: Tab[] = ['appointments', 'projects']
 
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const { t } = useI18n()
+  // Mode-relevant history only — read from the shared business source so it
+  // tracks mode switches (PRODUCTS → Orders, SERVICES → Appointments,
+  // FREELANCE → Projects).
+  const { business } = useBusiness()
   const [customer, setCustomer] = useState<CustomerDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
   const [savingNotes, setSavingNotes] = useState(false)
-  const [activeTab, setActiveTab] = useState<Tab>('appointments')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -260,49 +260,35 @@ export default function CustomerDetailPage() {
             </Card>
           </div>
 
-          {/* RIGHT COLUMN — tabbed content */}
+          {/* RIGHT COLUMN — ONLY the current business mode's history (no tab
+              switcher): PRODUCTS → Orders, FREELANCE → Projects, SERVICES (and
+              the loading default) → Appointments. */}
           <div className="flex-1 w-full min-w-0">
-            {/* Segmented control */}
-            <div className="inline-flex bg-surface-2 rounded-lg p-1 mb-6">
-              {TABS.map((tab) => {
-                const isActive = activeTab === tab
-                return (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setActiveTab(tab)}
-                    className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors capitalize ${
-                      isActive
-                        ? 'bg-surface text-text-1 shadow-sm'
-                        : 'text-text-2 hover:text-text-1'
-                    }`}
-                    style={{ transitionDuration: 'var(--dur-base)' }}
-                  >
-                    {tab}
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Appointments tab */}
-            {activeTab === 'appointments' && (
+            {business?.mode === 'PRODUCTS' ? (
               <>
-                {customer.appointments.length === 0 ? (
+                <h2 className="text-lg font-bold text-text-1 mb-4">
+                  {t('nav.orders')}
+                </h2>
+                {customer.orders.length === 0 ? (
                   <div className="text-center py-12 text-sm text-text-2">
-                    No appointments yet
+                    No orders yet
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {customer.appointments.map((appt) => (
-                      <Card key={appt.id}>
+                    {customer.orders.map((order) => (
+                      <Card key={order.id}>
                         <div className="flex justify-between items-center">
-                          <p className="text-sm font-bold text-text-1">{appt.service.name}</p>
-                          <Badge status={appt.status} type="appointment" />
+                          <p className="text-sm font-bold text-text-1">
+                            #{order.orderNumber}
+                          </p>
+                          <Badge status={order.orderStatus} type="order" />
                         </div>
                         <div className="flex items-center gap-4 mt-2">
-                          <p className="text-sm text-text-2">{formatDateTime(appt.startTime)}</p>
+                          <p className="text-sm text-text-2">
+                            {formatDate(order.createdAt)}
+                          </p>
                           <p className="text-sm text-text-1 font-medium tabular-nums">
-                            {formatUZS(appt.price)}
+                            {formatUZS(order.total)}
                           </p>
                         </div>
                       </Card>
@@ -310,11 +296,11 @@ export default function CustomerDetailPage() {
                   </div>
                 )}
               </>
-            )}
-
-            {/* Projects tab */}
-            {activeTab === 'projects' && (
+            ) : business?.mode === 'FREELANCE' ? (
               <>
+                <h2 className="text-lg font-bold text-text-1 mb-4">
+                  {t('nav.projects')}
+                </h2>
                 {customer.projects.length === 0 ? (
                   <div className="text-center py-12 text-sm text-text-2">No projects yet</div>
                 ) : (
@@ -334,6 +320,34 @@ export default function CustomerDetailPage() {
                               Due {formatDate(project.deadline)}
                             </p>
                           )}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <h2 className="text-lg font-bold text-text-1 mb-4">
+                  {t('nav.appointments')}
+                </h2>
+                {customer.appointments.length === 0 ? (
+                  <div className="text-center py-12 text-sm text-text-2">
+                    No appointments yet
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {customer.appointments.map((appt) => (
+                      <Card key={appt.id}>
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm font-bold text-text-1">{appt.service.name}</p>
+                          <Badge status={appt.status} type="appointment" />
+                        </div>
+                        <div className="flex items-center gap-4 mt-2">
+                          <p className="text-sm text-text-2">{formatDateTime(appt.startTime)}</p>
+                          <p className="text-sm text-text-1 font-medium tabular-nums">
+                            {formatUZS(appt.price)}
+                          </p>
                         </div>
                       </Card>
                     ))}

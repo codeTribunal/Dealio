@@ -11,7 +11,9 @@ import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_empty_state.dart';
 import '../../shared/widgets/app_spinner.dart';
+import '../../shared/widgets/floating_tab_bar.dart';
 import 'appointments_provider.dart';
 
 class AppointmentCalendarScreen extends ConsumerWidget {
@@ -119,25 +121,13 @@ class AppointmentCalendarScreen extends ConsumerWidget {
               ),
               data: (appointments) {
                 if (appointments.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AppIcon(
-                            name: AppIconName.calendar,
-                            size: 56,
-                            color: t.text3),
-                        const SizedBox(height: AppSpacing.s4),
-                        Text(l.apptEmpty,
-                            style: TextStyle(
-                                color: t.text2, fontSize: AppTextSizes.base)),
-                        const SizedBox(height: AppSpacing.s2),
-                        Text(l.apptEmptyHint,
-                            style: TextStyle(
-                                color: t.text3,
-                                fontSize: AppTextSizes.caption)),
-                      ],
-                    ),
+                  return AppEmptyState(
+                    icon: AppIconName.calendar,
+                    title: l.apptEmpty,
+                    message: l.apptEmptyMessage,
+                    ctaLabel: l.apptFormCreate,
+                    ctaIcon: AppIconName.add,
+                    onCta: () => context.push('/appointments/new'),
                   );
                 }
                 return RefreshIndicator(
@@ -170,12 +160,23 @@ class AppointmentCalendarScreen extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: t.accent,
-        foregroundColor: t.accentOn,
-        onPressed: () => context.push('/appointments/new'),
-        child: AppIcon(name: AppIconName.add, color: t.accentOn),
-      ),
+      // One button at a time, bound to the SELECTED DAY: the empty-state center
+      // CTA shows only when this day has no appointments, so the FAB shows only
+      // when it has ≥1. valueOrNull is the selected day's list and updates when
+      // the user pages between days, flipping which button is visible. Lifted
+      // above the floating glass nav bar via the reservedHeight padding.
+      floatingActionButton: (apptAsync.valueOrNull?.isNotEmpty ?? false)
+          ? Padding(
+              padding:
+                  const EdgeInsets.only(bottom: FloatingTabBar.reservedHeight),
+              child: FloatingActionButton(
+                backgroundColor: t.accent,
+                foregroundColor: t.accentOn,
+                onPressed: () => context.push('/appointments/new'),
+                child: AppIcon(name: AppIconName.add, color: t.accentOn),
+              ),
+            )
+          : null,
     );
   }
 

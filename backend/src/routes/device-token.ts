@@ -7,7 +7,7 @@ import { sendError } from '../lib/errors.js';
 
 export default async function deviceTokenRoutes(app: FastifyInstance) {
   app.post('/device-token', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = z.object({ token: z.string().min(1) }).safeParse(request.body);

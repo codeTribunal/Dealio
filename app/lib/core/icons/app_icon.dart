@@ -29,6 +29,7 @@ enum AppIconName {
   bell,
   logout,
   menu,
+  arrowLeft,
   close,
   staff,
   settings,
@@ -74,6 +75,7 @@ const Map<AppIconName, String> _kIconMarkup = {
   AppIconName.logout:
       '<path d="M14 5.5V4.4A1.4 1.4 0 0 0 12.6 3H5.4A1.4 1.4 0 0 0 4 4.4v15.2A1.4 1.4 0 0 0 5.4 21h7.2a1.4 1.4 0 0 0 1.4-1.4v-1.1"/><path d="M9 12h11"/><path d="M17 8.5 20.5 12 17 15.5"/>',
   AppIconName.menu: '<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>',
+  AppIconName.arrowLeft: '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>',
   AppIconName.close: '<path d="M6 6l12 12"/><path d="M18 6 6 18"/>',
   AppIconName.staff:
       '<path d="M9.5 3h5l-.6 3.2h-3.8z"/><rect x="5" y="6.2" width="14" height="14" rx="3"/><circle cx="12" cy="11.5" r="2.2"/><path d="M8.5 17.5a3.5 3.5 0 0 1 7 0"/>',

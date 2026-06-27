@@ -11,7 +11,7 @@ import {
 import { formatDateTZ, formatTimeTZ } from '../lib/format.js';
 import { t, tOrderStatus, tPaymentStatus, formatMoney, type Lang } from '../lib/i18n.js';
 import { getLang, needsLanguagePicker, languageKeyboard } from '../lib/lang.js';
-import { showCatalog } from '../scenes/catalog.js';
+import { showCatalog, showCart } from '../scenes/catalog.js';
 import { showProjects } from '../scenes/project.js';
 
 const ORDER_STATUS_EMOJI: Record<string, string> = {
@@ -36,7 +36,7 @@ const APPT_STATUS_EMOJI: Record<string, string> = {
   NO_SHOW: '👻',
 };
 
-async function showWelcomeMenu(ctx: MyContext, lang: Lang) {
+export async function showWelcomeMenu(ctx: MyContext, lang: Lang) {
   const name = ctx.from?.first_name ?? 'there';
 
   // mode is a single scalar value now ('SERVICES' | 'FREELANCE'; 'PRODUCTS' dormant).
@@ -70,6 +70,7 @@ async function showWelcomeMenu(ctx: MyContext, lang: Lang) {
 
 export function registerCommandHandlers(bot: import('grammy').Bot<MyContext>) {
   bot.command('start', async (ctx) => {
+    console.log(`[${ctx.botUsername}] /start handler reached (from ${ctx.from?.id ?? '?'})`);
     if (await needsLanguagePicker(ctx)) {
       await ctx.reply(t('UZBEK', 'chooseLanguage'), { reply_markup: languageKeyboard() });
       return;
@@ -130,10 +131,10 @@ export function registerCommandHandlers(bot: import('grammy').Bot<MyContext>) {
   });
 
   bot.command('cart', async (ctx) => {
-    // Product-seller mode disabled — the cart/catalog/checkout flow is
-    // unreachable. Reply without the 'cart' button so it can't be entered.
-    const lang = await getLang(ctx);
-    await ctx.reply(t(lang, 'cartEmpty'));
+    // Show the customer's current session cart. Items persist in
+    // ctx.session.cart across the catalog/checkout flow; showCart renders the
+    // real cart (and handles the empty case with a "Browse catalog" button).
+    await showCart(ctx);
   });
 
   bot.callbackQuery('show_orders', async (ctx) => {

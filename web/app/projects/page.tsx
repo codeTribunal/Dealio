@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import AuthLayout from '@/components/AuthLayout'
+import { useModeGuard } from '@/lib/businessContext'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -77,6 +78,7 @@ const SELECT_CLASS =
   'w-full bg-surface border border-border rounded-md py-2.5 px-3.5 text-sm text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors'
 
 export default function ProjectsPage() {
+  const guardReady = useModeGuard('FREELANCE')
   const [projects, setProjects] = useState<Project[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -94,6 +96,7 @@ export default function ProjectsPage() {
   const [createName, setCreateName] = useState('')
   const [createDescription, setCreateDescription] = useState('')
   const [createTotalPrice, setCreateTotalPrice] = useState('')
+  const [createStartDate, setCreateStartDate] = useState('')
   const [createDeadline, setCreateDeadline] = useState('')
   const [createCustomerId, setCreateCustomerId] = useState('')
   const [createCustomerMode, setCreateCustomerMode] =
@@ -248,6 +251,7 @@ export default function ProjectsPage() {
         name: createName.trim(),
         description: createDescription.trim() || undefined,
         totalPrice: Number(createTotalPrice),
+        startDate: createStartDate || undefined,
         deadline: createDeadline || undefined,
         customerId,
         paymentTerms: createPaymentTerms.trim() || undefined,
@@ -258,6 +262,7 @@ export default function ProjectsPage() {
       setCreateName('')
       setCreateDescription('')
       setCreateTotalPrice('')
+      setCreateStartDate('')
       setCreateDeadline('')
       setCreateCustomerId('')
       setCreateManualCustomerName('')
@@ -341,6 +346,8 @@ export default function ProjectsPage() {
         ? 'bg-accent-soft text-accent'
         : 'bg-surface border border-border text-text-2 hover:bg-surface-2'
     }`
+
+  if (!guardReady) return null
 
   return (
     <AuthLayout title="Projects">
@@ -927,6 +934,18 @@ export default function ProjectsPage() {
                   value={createDescription}
                   onChange={(e) => setCreateDescription(e.target.value)}
                   placeholder="Describe what is included in this project..."
+                />
+              </div>
+
+              {/* Start date (optional) — mirrors the Flutter project form */}
+              <div>
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
+                  Start date
+                </label>
+                <Input
+                  type="date"
+                  value={createStartDate}
+                  onChange={(e) => setCreateStartDate(e.target.value)}
                 />
               </div>
 

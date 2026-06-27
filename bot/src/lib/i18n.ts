@@ -430,23 +430,36 @@ const messages: Record<string, Entry> = {
     UZBEK:
       '💳 <b>To\'lov</b>\n\n' +
       '{amount} ni quyidagi kartaga o\'tkazing:\n' +
-      '<code>{card}</code> ({bank})\n\n' +
+      '<code>{card}</code>\n' +
+      '{name}\n\n' +
       'Izohga <b>#{reference}</b> deb yozing.',
     RUSSIAN:
       '💳 <b>Оплата</b>\n\n' +
       'Переведите {amount} на карту:\n' +
-      '<code>{card}</code> ({bank})\n\n' +
+      '<code>{card}</code>\n' +
+      '{name}\n\n' +
       'В комментарии укажите <b>#{reference}</b>.',
     ENGLISH:
       '💳 <b>Payment</b>\n\n' +
       'Transfer {amount} to the card:\n' +
-      '<code>{card}</code> ({bank})\n\n' +
+      '<code>{card}</code>\n' +
+      '{name}\n\n' +
       'Write <b>#{reference}</b> in the comment field.',
   },
   iHavePaid: {
     UZBEK: '✅ To\'ladim',
     RUSSIAN: '✅ Я оплатил',
     ENGLISH: '✅ I have paid',
+  },
+  paymentThanks: {
+    UZBEK: '✅ Rahmat! To\'lovingiz haqida sotuvchiga xabar berildi. Tez orada tasdiqlaydi.',
+    RUSSIAN: '✅ Спасибо! Продавец получил уведомление об оплате и скоро подтвердит.',
+    ENGLISH: '✅ Thank you! The seller has been notified of your payment and will confirm shortly.',
+  },
+  paymentError: {
+    UZBEK: '⚠️ To\'lov haqida xabar yuborib bo\'lmadi. Iltimos, "✅ To\'ladim" tugmasini qayta bosing.',
+    RUSSIAN: '⚠️ Не удалось отправить уведомление об оплате. Нажмите «✅ Я оплатил» ещё раз.',
+    ENGLISH: '⚠️ Couldn\'t send the payment notification. Please tap "✅ I have paid" again.',
   },
   orderError: {
     UZBEK: 'Buyurtmani rasmiylashtirib bo\'lmadi. Qayta urinib ko\'ring.',
@@ -494,9 +507,9 @@ const messages: Record<string, Entry> = {
     ENGLISH: 'Phone: <b>{phone}</b>',
   },
   enterPhoneText: {
-    UZBEK: 'Iltimos, telefon raqamingizni kiriting.',
-    RUSSIAN: 'Пожалуйста, введите ваш номер телефона.',
-    ENGLISH: 'Please enter your phone number.',
+    UZBEK: 'Iltimos, telefon raqamingizni yozing yoki "📱 Kontaktni ulashish" tugmasini bosing.',
+    RUSSIAN: 'Пожалуйста, введите номер телефона или нажмите «📱 Поделиться контактом».',
+    ENGLISH: 'Please type your phone number or tap "📱 Share my contact".',
   },
   fieldRequired: {
     UZBEK: 'Bu maydon majburiy. Iltimos, javob bering.',
@@ -518,6 +531,14 @@ const messages: Record<string, Entry> = {
     RUSSIAN: 'Произошла ошибка при создании заказа: {msg}',
     ENGLISH: 'Something went wrong creating your order: {msg}',
   },
+  orderOutOfStock: {
+    UZBEK:
+      '😔 Kechirasiz, {product} bu miqdorda mavjud emas. Savatingiz saqlandi — miqdorni kamaytiring yoki mahsulotni olib tashlab, qayta urinib ko\'ring.',
+    RUSSIAN:
+      '😔 Извините, {product} больше не доступен в таком количестве. Ваша корзина сохранена — уменьшите количество или удалите товар и попробуйте снова.',
+    ENGLISH:
+      '😔 Sorry, {product} is no longer available in that quantity. Your cart is saved — reduce the amount or remove it, then try again.',
+  },
   orderPlacedNoPayment: {
     UZBEK: '✅ <b>№{number} buyurtma qabul qilindi!</b>\n\nTo\'lovni tasdiqlash uchun siz bilan bog\'lanamiz.',
     RUSSIAN: '✅ <b>Заказ №{number} принят!</b>\n\nМы свяжемся с вами для подтверждения оплаты.',
@@ -527,19 +548,19 @@ const messages: Record<string, Entry> = {
     UZBEK:
       '✅ <b>№{number} buyurtma qabul qilindi!</b>\n\n' +
       'Iltimos, <b>{amount}</b> ni quyidagi kartaga o\'tkazing:\n\n' +
-      '<code>{card}</code>\nBank: <b>{bank}</b>\n\n' +
+      '<code>{card}</code>\n{name}\n\n' +
       '⚠️ To\'lov izohiga <b>#{number}</b> deb yozing.\n\n' +
       'O\'tkazgandan so\'ng quyidagi tugmani bosing:',
     RUSSIAN:
       '✅ <b>Заказ №{number} принят!</b>\n\n' +
       'Пожалуйста, переведите <b>{amount}</b> на карту:\n\n' +
-      '<code>{card}</code>\nБанк: <b>{bank}</b>\n\n' +
+      '<code>{card}</code>\n{name}\n\n' +
       '⚠️ Укажите <b>#{number}</b> в комментарии к платежу.\n\n' +
       'После перевода нажмите кнопку ниже:',
     ENGLISH:
       '✅ <b>Order #{number} placed!</b>\n\n' +
       'Please transfer <b>{amount}</b> to:\n\n' +
-      '<code>{card}</code>\nBank: <b>{bank}</b>\n\n' +
+      '<code>{card}</code>\n{name}\n\n' +
       '⚠️ Write <b>#{number}</b> in the payment comment.\n\n' +
       'After transferring, tap the button below:',
   },
@@ -740,17 +761,17 @@ const messages: Record<string, Entry> = {
     UZBEK:
       '✅ <b>Navbat tasdiqlandi!</b>\n\n' +
       'Joyingizni saqlab qolish uchun <b>{amount}</b> ni quyidagi kartaga o\'tkazing:\n\n' +
-      '<code>{card}</code>\nBank: <b>{bank}</b>\n\n' +
+      '<code>{card}</code>\n{name}\n\n' +
       'O\'tkazgandan so\'ng quyidagi tugmani bosing:',
     RUSSIAN:
       '✅ <b>Запись подтверждена!</b>\n\n' +
       'Чтобы закрепить место, переведите <b>{amount}</b> на карту:\n\n' +
-      '<code>{card}</code>\nБанк: <b>{bank}</b>\n\n' +
+      '<code>{card}</code>\n{name}\n\n' +
       'После перевода нажмите кнопку ниже:',
     ENGLISH:
       '✅ <b>Booking confirmed!</b>\n\n' +
       'To secure your spot, please transfer <b>{amount}</b> to:\n\n' +
-      '<code>{card}</code>\nBank: <b>{bank}</b>\n\n' +
+      '<code>{card}</code>\n{name}\n\n' +
       'After transferring, tap the button below:',
   },
   bookingConfirmedNoPayment: {

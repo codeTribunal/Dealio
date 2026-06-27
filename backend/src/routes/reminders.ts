@@ -12,7 +12,7 @@ const patchReminderBody = z.object({
 export default async function reminderRoutes(app: FastifyInstance) {
   // List all pending reminders for the business
   app.get('/reminders', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const query = request.query as Record<string, string>;
@@ -33,7 +33,7 @@ export default async function reminderRoutes(app: FastifyInstance) {
 
   // Mark reminder done / not done
   app.patch('/reminders/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };

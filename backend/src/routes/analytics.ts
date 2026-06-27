@@ -5,7 +5,7 @@ import { getBusinessOrFail } from '../lib/businessFromUser.js';
 
 export default async function analyticsRoutes(app: FastifyInstance) {
   app.get('/analytics', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const now = new Date();

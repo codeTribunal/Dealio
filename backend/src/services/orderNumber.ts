@@ -1,9 +1,13 @@
-import { prisma } from '../lib/prisma.js';
+import { prismaUnscoped } from '../lib/prisma.js';
 
 export async function allocateOrderNumber(businessId: string): Promise<number> {
-  // No transaction needed — the @@unique([businessId, orderNumber]) constraint
-  // catches any race condition at the DB level with a retryable conflict error.
-  const result = await prisma.order.aggregate({
+  // Count over ALL orders for the business, INCLUDING soft-deleted ones: a
+  // soft-deleted order still occupies its (businessId, orderNumber) under the
+  // @@unique constraint, so the next number must clear it too (otherwise we'd
+  // perpetually collide with a deleted top number and exhaust the retries).
+  // Uses the un-extended client to bypass the soft-delete read filter; the
+  // caller (POST /bot/orders) catches + retries the unique-constraint race.
+  const result = await prismaUnscoped.order.aggregate({
     where: { businessId },
     _max: { orderNumber: true },
   });

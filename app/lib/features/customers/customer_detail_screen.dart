@@ -192,7 +192,7 @@ class _HeaderCard extends ConsumerWidget {
 
   static const _tagPalette = [
     '#6366F1', '#EC4899', '#F59E0B', '#10B981',
-    '#3B82F6', '#EF4444', '#8B5CF6', '#14B8A6',
+    '#3C83F6', '#EF4444', '#8B5CF6', '#14B8A6',
   ];
 
   void _showAddTag(BuildContext context) {

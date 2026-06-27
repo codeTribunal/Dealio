@@ -17,6 +17,7 @@ class AppTextField extends StatelessWidget {
   final bool obscureText;
   final Widget? suffixIcon;
   final AppIconName? leftIcon;
+  final String? prefixText;
   final int? maxLines;
   final bool readOnly;
   final VoidCallback? onTap;
@@ -33,6 +34,7 @@ class AppTextField extends StatelessWidget {
     this.obscureText = false,
     this.suffixIcon,
     this.leftIcon,
+    this.prefixText,
     this.maxLines = 1,
     this.readOnly = false,
     this.onTap,
@@ -71,6 +73,7 @@ class AppTextField extends StatelessWidget {
             hint: hint,
             leftIcon: leftIcon,
             suffixIcon: suffixIcon,
+            prefixText: prefixText,
           ),
         ),
       ],
@@ -84,6 +87,7 @@ InputDecoration appInputDecoration(
   String? hint,
   AppIconName? leftIcon,
   Widget? suffixIcon,
+  String? prefixText,
 }) {
   final t = AppTokens.of(context);
   OutlineInputBorder border(Color color, [double width = 1]) =>
@@ -98,6 +102,8 @@ InputDecoration appInputDecoration(
     filled: true,
     fillColor: t.surface,
     isDense: true,
+    prefixText: prefixText,
+    prefixStyle: TextStyle(color: t.text2, fontSize: AppTextSizes.base),
     contentPadding: const EdgeInsets.symmetric(
       horizontal: AppSpacing.s4,
       vertical: AppSpacing.s3,

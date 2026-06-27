@@ -471,6 +471,11 @@ class _QuickActionsGrid extends StatelessWidget {
     // Only secondary tools that have NO bottom-nav tab, so nothing here just
     // mirrors the bar (Customers / Appointments / Projects / Settings live
     // there; Analytics and the account avatar are in the app bar).
+    // Per-mode quick actions, kept IDENTICAL to the web home:
+    //   SERVICES  → Services + Staff
+    //   PRODUCTS  → Catalog + Calendar
+    //   FREELANCE → Staff + Calendar
+    // (A FREELANCE "Todo" button is still omitted — no Todo screen exists yet.)
     final items = <QuickActionItem>[
       if (mode == 'SERVICES') ...[
         QuickActionItem(
@@ -482,6 +487,30 @@ class _QuickActionsGrid extends StatelessWidget {
           icon: AppIconName.staff,
           label: l.navStaff,
           onTap: () => context.push('/staff'),
+        ),
+      ],
+      if (mode == 'PRODUCTS') ...[
+        QuickActionItem(
+          icon: AppIconName.catalog,
+          label: l.navCatalog,
+          onTap: () => context.push('/catalog'),
+        ),
+        QuickActionItem(
+          icon: AppIconName.calendar,
+          label: l.navCalendar,
+          onTap: () => context.push('/calendar'),
+        ),
+      ],
+      if (mode == 'FREELANCE') ...[
+        QuickActionItem(
+          icon: AppIconName.staff,
+          label: l.navStaff,
+          onTap: () => context.push('/staff'),
+        ),
+        QuickActionItem(
+          icon: AppIconName.calendar,
+          label: l.navCalendar,
+          onTap: () => context.push('/calendar'),
         ),
       ],
     ];

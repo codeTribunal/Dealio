@@ -161,6 +161,7 @@ class _AppState extends ConsumerState<App> {
       // Default to light for now; a real light/dark toggle comes in a later phase.
       themeMode: ThemeMode.light,
       routerConfig: router,
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       locale: locale,
       builder: (context, child) {

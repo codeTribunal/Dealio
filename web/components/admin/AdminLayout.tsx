@@ -12,8 +12,9 @@ import {
   Menu,
   X,
   Search,
+  Settings,
 } from 'lucide-react'
-import { isAdminAuthenticated, clearAdminToken } from '@/lib/adminApi'
+import { isAdminAuthenticated, clearAdminToken, getAdminRole } from '@/lib/adminApi'
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -42,6 +43,10 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     { icon: Building2, label: 'Businesses', href: '/admin/businesses' },
     { icon: ScrollText, label: 'Audit log', href: '/admin/audit' },
     { icon: Users, label: 'Admin users', href: '/admin/users' },
+    // Platform-wide flags (incl. the card-payments toggle) — Super Admin only.
+    ...(getAdminRole() === 'SUPER_ADMIN'
+      ? [{ icon: Settings, label: 'Settings', href: '/admin/settings' }]
+      : []),
   ]
 
   const handleSignOut = () => {

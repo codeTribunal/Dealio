@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_service.dart';
+import '../../core/auth/auth_notifier.dart';
 import '../../core/models/business.dart';
 import '../../core/providers/business_provider.dart';
 
@@ -77,6 +78,21 @@ class SettingsNotifier extends AsyncNotifier<SettingsState> {
     ref.invalidate(businessProvider);
   }
 
+  /// Set/update/clear the P2P payment card (number + holder). Pass null to clear.
+  Future<void> savePayment({
+    required String? cardNumber,
+    required String? cardHolderName,
+  }) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final updated = await ref.read(apiServiceProvider).updatePayment(
+          cardNumber: cardNumber,
+          cardHolderName: cardHolderName,
+        );
+    state = AsyncData(current.copyWith(business: updated));
+    ref.invalidate(businessProvider);
+  }
+
   Future<void> saveLanguage(String language) async {
     final current = state.valueOrNull;
     if (current == null) return;
@@ -104,6 +120,13 @@ class SettingsNotifier extends AsyncNotifier<SettingsState> {
     if (current == null) return;
     final updated = await ref.read(apiServiceProvider).updateBusiness({'mode': mode});
     state = AsyncData(current.copyWith(business: updated));
+    // Push the confirmed business into the auth notifier — the single source the
+    // nav shell (main_scaffold), home, and routing read for business.mode.
+    // setBusiness() calls notifyListeners(), so every ref.watch(authNotifierProvider)
+    // rebuilds with the new mode immediately (no manual reload). Done only after
+    // the awaited PATCH succeeds, so a failed write leaves the old mode — and the
+    // whole nav structure — intact (no optimistic flip).
+    ref.read(authNotifierProvider).setBusiness(updated);
     ref.invalidate(businessProvider);
   }
 

@@ -34,6 +34,11 @@ class ServicesNotifier extends AsyncNotifier<List<Service>> {
     ref.invalidateSelf();
   }
 
+  Future<void> deleteService(String id) async {
+    await ref.read(apiServiceProvider).deleteService(id);
+    ref.invalidateSelf();
+  }
+
   Future<void> toggleActive(String id, bool currentActive) async {
     await ref.read(apiServiceProvider).updateService(id, {'active': !currentActive});
     ref.invalidateSelf();

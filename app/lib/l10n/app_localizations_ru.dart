@@ -9,6 +9,62 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String emptySearchTitle(String query) {
+    return 'Нет результатов по запросу «$query»';
+  }
+
+  @override
+  String get emptyClearSearch => 'Очистить поиск';
+
+  @override
+  String get emptyClearFilter => 'Сбросить фильтр';
+
+  @override
+  String get apptEmptyMessage =>
+      'Здесь появляются записи из бота и добавленные вручную.';
+
+  @override
+  String get projectsEmptyMessage =>
+      'Отслеживайте проекты клиентов, этапы и счета здесь.';
+
+  @override
+  String get projectsEmptyCta => 'Создайте первый проект';
+
+  @override
+  String get projectsFilterEmpty => 'Нет проектов по этому фильтру';
+
+  @override
+  String get servicesEmptyTitle => 'Пока нет услуг';
+
+  @override
+  String get servicesEmptyMessage =>
+      'Опишите услуги, которые клиенты смогут забронировать через бота.';
+
+  @override
+  String get servicesEmptyCta => 'Добавить услугу';
+
+  @override
+  String get staffEmptyTitle => 'Пока нет сотрудников';
+
+  @override
+  String get staffEmptyMessage =>
+      'Добавьте сотрудников, чтобы назначать их на записи.';
+
+  @override
+  String get staffEmptyCta => 'Добавить сотрудника';
+
+  @override
+  String get catalogEmptyMessage =>
+      'Создайте каталог, чтобы клиенты могли заказывать через бота.';
+
+  @override
+  String get catalogEmptyCta => 'Добавить товар';
+
+  @override
+  String get ordersEmptyMessage =>
+      'Заказы, оформленные через бота, появляются здесь.';
+
+  @override
   String get appTitle => 'Dealio';
 
   @override
@@ -1007,6 +1063,39 @@ class AppLocalizationsRu extends AppLocalizations {
   String get customerDetailTitle => 'Клиент';
 
   @override
+  String get customerNewTitle => 'Новый клиент';
+
+  @override
+  String get customerFormName => 'Имя';
+
+  @override
+  String get customerFormNameHint => 'Имя клиента';
+
+  @override
+  String get customerFormNameRequired => 'Введите имя';
+
+  @override
+  String get customerFormPhone => 'Телефон';
+
+  @override
+  String get customerFormPhoneHint => 'Номер телефона (необязательно)';
+
+  @override
+  String get customerFormTelegram => 'Telegram';
+
+  @override
+  String get customerFormTelegramHint => 'имя пользователя';
+
+  @override
+  String get customerFormNotes => 'Заметки';
+
+  @override
+  String get customerFormNotesHint => 'Заметки (необязательно)';
+
+  @override
+  String get customerCreate => 'Добавить клиента';
+
+  @override
   String get customerAddTag => 'Добавить тег';
 
   @override
@@ -1213,6 +1302,26 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get serviceFormActiveSubtitle => 'Видна клиентам в боте';
+
+  @override
+  String get serviceDeleteButton => 'Удалить услугу';
+
+  @override
+  String get serviceDeleteTitle => 'Удалить эту услугу?';
+
+  @override
+  String get serviceDeleteConfirm =>
+      'Она будет скрыта из вашего бота и перемещена в удалённые. Вы сможете восстановить её позже.';
+
+  @override
+  String get productDeleteButton => 'Удалить товар';
+
+  @override
+  String get productDeleteTitle => 'Удалить этот товар?';
+
+  @override
+  String get productDeleteConfirm =>
+      'Он будет скрыт из вашего бота и перемещён в удалённые. Вы сможете восстановить его позже.';
 
   @override
   String get staffTitle => 'Сотрудники';
@@ -1809,6 +1918,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsModeDataFreelance => 'проекты';
 
   @override
+  String get settingsModeDataProducts => 'заказы';
+
+  @override
   String get buttonRestore => 'Восстановить';
 
   @override
@@ -1846,4 +1958,86 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get notificationDismiss => 'Скрыть';
+
+  @override
+  String get modeNotAvailable => 'Недоступно в вашем режиме бизнеса.';
+
+  @override
+  String get navCalendar => 'Календарь';
+
+  @override
+  String get calendarProjectDeadline => 'Срок проекта';
+
+  @override
+  String get calendarEmptyOrdersTitle => 'Нет запланированных доставок';
+
+  @override
+  String get calendarEmptyOrdersMessage =>
+      'Заказы с датой доставки появятся здесь.';
+
+  @override
+  String get calendarEmptyDeadlinesTitle => 'Нет сроков';
+
+  @override
+  String get calendarEmptyDeadlinesMessage =>
+      'Сроки проектов и этапов появятся здесь.';
+
+  @override
+  String get orderNewTitle => 'Новый заказ';
+
+  @override
+  String get orderCreate => 'Создать заказ';
+
+  @override
+  String get orderCustomerExisting => 'Существующий';
+
+  @override
+  String get orderCustomerNew => 'Новый';
+
+  @override
+  String get orderSelectCustomer => 'Выберите клиента';
+
+  @override
+  String get orderNoProducts => 'В каталоге пока нет товаров.';
+
+  @override
+  String get orderDeliveryPickup => 'Самовывоз';
+
+  @override
+  String get orderDeliveryDelivery => 'Доставка';
+
+  @override
+  String get orderAddressLabel => 'Адрес доставки';
+
+  @override
+  String get orderDateLabel => 'Дата доставки';
+
+  @override
+  String get orderErrSelectCustomer => 'Выберите или введите клиента';
+
+  @override
+  String get orderErrItems => 'Добавьте хотя бы один товар';
+
+  @override
+  String get orderErrAddress => 'Укажите адрес доставки';
+
+  @override
+  String get orderLimitReached =>
+      'Достигнут лимит клиентов. Перейдите на Pro, чтобы добавить больше.';
+
+  @override
+  String get orderCreateError => 'Не удалось создать заказ. Попробуйте снова.';
+
+  @override
+  String get settingsPaymentCard => 'ПЛАТЁЖНАЯ КАРТА';
+
+  @override
+  String get settingsPaymentHint =>
+      'Клиенты переводят на эту карту при оплате. Показывается в вашем Telegram-боте.';
+
+  @override
+  String get settingsCardHolderLabel => 'Имя владельца карты';
+
+  @override
+  String get settingsCardNotSet => 'Платёжная карта ещё не добавлена.';
 }

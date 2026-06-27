@@ -40,6 +40,11 @@ class CatalogNotifier extends AsyncNotifier<List<Product>> {
       rethrow;
     }
   }
+
+  Future<void> deleteProduct(String id) async {
+    await ref.read(apiServiceProvider).deleteProduct(id);
+    ref.invalidateSelf();
+  }
 }
 
 final catalogProvider =

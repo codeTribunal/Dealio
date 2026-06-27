@@ -25,6 +25,22 @@ class CustomersNotifier extends AsyncNotifier<List<Customer>> {
     ref.invalidateSelf();
   }
 
+  Future<void> create({
+    required String name,
+    String? phone,
+    String? telegramUsername,
+    String? notes,
+  }) async {
+    await ref.read(apiServiceProvider).createCustomer(
+          name: name,
+          phone: phone,
+          telegramUsername: telegramUsername,
+          notes: notes,
+        );
+    ref.invalidateSelf();
+    await future;
+  }
+
   Future<void> delete(String id) async {
     await ref.read(apiServiceProvider).deleteCustomer(id);
     ref.invalidateSelf();

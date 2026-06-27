@@ -54,7 +54,7 @@ const createInvoiceBody = z.object({
 export default async function projectRoutes(app: FastifyInstance) {
   // GET /projects
   app.get('/projects', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const query = request.query as Record<string, string>;
@@ -85,7 +85,7 @@ export default async function projectRoutes(app: FastifyInstance) {
 
   // POST /projects
   app.post('/projects', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = createProjectBody.safeParse(request.body);
@@ -116,7 +116,7 @@ export default async function projectRoutes(app: FastifyInstance) {
 
   // GET /projects/:id
   app.get('/projects/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -141,7 +141,7 @@ export default async function projectRoutes(app: FastifyInstance) {
 
   // PATCH /projects/:id
   app.patch('/projects/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -174,7 +174,7 @@ export default async function projectRoutes(app: FastifyInstance) {
 
   // DELETE /projects/:id
   app.delete('/projects/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -192,7 +192,7 @@ export default async function projectRoutes(app: FastifyInstance) {
 
   // POST /projects/:id/milestones
   app.post('/projects/:id/milestones', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id: projectId } = request.params as { id: string };
@@ -222,7 +222,7 @@ export default async function projectRoutes(app: FastifyInstance) {
     '/projects/:id/milestones/:milestoneId',
     { preHandler: authenticate },
     async (request, reply) => {
-      const business = await getBusinessOrFail(request.user.userId, reply);
+      const business = await getBusinessOrFail(request, reply);
       if (!business) return;
 
       const { id: projectId, milestoneId } = request.params as {
@@ -282,7 +282,7 @@ export default async function projectRoutes(app: FastifyInstance) {
     '/projects/:id/milestones/:milestoneId',
     { preHandler: authenticate },
     async (request, reply) => {
-      const business = await getBusinessOrFail(request.user.userId, reply);
+      const business = await getBusinessOrFail(request, reply);
       if (!business) return;
 
       const { id: projectId, milestoneId } = request.params as {
@@ -313,7 +313,7 @@ export default async function projectRoutes(app: FastifyInstance) {
 
   // POST /projects/:id/invoices
   app.post('/projects/:id/invoices', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id: projectId } = request.params as { id: string };
@@ -354,7 +354,7 @@ export default async function projectRoutes(app: FastifyInstance) {
     '/projects/:id/invoices/:invoiceId/paid',
     { preHandler: authenticate },
     async (request, reply) => {
-      const business = await getBusinessOrFail(request.user.userId, reply);
+      const business = await getBusinessOrFail(request, reply);
       if (!business) return;
 
       const { id: projectId, invoiceId } = request.params as {

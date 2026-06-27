@@ -1,5 +1,6 @@
 {
   "common": {
+    "notAvailableInMode": "Bu bo'lim sizning biznes rejimingizda mavjud emas.",
     "save": "Saqlash",
     "saveChanges": "O'zgarishlarni saqlash",
     "cancel": "Bekor qilish",
@@ -45,7 +46,10 @@
     "deleteOrderTitle": "Bu buyurtma o'chirilsinmi?",
     "deleteOrderBody": "U buyurtmalar ro'yxatidan yashiriladi. Keyin tiklashingiz mumkin.",
     "deleteAppointmentTitle": "Bu uchrashuv o'chirilsinmi?",
-    "deleteAppointmentBody": "U uchrashuvlar ro'yxatidan yashiriladi. Keyin tiklashingiz mumkin."
+    "deleteAppointmentBody": "U uchrashuvlar ro'yxatidan yashiriladi. Keyin tiklashingiz mumkin.",
+    "deleteService": "Xizmatni o'chirish",
+    "deleteServiceTitle": "Bu xizmat o'chirilsinmi?",
+    "deleteServiceBody": "U botingizdan yashiriladi va o'chirilganlarga o'tkaziladi. Keyinroq uni tiklashingiz mumkin."
   },
   "customers": {
     "title": "Mijozlar",
@@ -102,7 +106,26 @@
     "staff": "Xodimlar",
     "projects": "Loyihalar",
     "analytics": "Tahlil",
-    "settings": "Sozlamalar"
+    "settings": "Sozlamalar",
+    "calendar": "Kalendar"
+  },
+  "catalog": {
+    "empty": "Hozircha mahsulot yo'q",
+    "emptyHint": "Sotishni boshlash uchun birinchi mahsulotni qo'shing",
+    "addProduct": "Mahsulot qo'shish",
+    "noMatch": "Qidiruvga mos mahsulot topilmadi"
+  },
+  "calendar": {
+    "title": "Kalendar",
+    "projectDeadline": "Loyiha muddati",
+    "orderNumber": "Buyurtma #{n}",
+    "failedLoad": "Jadvalni yuklab bo'lmadi",
+    "tomorrow": "Ertaga",
+    "yesterday": "Kecha",
+    "emptyOrdersTitle": "Rejalashtirilgan yetkazib berishlar yo'q",
+    "emptyOrdersMessage": "Yetkazib berish sanasi bor buyurtmalar shu yerda ko'rinadi.",
+    "emptyDeadlinesTitle": "Muddatlar yo'q",
+    "emptyDeadlinesMessage": "Loyiha muddatlari va bosqich muddatlari shu yerda ko'rinadi."
   },
   "status": {
     "NEW": "Yangi",
@@ -161,6 +184,11 @@
     "language": "Til",
     "languageHint": "Bu boshqaruv paneli tilini va Telegram botingiz mijozlar bilan ishlatadigan tilni o'zgartiradi.",
     "failedLoad": "Sozlamalarni yuklab bo'lmadi",
+    "paymentCard": "To'lov kartasi",
+    "paymentHint": "Mijozlar to'lov qilganda shu kartaga o'tkazadi. Telegram botingizda ko'rsatiladi.",
+    "cardNumber": "Karta raqami",
+    "cardHolder": "Karta egasi ismi",
+    "cardSaved": "To'lov kartasi saqlandi",
     "businessProfile": "Biznes profili",
     "businessName": "Biznes nomi",
     "description": "Tavsif",
@@ -217,7 +245,8 @@
     "modeNameServices": "Navbatlar",
     "modeNameFreelance": "Loyihalar",
     "modeDataServices": "navbatlar",
-    "modeDataFreelance": "loyihalar"
+    "modeDataFreelance": "loyihalar",
+    "modeDataProducts": "buyurtmalar"
   },
   "scheduling": {
     "workingHours": "Ish vaqti",

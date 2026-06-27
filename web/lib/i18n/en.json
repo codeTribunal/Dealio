@@ -1,5 +1,6 @@
 {
   "common": {
+    "notAvailableInMode": "Not available in your business mode.",
     "save": "Save",
     "saveChanges": "Save changes",
     "cancel": "Cancel",
@@ -45,7 +46,10 @@
     "deleteOrderTitle": "Delete this order?",
     "deleteOrderBody": "It will be hidden from your orders. You can restore it later.",
     "deleteAppointmentTitle": "Delete this appointment?",
-    "deleteAppointmentBody": "It will be hidden from your appointments. You can restore it later."
+    "deleteAppointmentBody": "It will be hidden from your appointments. You can restore it later.",
+    "deleteService": "Delete service",
+    "deleteServiceTitle": "Delete this service?",
+    "deleteServiceBody": "It will be hidden from your bot and moved to deleted. You can restore it later."
   },
   "customers": {
     "title": "Customers",
@@ -102,7 +106,26 @@
     "staff": "Staff",
     "projects": "Projects",
     "analytics": "Analytics",
-    "settings": "Settings"
+    "settings": "Settings",
+    "calendar": "Calendar"
+  },
+  "catalog": {
+    "empty": "No products yet",
+    "emptyHint": "Add your first product to start selling",
+    "addProduct": "Add a product",
+    "noMatch": "No products match your search"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "projectDeadline": "Project deadline",
+    "orderNumber": "Order #{n}",
+    "failedLoad": "Failed to load the schedule",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday",
+    "emptyOrdersTitle": "No scheduled deliveries",
+    "emptyOrdersMessage": "Orders with a delivery date will appear here.",
+    "emptyDeadlinesTitle": "No deadlines",
+    "emptyDeadlinesMessage": "Project deadlines and milestone due dates will appear here."
   },
   "status": {
     "NEW": "New",
@@ -161,6 +184,11 @@
     "language": "Language",
     "languageHint": "This changes the dashboard language and the language your Telegram bot uses with customers.",
     "failedLoad": "Failed to load settings",
+    "paymentCard": "Payment card",
+    "paymentHint": "Customers transfer to this card when they pay. It's shown in your Telegram bot at checkout.",
+    "cardNumber": "Card number",
+    "cardHolder": "Cardholder name",
+    "cardSaved": "Payment card saved",
     "businessProfile": "Business profile",
     "businessName": "Business name",
     "description": "Description",
@@ -217,7 +245,8 @@
     "modeNameServices": "Appointments",
     "modeNameFreelance": "Projects",
     "modeDataServices": "appointments",
-    "modeDataFreelance": "projects"
+    "modeDataFreelance": "projects",
+    "modeDataProducts": "orders"
   },
   "scheduling": {
     "workingHours": "Working hours",

@@ -26,6 +26,9 @@ export interface BookingState {
 export interface SessionData {
   cart: CartItem[];
   customerId?: string;
+  /** Idempotency key for the in-progress order: set once at checkout, reused on
+   *  retry, cleared on success or when the cart changes. */
+  orderIdemKey?: string;
   booking?: BookingState;
   /** Cached customer language preference for this chat (UZBEK | RUSSIAN | ENGLISH). */
   lang?: 'UZBEK' | 'RUSSIAN' | 'ENGLISH';
@@ -97,6 +100,14 @@ export interface ApiBusiness {
   language: 'UZBEK' | 'RUSSIAN' | 'ENGLISH';
   // Single business mode (scalar). 'SERVICES' | 'FREELANCE' ('PRODUCTS' dormant).
   mode: string;
+  // Global, superadmin-controlled flag (default ON). When false, the bot must
+  // NOT show card/transfer instructions at checkout. The "I have paid" path is
+  // kept regardless. Optional for forward-compat with older catalog responses.
+  cardPaymentsEnabled?: boolean;
+  // P2P card shown at checkout. Payment step is shown only when
+  // cardPaymentsEnabled AND cardNumber is present.
+  cardNumber?: string | null;
+  cardHolderName?: string | null;
 }
 
 export interface ApiCustomer {

@@ -7,6 +7,7 @@ import { sendError } from '../lib/errors.js';
 import { encryptBotToken } from '../lib/crypto.js';
 import { generateCalendarToken } from '../lib/calendarToken.js';
 import { mergeReminderSettings } from '../lib/reminderDefaults.js';
+import { getCardPaymentsEnabled } from '../lib/platformSettings.js';
 
 // Fields returned to the app owner — never includes any token fields
 const SAFE_BUSINESS_SELECT = {
@@ -20,6 +21,8 @@ const SAFE_BUSINESS_SELECT = {
   calendarToken: true,
   workingHours: true,
   bufferMinutes: true,
+  cardNumber: true,
+  cardHolderName: true,
   ownerTelegramChatId: true,
   ownerId: true,
   plan: true,
@@ -33,7 +36,7 @@ const createBusinessBody = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
   // Single mode (scalar). PRODUCTS disabled — only SERVICES/FREELANCE accepted.
-  mode: z.enum(['SERVICES', 'FREELANCE']),
+  mode: z.enum(['PRODUCTS', 'SERVICES', 'FREELANCE']),
   language: z.enum(['UZBEK', 'RUSSIAN', 'ENGLISH']).optional(),
   ownerTelegramChatId: z.string().optional(),
   botToken: z.string().optional(),
@@ -76,7 +79,7 @@ const updateBusinessBody = z.object({
   description: z.string().max(500).optional(),
   photoUrl: z.string().url().optional(),
   // Single mode (scalar). PRODUCTS disabled — only SERVICES/FREELANCE accepted.
-  mode: z.enum(['SERVICES', 'FREELANCE']).optional(),
+  mode: z.enum(['PRODUCTS', 'SERVICES', 'FREELANCE']).optional(),
   language: z.enum(['UZBEK', 'RUSSIAN', 'ENGLISH']).optional(),
   workingHours: workingHoursSchema.optional(),
   bufferMinutes: z.number().int().min(0).max(120).optional(),
@@ -149,6 +152,13 @@ async function restartBusinessBot(businessId: string): Promise<void> {
   });
 }
 
+// PATCH /business/payment body. Both fields nullable so the owner can clear the
+// card. An empty cardNumber string is normalised to null in the handler.
+const updatePaymentBody = z.object({
+  cardNumber: z.string().trim().max(32).nullable().optional(),
+  cardHolderName: z.string().trim().max(100).nullable().optional(),
+});
+
 export default async function businessRoutes(app: FastifyInstance) {
   app.get('/business', { preHandler: authenticate }, async (request, reply) => {
     const business = await prisma.business.findUnique({
@@ -156,7 +166,18 @@ export default async function businessRoutes(app: FastifyInstance) {
       select: SAFE_BUSINESS_SELECT,
     });
     if (!business) return sendError(reply, 404, 'Business not found. Complete onboarding first.');
-    return reply.send(business);
+    // Carry the global card-payments flag on the business payload so the app/web
+    // get it with their existing bootstrap fetch (no extra round-trip needed).
+    const cardPaymentsEnabled = await getCardPaymentsEnabled();
+    return reply.send({ ...business, cardPaymentsEnabled });
+  });
+
+  // GET /platform-settings — global, superadmin-controlled flags any
+  // authenticated owner/app may READ (e.g. onboarding needs it BEFORE a business
+  // exists, so it can't rely on GET /business). Writes are admin-only (see admin.ts).
+  app.get('/platform-settings', { preHandler: authenticate }, async (_request, reply) => {
+    const cardPaymentsEnabled = await getCardPaymentsEnabled();
+    return reply.send({ cardPaymentsEnabled });
   });
 
   app.post('/business', { preHandler: authenticate }, async (request, reply) => {
@@ -178,11 +199,14 @@ export default async function businessRoutes(app: FastifyInstance) {
       },
       select: SAFE_BUSINESS_SELECT,
     });
-    return reply.status(201).send(business);
+    // Keep cardPaymentsEnabled present on every full-business payload (as GET
+    // does) so clients gate the card UI consistently after any mutation.
+    const cardPaymentsEnabled = await getCardPaymentsEnabled();
+    return reply.status(201).send({ ...business, cardPaymentsEnabled });
   });
 
   app.patch('/business', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = updateBusinessBody.safeParse(request.body);
@@ -198,14 +222,48 @@ export default async function businessRoutes(app: FastifyInstance) {
       },
       select: SAFE_BUSINESS_SELECT,
     });
-    return reply.send(updated);
+    // Carry the global flag (PATCH select omits it) so the card UI gate stays
+    // correct after profile/mode/language edits.
+    const cardPaymentsEnabled = await getCardPaymentsEnabled();
+    return reply.send({ ...updated, cardPaymentsEnabled });
+  });
+
+  // PATCH /business/payment
+  // Owner sets/updates/clears their P2P card (number + holder) shown to customers.
+  // Always writable regardless of the global cardPaymentsEnabled flag — that
+  // flag controls VISIBILITY only and never erases stored card data.
+  app.patch('/business/payment', { preHandler: authenticate }, async (request, reply) => {
+    const business = await getBusinessOrFail(request, reply);
+    if (!business) return;
+
+    const parsed = updatePaymentBody.safeParse(request.body);
+    if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
+
+    const updated = await prisma.business.update({
+      where: { id: business.id },
+      data: {
+        // undefined = leave unchanged; '' or null = clear.
+        cardNumber:
+          parsed.data.cardNumber === undefined
+            ? undefined
+            : parsed.data.cardNumber || null,
+        cardHolderName:
+          parsed.data.cardHolderName === undefined
+            ? undefined
+            : parsed.data.cardHolderName || null,
+      },
+      select: SAFE_BUSINESS_SELECT,
+    });
+    // Mirror GET /business: carry the global flag so clients refresh their model.
+    const cardPaymentsEnabled = await getCardPaymentsEnabled();
+    return reply.send({ ...updated, cardPaymentsEnabled });
   });
 
   // PATCH /business/bot-token
   // Change the Telegram bot token (e.g. after revoking/replacing the bot).
   // Re-verifies with Telegram, re-derives the username, and hot-swaps the bot.
   app.patch('/business/bot-token', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = updateBotTokenBody.safeParse(request.body);
@@ -240,7 +298,7 @@ export default async function businessRoutes(app: FastifyInstance) {
   });
 
   app.patch('/business/fcm-token', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = z.object({ fcmToken: z.string().min(1) }).safeParse(request.body);
@@ -254,7 +312,7 @@ export default async function businessRoutes(app: FastifyInstance) {
   });
 
   app.get('/business/bot', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     if (!business.botUsername) {
@@ -270,7 +328,7 @@ export default async function businessRoutes(app: FastifyInstance) {
   // POST /business/calendar-token
   // Generates a new calendar token (or regenerates the existing one)
   app.post('/business/calendar-token', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const newToken = generateCalendarToken();
@@ -287,7 +345,7 @@ export default async function businessRoutes(app: FastifyInstance) {
   // DELETE /business/calendar-token
   // Disables calendar sync by removing the token
   app.delete('/business/calendar-token', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     await prisma.business.update({
@@ -301,7 +359,7 @@ export default async function businessRoutes(app: FastifyInstance) {
   // GET /business/reminder-settings
   // Owner reminder settings, merged with defaults for any missing keys.
   app.get('/business/reminder-settings', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     return reply.send(mergeReminderSettings(business.reminderSettings));
@@ -310,7 +368,7 @@ export default async function businessRoutes(app: FastifyInstance) {
   // PATCH /business/reminder-settings
   // Partial update — merges the provided keys onto the stored settings.
   app.patch('/business/reminder-settings', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = reminderSettingsSchema.safeParse(request.body);

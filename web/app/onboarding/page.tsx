@@ -3,8 +3,15 @@ import { useState } from 'react'
 import { verifyBotToken, completeOnboarding, enrollStart, enrollVerify } from '@/lib/api'
 import { setToken } from '@/lib/auth'
 
-type Mode = 'SERVICES' | 'FREELANCE'
-type Language = 'UZBEK' | 'RUSSIAN'
+type Mode = 'PRODUCTS' | 'SERVICES' | 'FREELANCE'
+type Language = 'UZBEK' | 'RUSSIAN' | 'ENGLISH'
+
+// Language names are always shown in their own language, never translated.
+const languageLabels: Record<Language, string> = {
+  UZBEK: "O'zbek",
+  RUSSIAN: 'Русский',
+  ENGLISH: 'English',
+}
 
 interface FormState {
   businessName: string
@@ -17,13 +24,13 @@ interface FormState {
 }
 
 const inputClass =
-  'w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+  'w-full px-4 py-3 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent'
 
-// Product-seller mode is disabled — onboarding offers only appointment-based
-// (SERVICES) and project-based (FREELANCE) businesses.
+// Onboarding business types. Order mirrors the Mode enum (PRODUCTS/SERVICES/FREELANCE).
 const modeOptions: { value: Mode; title: string; subtitle: string }[] = [
-  { value: 'SERVICES', title: 'Appointments', subtitle: 'For salons, barbers, doctors, tutors' },
-  { value: 'FREELANCE', title: 'Projects', subtitle: 'For freelancers, designers, influencers' },
+  { value: 'PRODUCTS', title: 'Products', subtitle: 'For shops selling goods and taking orders' },
+  { value: 'SERVICES', title: 'Services', subtitle: 'For salons, barbers, doctors, tutors' },
+  { value: 'FREELANCE', title: 'Freelance', subtitle: 'For freelancers, designers, influencers' },
 ]
 
 const botInstructions = [
@@ -163,8 +170,8 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 w-full max-w-lg p-8">
+    <div className="min-h-screen bg-surface-2 flex items-center justify-center py-12 px-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-border w-full max-w-lg p-8">
 
         {/* Progress bar (steps 1-5) */}
         {step < 5 && (
@@ -173,7 +180,7 @@ export default function OnboardingPage() {
               <div
                 key={n}
                 className={`h-1 flex-1 rounded-full ${
-                  n <= step ? 'bg-blue-600' : 'bg-gray-200'
+                  n <= step ? 'bg-accent' : 'bg-surface-2'
                 }`}
               />
             ))}
@@ -183,10 +190,10 @@ export default function OnboardingPage() {
         {/* ── Step 1: Business details ── */}
         {step === 1 && (
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Set up your business</h1>
-            <p className="text-sm text-gray-500 mt-1 mb-6">Tell us about your business</p>
+            <h1 className="text-2xl font-bold text-text-1">Set up your business</h1>
+            <p className="text-sm text-text-2 mt-1 mb-6">Tell us about your business</p>
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-text-2 mb-1">
               Business name
             </label>
             <input
@@ -196,7 +203,7 @@ export default function OnboardingPage() {
               onChange={(e) => setForm((f) => ({ ...f, businessName: e.target.value }))}
             />
 
-            <p className="text-sm font-medium text-gray-700 mt-5 mb-3">Business type</p>
+            <p className="text-sm font-medium text-text-2 mt-5 mb-3">Business type</p>
             <div className="space-y-2">
               {modeOptions.map((opt) => (
                 <button
@@ -205,32 +212,32 @@ export default function OnboardingPage() {
                   onClick={() => toggleMode(opt.value)}
                   className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-colors ${
                     form.mode === opt.value
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
+                      ? 'border-accent bg-accent-soft'
+                      : 'border-border bg-white hover:border-border'
                   }`}
                 >
-                  <span className={`font-semibold text-sm ${form.mode === opt.value ? 'text-blue-700' : 'text-gray-800'}`}>
+                  <span className={`font-semibold text-sm ${form.mode === opt.value ? 'text-accent' : 'text-text-1'}`}>
                     {opt.title}
                   </span>
-                  <p className="text-xs text-gray-500 mt-0.5">{opt.subtitle}</p>
+                  <p className="text-xs text-text-2 mt-0.5">{opt.subtitle}</p>
                 </button>
               ))}
             </div>
 
-            <p className="text-sm font-medium text-gray-700 mt-5 mb-3">Language</p>
+            <p className="text-sm font-medium text-text-2 mt-5 mb-3">Language</p>
             <div className="flex gap-3">
-              {(['UZBEK', 'RUSSIAN'] as Language[]).map((lang) => (
+              {(['UZBEK', 'RUSSIAN', 'ENGLISH'] as Language[]).map((lang) => (
                 <button
                   key={lang}
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, language: lang }))}
                   className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
                     form.language === lang
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                      ? 'bg-accent text-accent-on border-accent'
+                      : 'border-border text-text-2 hover:border-border-strong'
                   }`}
                 >
-                  {lang === 'UZBEK' ? "O'zbek" : 'Русский'}
+                  {languageLabels[lang]}
                 </button>
               ))}
             </div>
@@ -238,7 +245,7 @@ export default function OnboardingPage() {
             <button
               onClick={() => setStep(2)}
               disabled={!form.businessName.trim()}
-              className="w-full mt-8 bg-blue-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="w-full mt-8 bg-accent text-accent-on py-3 rounded-xl text-sm font-semibold hover:bg-accent-hover transition-colors disabled:opacity-50"
             >
               Continue
             </button>
@@ -248,26 +255,26 @@ export default function OnboardingPage() {
         {/* ── Step 2: Telegram bot ── */}
         {step === 2 && (
           <div>
-            <button onClick={() => setStep(1)} className="text-sm text-blue-600 mb-4">
+            <button onClick={() => setStep(1)} className="text-sm text-accent mb-4">
               ← Back
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">Create your Telegram bot</h1>
-            <p className="text-sm text-gray-500 mt-1 mb-6">
+            <h1 className="text-2xl font-bold text-text-1">Create your Telegram bot</h1>
+            <p className="text-sm text-text-2 mt-1 mb-6">
               Your customers will use this bot to book appointments and track projects
             </p>
 
             <div className="space-y-3 mb-6">
               {botInstructions.map((text, i) => (
                 <div key={i} className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-accent text-accent-on text-xs font-bold flex items-center justify-center mt-0.5">
                     {i + 1}
                   </span>
-                  <p className="text-sm text-gray-700">{text}</p>
+                  <p className="text-sm text-text-2">{text}</p>
                 </div>
               ))}
             </div>
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-text-2 mb-1">
               Paste your bot token
             </label>
             <input
@@ -281,26 +288,26 @@ export default function OnboardingPage() {
               }}
             />
             {tokenError && (
-              <p className="text-red-600 text-xs mt-1">{tokenError}</p>
+              <p className="text-error-strong text-xs mt-1">{tokenError}</p>
             )}
 
             {!tokenVerified ? (
               <button
                 onClick={handleVerify}
                 disabled={verifying || !form.botToken}
-                className="w-full mt-4 bg-blue-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="w-full mt-4 bg-accent text-accent-on py-3 rounded-xl text-sm font-semibold hover:bg-accent-hover transition-colors disabled:opacity-50"
               >
                 {verifying ? 'Verifying...' : 'Verify token'}
               </button>
             ) : (
               <>
-                <div className="flex items-center gap-2 mt-3 text-green-600 text-sm font-semibold">
+                <div className="flex items-center gap-2 mt-3 text-success-strong text-sm font-semibold">
                   <span>✓</span>
                   <span>@{form.botUsername} is ready!</span>
                 </div>
                 <button
                   onClick={() => setStep(3)}
-                  className="w-full mt-4 bg-blue-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
+                  className="w-full mt-4 bg-accent text-accent-on py-3 rounded-xl text-sm font-semibold hover:bg-accent-hover transition-colors"
                 >
                   Continue
                 </button>
@@ -312,40 +319,40 @@ export default function OnboardingPage() {
         {/* ── Step 3: Review & launch ── */}
         {step === 3 && (
           <div>
-            <button onClick={() => setStep(2)} className="text-sm text-blue-600 mb-4">
+            <button onClick={() => setStep(2)} className="text-sm text-accent mb-4">
               ← Back
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">Almost done!</h1>
-            <p className="text-sm text-gray-500 mt-1 mb-6">Review your details before launching</p>
+            <h1 className="text-2xl font-bold text-text-1">Almost done!</h1>
+            <p className="text-sm text-text-2 mt-1 mb-6">Review your details before launching</p>
 
-            <div className="border border-gray-200 rounded-xl overflow-hidden mb-6">
+            <div className="border border-border rounded-xl overflow-hidden mb-6">
               {[
                 { label: 'Business name', value: form.businessName },
                 {
                   label: 'Type',
-                  value: { SERVICES: 'Services', FREELANCE: 'Freelance' }[form.mode],
+                  value: { PRODUCTS: 'Products', SERVICES: 'Services', FREELANCE: 'Freelance' }[form.mode],
                 },
-                { label: 'Language', value: form.language === 'UZBEK' ? "O'zbek" : 'Русский' },
+                { label: 'Language', value: languageLabels[form.language] },
                 { label: 'Bot', value: `@${form.botUsername}` },
               ].map((row, i, arr) => (
                 <div
                   key={row.label}
                   className={`flex justify-between px-5 py-3.5 text-sm ${
-                    i < arr.length - 1 ? 'border-b border-gray-100' : ''
+                    i < arr.length - 1 ? 'border-b border-border' : ''
                   }`}
                 >
-                  <span className="text-gray-500">{row.label}</span>
-                  <span className="font-semibold text-gray-900">{row.value}</span>
+                  <span className="text-text-2">{row.label}</span>
+                  <span className="font-semibold text-text-1">{row.value}</span>
                 </div>
               ))}
             </div>
 
             {completionError && (
-              <p className="text-red-600 text-sm mb-3">{completionError}</p>
+              <p className="text-error-strong text-sm mb-3">{completionError}</p>
             )}
             <button
               onClick={goToVerify}
-              className="w-full bg-blue-600 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="w-full bg-accent text-accent-on py-3.5 rounded-xl text-sm font-bold hover:bg-accent-hover transition-colors disabled:opacity-50"
             >
               Continue
             </button>
@@ -355,11 +362,11 @@ export default function OnboardingPage() {
         {/* ── Step 4: Verify via Telegram (owner auth) ── */}
         {step === 4 && (
           <div>
-            <button onClick={() => setStep(3)} className="text-sm text-blue-600 mb-4">
+            <button onClick={() => setStep(3)} className="text-sm text-accent mb-4">
               ← Back
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">Verify via Telegram</h1>
-            <p className="text-sm text-gray-500 mt-1 mb-6">
+            <h1 className="text-2xl font-bold text-text-1">Verify via Telegram</h1>
+            <p className="text-sm text-text-2 mt-1 mb-6">
               One last step to secure your account
             </p>
 
@@ -370,10 +377,10 @@ export default function OnboardingPage() {
                 'The bot sends you a 6-digit code — enter it here',
               ].map((text, i) => (
                 <li key={i} className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-accent text-accent-on text-xs font-bold flex items-center justify-center mt-0.5">
                     {i + 1}
                   </span>
-                  <p className="text-sm text-gray-700">{text}</p>
+                  <p className="text-sm text-text-2">{text}</p>
                 </li>
               ))}
             </ol>
@@ -381,7 +388,7 @@ export default function OnboardingPage() {
             <button
               onClick={openTelegram}
               disabled={enrollLoading}
-              className="w-full mb-5 border-2 border-blue-200 text-blue-700 py-3 rounded-xl text-sm font-semibold hover:bg-blue-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full mb-5 border-2 border-accent text-accent py-3 rounded-xl text-sm font-semibold hover:bg-accent-soft transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.93 7.2l-1.68 7.93c-.12.56-.44.7-.9.43l-2.5-1.84-1.2 1.16c-.13.13-.25.25-.51.25l.18-2.56 4.64-4.19c.2-.18-.05-.28-.31-.1L7.92 14.36l-2.47-.77c-.54-.17-.55-.54.11-.8l9.63-3.72c.46-.17.86.11.7.79l.01.34z" />
@@ -389,7 +396,7 @@ export default function OnboardingPage() {
               {enrollLoading ? 'Preparing…' : linkExpired ? 'Get a new link' : 'Connect Telegram'}
             </button>
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-text-2 mb-1">
               6-digit code
             </label>
             <input
@@ -402,7 +409,7 @@ export default function OnboardingPage() {
             />
 
             {/* Consent — captured once, here at enrollment. */}
-            <label className="flex items-start gap-2.5 mt-5 text-sm text-gray-600 cursor-pointer">
+            <label className="flex items-start gap-2.5 mt-5 text-sm text-text-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={generalConsent}
@@ -412,14 +419,14 @@ export default function OnboardingPage() {
               />
               <span>
                 I have read the{' '}
-                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-medium">
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-accent underline font-medium">
                   Privacy Policy
                 </a>{' '}
                 and consent to the processing of my personal data in accordance with the Law of
                 the Republic of Uzbekistan &quot;On Personal Data&quot;.
               </span>
             </label>
-            <label className="flex items-start gap-2.5 mt-3 text-sm text-gray-600 cursor-pointer">
+            <label className="flex items-start gap-2.5 mt-3 text-sm text-text-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={crossBorderConsent}
@@ -433,7 +440,7 @@ export default function OnboardingPage() {
               </span>
             </label>
 
-            {enrollError && <p className="text-red-600 text-sm mt-3">{enrollError}</p>}
+            {enrollError && <p className="text-error-strong text-sm mt-3">{enrollError}</p>}
 
             <button
               onClick={handleVerifyAndLaunch}
@@ -441,7 +448,7 @@ export default function OnboardingPage() {
                 completing ||
                 (!enrolled && (code.length < 6 || !generalConsent || !crossBorderConsent))
               }
-              className="w-full mt-5 bg-blue-600 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="w-full mt-5 bg-accent text-accent-on py-3.5 rounded-xl text-sm font-bold hover:bg-accent-hover transition-colors disabled:opacity-50"
             >
               {completing ? 'Verifying…' : 'Verify & launch'}
             </button>
@@ -451,27 +458,27 @@ export default function OnboardingPage() {
         {/* ── Step 5: Done ── */}
         {step === 5 && (
           <div className="text-center">
-            <div className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-6">
+            <div className="w-20 h-20 rounded-full bg-success flex items-center justify-center mx-auto mb-6">
               <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-3">You&apos;re all set!</h1>
-            <p className="text-gray-500 text-sm mb-8">
+            <h1 className="text-3xl font-bold text-text-1 mb-3">You&apos;re all set!</h1>
+            <p className="text-text-2 text-sm mb-8">
               Your CRM is ready. Share your bot link with customers.
             </p>
-            <div className="border-2 border-blue-200 rounded-xl px-5 py-4 flex items-center gap-3 mb-8 text-left">
-              <svg className="w-7 h-7 text-blue-500 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+            <div className="border-2 border-accent rounded-xl px-5 py-4 flex items-center gap-3 mb-8 text-left">
+              <svg className="w-7 h-7 text-accent flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.93 7.2l-1.68 7.93c-.12.56-.44.7-.9.43l-2.5-1.84-1.2 1.16c-.13.13-.25.25-.51.25l.18-2.56 4.64-4.19c.2-.18-.05-.28-.31-.1L7.92 14.36l-2.47-.77c-.54-.17-.55-.54.11-.8l9.63-3.72c.46-.17.86.11.7.79l.01.34z"/>
               </svg>
-              <span className="font-semibold text-blue-700 flex-1">@{form.botUsername}</span>
+              <span className="font-semibold text-accent flex-1">@{form.botUsername}</span>
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(form.botLink)
                   setCopied(true)
                   setTimeout(() => setCopied(false), 2000)
                 }}
-                className="text-blue-600 text-xs font-semibold hover:text-blue-800"
+                className="text-accent text-xs font-semibold hover:text-accent"
               >
                 {copied ? '✓ Copied' : 'Copy link'}
               </button>
@@ -482,7 +489,7 @@ export default function OnboardingPage() {
                 // session and the dashboard loads the freshly-created business.
                 window.location.href = '/'
               }}
-              className="w-full bg-blue-600 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors"
+              className="w-full bg-accent text-accent-on py-3.5 rounded-xl text-sm font-bold hover:bg-accent-hover transition-colors"
             >
               Go to dashboard
             </button>

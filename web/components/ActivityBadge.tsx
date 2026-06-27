@@ -1,62 +1,17 @@
 'use client'
-import { useI18n } from '@/lib/i18n/i18nContext'
+import { Badge, type BadgeType } from '@/components/ui/Badge'
 
 interface ActivityBadgeProps {
   status: string
-  type: 'order' | 'payment' | 'appointment' | 'project'
+  type: BadgeType
 }
 
-const orderColors: Record<string, string> = {
-  NEW: 'bg-blue-50 text-blue-700',
-  PREPARING: 'bg-yellow-50 text-yellow-700',
-  READY: 'bg-green-50 text-green-700',
-  DELIVERED: 'bg-gray-50 text-gray-700',
-  CANCELLED: 'bg-red-50 text-red-700',
-}
-
-const paymentColors: Record<string, string> = {
-  PENDING: 'bg-orange-50 text-orange-700',
-  PAYMENT_RECEIVED: 'bg-yellow-50 text-yellow-700',
-  CONFIRMED: 'bg-green-50 text-green-700',
-}
-
-const appointmentColors: Record<string, string> = {
-  REQUESTED: 'bg-blue-50 text-blue-700',
-  CONFIRMED: 'bg-green-50 text-green-700',
-  COMPLETED: 'bg-gray-50 text-gray-700',
-  CANCELLED: 'bg-red-50 text-red-700',
-  NO_SHOW: 'bg-red-50 text-red-700',
-}
-
-const projectColors: Record<string, string> = {
-  PROPOSAL_SENT: 'bg-purple-50 text-purple-700',
-  IN_PROGRESS: 'bg-blue-50 text-blue-700',
-  REVIEW: 'bg-yellow-50 text-yellow-700',
-  COMPLETED: 'bg-green-50 text-green-700',
-  CANCELLED: 'bg-red-50 text-red-700',
-}
-
+/**
+ * Thin backwards-compat wrapper around the canonical token-based {@link Badge}.
+ * Delegating keeps the status→family→color mapping in ONE place so web renders
+ * the same color for the same status as the Flutter app (app_badge.dart):
+ * pill shape, fill = {family}-soft, text = {family}-strong.
+ */
 export default function ActivityBadge({ status, type }: ActivityBadgeProps) {
-  const { t } = useI18n()
-  let colorClass = 'bg-gray-50 text-gray-700'
-
-  if (type === 'order') {
-    colorClass = orderColors[status] || colorClass
-  } else if (type === 'payment') {
-    colorClass = paymentColors[status] || colorClass
-  } else if (type === 'appointment') {
-    colorClass = appointmentColors[status] || colorClass
-  } else if (type === 'project') {
-    colorClass = projectColors[status] || colorClass
-  }
-
-  const label = t(`status.${status}`)
-
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}
-    >
-      {label}
-    </span>
-  )
+  return <Badge status={status} type={type} />
 }

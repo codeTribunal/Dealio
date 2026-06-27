@@ -27,19 +27,26 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   const navItems: NavItem[] = [
     { icon: 'home', label: t('nav.home'), href: '/' },
     { icon: 'customers', label: t('nav.customers'), href: '/customers' },
-    // Product-seller mode disabled — Orders & Catalog are not linked in nav.
-    // Their routes still exist but are unreachable through the UI.
+    // Mode-specific destinations — the filter below surfaces each only for the
+    // matching business.mode.
+    { icon: 'orders', label: t('nav.orders'), href: '/orders', modes: ['PRODUCTS'] },
+    { icon: 'catalog', label: t('nav.catalog'), href: '/catalog', modes: ['PRODUCTS'] },
     { icon: 'calendar', label: t('nav.appointments'), href: '/appointments', modes: ['SERVICES'] },
-    { icon: 'staff', label: t('nav.staff'), href: '/staff', modes: ['SERVICES'] },
+    // Staff applies to every mode (Orders & Projects businesses have staff too) — no mode gate.
+    { icon: 'staff', label: t('nav.staff'), href: '/staff' },
     { icon: 'projects', label: t('nav.projects'), href: '/projects', modes: ['FREELANCE'] },
+    // Schedule list — orders-by-delivery (PRODUCTS) / deadlines (FREELANCE).
+    { icon: 'calendar', label: t('nav.calendar'), href: '/calendar', modes: ['PRODUCTS', 'FREELANCE'] },
     { icon: 'analytics', label: t('nav.analytics'), href: '/analytics' },
     { icon: 'settings', label: t('nav.settings'), href: '/settings' },
   ]
 
   const visibleItems = navItems.filter((item) => {
     if (!item.modes) return true
-    if (!business) return true
-    return item.modes.includes(business.mode)
+    // Mode-specific items: show ONLY when the live business mode matches. While
+    // business is still loading (or failed to load) we hide them rather than
+    // flashing every mode's destinations — the nav only ever shows valid items.
+    return business ? item.modes.includes(business.mode) : false
   })
 
   return (

@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_dialog.dart';
 import '../../shared/widgets/app_switch.dart';
 import 'services_provider.dart';
 
@@ -90,6 +91,50 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
     }
   }
 
+  // Soft-delete (edit mode only): hides the service from the bot and the list
+  // but preserves it (and its appointment history) for later restore.
+  Future<void> _confirmDelete() async {
+    final l = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AppDialog(
+        title: l.serviceDeleteTitle,
+        content: Text(l.serviceDeleteConfirm),
+        actions: [
+          AppButton(
+            label: l.buttonCancel,
+            variant: AppButtonVariant.ghost,
+            size: AppButtonSize.sm,
+            onPressed: () => Navigator.of(ctx).pop(false),
+          ),
+          AppButton(
+            label: l.buttonDelete,
+            variant: AppButtonVariant.danger,
+            size: AppButtonSize.sm,
+            onPressed: () => Navigator.of(ctx).pop(true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await ref
+          .read(servicesProvider.notifier)
+          .deleteService(widget.serviceId!);
+      if (mounted) context.pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(e.toString()),
+              backgroundColor: AppTokens.of(context).error),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -97,12 +142,6 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEdit ? l.serviceFormEditTitle : l.serviceFormNewTitle),
-        actions: [
-          TextButton(
-            onPressed: _saving ? null : _save,
-            child: Text(l.buttonSave),
-          ),
-        ],
       ),
       body: Form(
         key: _formKey,
@@ -178,13 +217,24 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.s5),
+            // Breathing room between the Active toggle card and the Save button.
+            const SizedBox(height: AppSpacing.s6),
             AppButton(
               label: l.buttonSave,
               fullWidth: true,
               loading: _saving,
               onPressed: _saving ? null : _save,
             ),
+            // Edit mode only: danger soft-delete below Save.
+            if (_isEdit) ...[
+              const SizedBox(height: AppSpacing.s3),
+              AppButton(
+                label: l.serviceDeleteButton,
+                variant: AppButtonVariant.danger,
+                fullWidth: true,
+                onPressed: _saving ? null : _confirmDelete,
+              ),
+            ],
             const SizedBox(height: AppSpacing.s6),
           ],
         ),

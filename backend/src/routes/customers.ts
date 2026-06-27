@@ -6,11 +6,14 @@ import { getBusinessOrFail } from '../lib/businessFromUser.js';
 import { sendError } from '../lib/errors.js';
 import { getBotToken, hasBotToken } from '../lib/getBotToken.js';
 import { softDelete, restore } from '../services/softDelete.js';
+import { normalizePhone } from '../lib/phone.js';
+import { checkCustomerLimit } from '../middleware/checkLimits.js';
 
 const createCustomerBody = z.object({
-  name: z.string().min(1).max(200),
+  name: z.string().trim().min(1).max(200),
   phone: z.string().max(50).optional(),
   telegramUsername: z.string().max(100).optional(),
+  notes: z.string().max(2000).optional(),
 });
 
 const updateNotesBody = z.object({
@@ -50,7 +53,7 @@ const customerInclude = {
 export default async function customerRoutes(app: FastifyInstance) {
   // ── List customers ──────────────────────────────────────────────
   app.get('/customers', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { search, page: pageParam, limit: limitParam, includeDeleted: includeDeletedParam } =
@@ -127,22 +130,60 @@ export default async function customerRoutes(app: FastifyInstance) {
   });
 
   // ── Create customer ─────────────────────────────────────────────
-  app.post('/customers', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+  // checkCustomerLimit() enforces the FREE customers:30 cap (HTTP 402), same
+  // pattern as POST /orders and POST /appointments.
+  app.post('/customers', { preHandler: [authenticate, checkCustomerLimit()] }, async (request, reply) => {
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = createCustomerBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
+    const { name, phone, telegramUsername, notes } = parsed.data;
+
+    // Strip a single leading "@" from the Telegram handle, if present.
+    const handle = telegramUsername?.replace(/^@/, '').trim();
+    // Canonicalize the phone to E.164 (same helper used at enrollment/login).
+    const normalizedPhone =
+      phone && phone.trim() !== '' ? normalizePhone(phone) : null;
+    const trimmedNotes = notes?.trim();
+
     const customer = await prisma.customer.create({
-      data: { ...parsed.data, businessId: business.id },
+      data: {
+        businessId: business.id, // tenant from auth — never from the request body
+        name,
+        phone: normalizedPhone,
+        telegramUsername: handle && handle !== '' ? handle : null,
+        telegramUserId: null, // manually-created customers have no Telegram account
+        notes: trimmedNotes && trimmedNotes !== '' ? trimmedNotes : null,
+      },
+      select: {
+        id: true,
+        name: true,
+        telegramUsername: true,
+        phone: true,
+        createdAt: true,
+        lastInteractionAt: true,
+      },
     });
-    return reply.status(201).send(customer);
+
+    // Same shape as the list endpoint (a brand-new customer has no orders).
+    return reply.status(201).send({
+      id: customer.id,
+      name: customer.name,
+      telegramUsername: customer.telegramUsername,
+      phone: customer.phone,
+      createdAt: customer.createdAt,
+      lastInteractionAt: customer.lastInteractionAt,
+      totalOrders: 0,
+      totalSpent: 0,
+      deleted: false,
+    });
   });
 
   // ── Customer detail ─────────────────────────────────────────────
   app.get('/customers/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const params = request.params as { id: string };
@@ -207,7 +248,7 @@ export default async function customerRoutes(app: FastifyInstance) {
 
   // ── Update customer profile ─────────────────────────────────────
   app.patch('/customers/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -237,7 +278,7 @@ export default async function customerRoutes(app: FastifyInstance) {
 
   // ── Legacy notes endpoint (kept for backwards compat) ──────────
   app.patch('/customers/:id/notes', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -259,7 +300,7 @@ export default async function customerRoutes(app: FastifyInstance) {
 
   // ── Add tag ────────────────────────────────────────────────────
   app.post('/customers/:id/tags', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -284,7 +325,7 @@ export default async function customerRoutes(app: FastifyInstance) {
 
   // ── Remove tag ─────────────────────────────────────────────────
   app.delete('/customers/:id/tags/:tagId', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id, tagId } = request.params as { id: string; tagId: string };
@@ -299,7 +340,7 @@ export default async function customerRoutes(app: FastifyInstance) {
 
   // ── Add reminder ───────────────────────────────────────────────
   app.post('/customers/:id/reminders', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -324,7 +365,7 @@ export default async function customerRoutes(app: FastifyInstance) {
 
   // ── Send Telegram message ──────────────────────────────────────
   app.post('/customers/:id/message', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -371,7 +412,7 @@ export default async function customerRoutes(app: FastifyInstance) {
 
   // ── Soft-delete customer (recoverable) ──────────────────────────
   app.delete('/customers/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -383,7 +424,7 @@ export default async function customerRoutes(app: FastifyInstance) {
 
   // ── Restore a soft-deleted customer ─────────────────────────────
   app.post('/customers/:id/restore', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };

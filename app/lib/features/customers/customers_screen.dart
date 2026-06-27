@@ -10,7 +10,10 @@ import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_avatar.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_empty_state.dart';
 import '../../shared/widgets/app_spinner.dart';
+import '../../shared/widgets/app_text_field.dart';
+import '../../shared/widgets/floating_tab_bar.dart';
 import 'customers_provider.dart';
 
 class CustomersScreen extends ConsumerStatefulWidget {
@@ -90,7 +93,9 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
                           icon: AppIcon(
-                              name: AppIconName.close, size: 18, color: t.text2),
+                              name: AppIconName.close,
+                              size: 18,
+                              color: t.text2),
                           onPressed: () {
                             _searchController.clear();
                             notifier.setSearch('');
@@ -121,15 +126,37 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
               data: (_) {
                 final customers = notifier.filteredCustomers;
                 if (customers.isEmpty) {
-                  return _EmptyView(
-                    hasFilter: _searchController.text.isNotEmpty,
+                  final query = _searchController.text.trim();
+                  // Search-empty (a query is active) vs data-empty (no data).
+                  if (query.isNotEmpty) {
+                    return AppEmptyState(
+                      icon: AppIconName.search,
+                      title: l.emptySearchTitle(query),
+                      ctaLabel: l.emptyClearSearch,
+                      onCta: () {
+                        _searchController.clear();
+                        notifier.setSearch('');
+                        setState(() {});
+                      },
+                    );
+                  }
+                  return AppEmptyState(
+                    icon: AppIconName.customers,
+                    title: l.customersEmpty,
+                    message: l.customersEmptyHint,
+                    ctaLabel: l.customerCreate,
+                    ctaIcon: AppIconName.add,
+                    onCta: _showAddCustomer,
                   );
                 }
                 return RefreshIndicator(
                   color: t.accent,
                   onRefresh: notifier.refresh,
                   child: ListView.separated(
-                    padding: EdgeInsets.fromLTRB(AppSpacing.s4, 0, AppSpacing.s4,
+                    padding: EdgeInsets.fromLTRB(
+                        AppSpacing.s4,
+                        0,
+                        AppSpacing.s4,
                         AppSpacing.s4 + MediaQuery.of(context).padding.bottom),
                     itemCount: customers.length,
                     separatorBuilder: (_, __) =>
@@ -154,6 +181,139 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
             ),
           ),
         ],
+      ),
+      // Same placement/style as the Appointments FAB: lifted above the floating
+      // glass nav bar (endFloat adds the standard 16px gap + safe-area inset).
+      // Mutually exclusive with the empty-state CTA: shown only when the list
+      // (post-search) has records. When empty, the data-empty long CTA or the
+      // search-empty "clear" action stands alone — never both create affordances.
+      floatingActionButton: notifier.filteredCustomers.isEmpty
+          ? null
+          : Padding(
+              padding:
+                  const EdgeInsets.only(bottom: FloatingTabBar.reservedHeight),
+              child: FloatingActionButton(
+                backgroundColor: t.accent,
+                foregroundColor: t.accentOn,
+                onPressed: _showAddCustomer,
+                child: AppIcon(name: AppIconName.add, color: t.accentOn),
+              ),
+            ),
+    );
+  }
+
+  // Bottom-sheet form to create a customer manually — matches the add-tag /
+  // add-reminder sheet pattern (keyboard-inset aware, AppTextField fields,
+  // full-width AppButton with loading + error snackbar).
+  void _showAddCustomer() {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    final nameCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final telegramCtrl = TextEditingController();
+    final notesCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    var submitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      // Present on the ROOT navigator so the sheet sits ABOVE the tab/nav shell;
+      // otherwise the FloatingTabBar (overlaid by MainScaffold) shows through.
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: t.surface,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          // Lift the sheet above the keyboard…
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          // …and make the body scroll so it never overflows when the keyboard is up.
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.s5),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l.customerNewTitle,
+                    style: TextStyle(
+                      fontWeight: AppFontWeights.bold,
+                      fontSize: AppTextSizes.base,
+                      color: t.text1,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.s4),
+                  AppTextField(
+                    label: l.customerFormName,
+                    hint: l.customerFormNameHint,
+                    controller: nameCtrl,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? l.customerFormNameRequired
+                        : null,
+                  ),
+                  const SizedBox(height: AppSpacing.s3),
+                  AppTextField(
+                    label: l.customerFormPhone,
+                    hint: l.customerFormPhoneHint,
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                  ),
+                  const SizedBox(height: AppSpacing.s3),
+                  AppTextField(
+                    label: l.customerFormTelegram,
+                    hint: l.customerFormTelegramHint,
+                    controller: telegramCtrl,
+                    prefixText: '@',
+                  ),
+                  const SizedBox(height: AppSpacing.s3),
+                  AppTextField(
+                    label: l.customerFormNotes,
+                    hint: l.customerFormNotesHint,
+                    controller: notesCtrl,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: AppSpacing.s5),
+                  AppButton(
+                    label: l.customerCreate,
+                    fullWidth: true,
+                    loading: submitting,
+                    onPressed: () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setModalState(() => submitting = true);
+                      // Strip a leading "@" the user may type; backend strips too.
+                      final tg = telegramCtrl.text
+                          .trim()
+                          .replaceFirst(RegExp(r'^@'), '');
+                      final phone = phoneCtrl.text.trim();
+                      final notes = notesCtrl.text.trim();
+                      try {
+                        await ref.read(customersProvider.notifier).create(
+                              name: nameCtrl.text.trim(),
+                              phone: phone.isEmpty ? null : phone,
+                              telegramUsername: tg.isEmpty ? null : tg,
+                              notes: notes.isEmpty ? null : notes,
+                            );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      } catch (e) {
+                        setModalState(() => submitting = false);
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(
+                              content: Text(l.errorWithMessage(e.toString())),
+                              backgroundColor: t.error,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -370,39 +530,7 @@ class StagePill extends StatelessWidget {
   }
 }
 
-// ── Empty / error ───────────────────────────────────────────────────
-
-class _EmptyView extends StatelessWidget {
-  final bool hasFilter;
-  const _EmptyView({required this.hasFilter});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppIcon(name: AppIconName.customers, size: 56, color: t.text3),
-          const SizedBox(height: AppSpacing.s3),
-          Text(
-            hasFilter ? l.customersEmptyFiltered : l.customersEmpty,
-            style: TextStyle(color: t.text2),
-          ),
-          if (!hasFilter) ...[
-            const SizedBox(height: AppSpacing.s1),
-            Text(
-              l.customersEmptyHint,
-              style: TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
+// ── Error ────────────────────────────────────────────────────────────
 
 class _ErrorView extends StatelessWidget {
   final String message;
@@ -422,8 +550,7 @@ class _ErrorView extends StatelessWidget {
             AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
             const SizedBox(height: AppSpacing.s3),
             Text(message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: t.text2)),
+                textAlign: TextAlign.center, style: TextStyle(color: t.text2)),
             const SizedBox(height: AppSpacing.s4),
             AppButton(
               label: l.buttonRetry,

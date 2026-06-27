@@ -1,12 +1,14 @@
 import { timingSafeEqual } from 'crypto';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { sendError } from '../lib/errors.js';
 import { allocateOrderNumber } from '../services/orderNumber.js';
 import { sendTelegramMessage } from '../lib/telegram.js';
 import { sendPushToAll } from '../lib/push.js';
 import { getBotToken, hasBotToken } from '../lib/getBotToken.js';
+import { getCardPaymentsEnabled } from '../lib/platformSettings.js';
 import { PLAN_LIMITS, planLimitError } from '../lib/planLimits.js';
 import { isSlotBookable } from '../services/availability.js';
 
@@ -31,6 +33,25 @@ async function findBusinessByUsername(botUsername: string, reply: FastifyReply) 
   return business;
 }
 
+/** Thrown inside the order transaction when a guarded stock decrement matches
+ *  no row (another order took the stock first). Caught to return a 409. */
+class InsufficientStockError extends Error {
+  constructor(public readonly productName: string) {
+    super('INSUFFICIENT_STOCK');
+    this.name = 'InsufficientStockError';
+  }
+}
+
+// Bounded retries for the (businessId, orderNumber) unique-collision race.
+const MAX_ORDER_ATTEMPTS = 5;
+
+// Shared include so the create result, the idempotency early-return, and the
+// concurrent-replay return all yield the same Order payload shape/type.
+const BOT_ORDER_INCLUDE = {
+  items: { include: { product: { select: { id: true, name: true } } } },
+  customer: { select: { id: true, name: true, telegramUserId: true } },
+} satisfies Prisma.OrderInclude;
+
 const upsertCustomerBody = z.object({
   botUsername: z.string(),
   telegramUserId: z.string(),
@@ -43,6 +64,7 @@ const upsertCustomerBody = z.object({
 const createBotOrderBody = z.object({
   botUsername: z.string(),
   customerId: z.string(),
+  idempotencyKey: z.string().optional(),
   items: z.array(
     z.object({
       productId: z.string(),
@@ -122,8 +144,21 @@ export default async function botRoutes(app: FastifyInstance) {
       },
       orderBy: { createdAt: 'asc' },
     });
+    // Global card-payments flag — the bot uses this to decide whether to show
+    // card/transfer instructions at checkout (the "I have paid" path is kept
+    // regardless). Default ON; superadmin-controlled, platform-wide.
+    const cardPaymentsEnabled = await getCardPaymentsEnabled();
     return reply.send({
-      business: { name: business.name, language: business.language, mode: business.mode },
+      business: {
+        name: business.name,
+        language: business.language,
+        mode: business.mode,
+        // Card fields for the checkout payment step. The bot gates display on
+        // cardPaymentsEnabled AND cardNumber present.
+        cardNumber: business.cardNumber,
+        cardHolderName: business.cardHolderName,
+        cardPaymentsEnabled,
+      },
       products,
     });
   });
@@ -193,7 +228,7 @@ export default async function botRoutes(app: FastifyInstance) {
     const parsed = createBotOrderBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const { botUsername, customerId, items, deliveryMethod, deliveryAddress, deliveryDate, notes, customAnswers } = parsed.data;
+    const { botUsername, customerId, idempotencyKey, items, deliveryMethod, deliveryAddress, deliveryDate, notes, customAnswers } = parsed.data;
 
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
@@ -210,6 +245,17 @@ export default async function botRoutes(app: FastifyInstance) {
     });
     if (!customer) return sendError(reply, 404, 'Customer not found');
 
+    // Idempotency: a retry after a lost/timed-out response must reuse the
+    // original order, not create a duplicate. If this checkout key already
+    // produced an order, return it as-is (skip pricing/stock/number entirely).
+    if (idempotencyKey) {
+      const existing = await prisma.order.findFirst({
+        where: { businessId: business.id, idempotencyKey },
+        include: BOT_ORDER_INCLUDE,
+      });
+      if (existing) return reply.status(200).send({ order: existing });
+    }
+
     const productIds = items.map((i) => i.productId);
     const products = await prisma.product.findMany({
       where: { id: { in: productIds }, businessId: business.id, active: true, deletedAt: null },
@@ -218,50 +264,126 @@ export default async function botRoutes(app: FastifyInstance) {
       return sendError(reply, 400, 'One or more products not found or unavailable');
     }
 
-    const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-    const orderNumber = await allocateOrderNumber(business.id);
+    // Bill from the CURRENT DB price, never the client-submitted price. Index
+    // the already-fetched, validated products by id for pricing + stock.
+    const productById = new Map(products.map((p) => [p.id, p]));
 
-    const order = await prisma.order.create({
-      data: {
-        businessId: business.id,
-        customerId,
-        orderNumber,
-        total,
-        deliveryMethod,
-        deliveryAddress,
-        deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined,
-        notes,
-        customAnswers: customAnswers ?? undefined,
-        timeline: [{ status: 'NEW', at: new Date().toISOString(), by: 'bot' }],
-        items: {
-          create: items.map((i) => ({
-            productId: i.productId,
-            quantity: i.quantity,
-            price: i.price,
-            variant: i.variant,
-          })),
-        },
-      },
-      include: {
-        items: { include: { product: { select: { id: true, name: true } } } },
-        customer: { select: { id: true, name: true, telegramUserId: true } },
-      },
-    });
+    // Stock pre-check — fail the WHOLE order (never partial) if any non-unlimited
+    // line exceeds current stock. A non-unlimited product with no stock number
+    // set counts as 0 available. Unlimited products are exempt.
+    for (const item of items) {
+      const product = productById.get(item.productId)!;
+      if (!product.unlimited && item.quantity > (product.stockQty ?? 0)) {
+        return reply.status(409).send({
+          error: 'INSUFFICIENT_STOCK',
+          productName: product.name,
+          available: product.stockQty ?? 0,
+        });
+      }
+    }
 
-    await prisma.customer.update({
-      where: { id: customerId },
-      data: { lastInteractionAt: new Date() },
-    });
+    // Line prices come from the DB product; quantity/productId/variant from the
+    // request. The request's `price` field is ignored for billing.
+    const lineItems = items.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      price: productById.get(item.productId)!.price,
+      variant: item.variant,
+    }));
+    const total = lineItems.reduce((sum, li) => sum + li.price * li.quantity, 0);
 
-    const firstItemName = order.items[0]?.product.name ?? 'items';
-    sendPushToAll(
-      business.id,
-      `New order #${orderNumber}`,
-      `${order.customer.name} ordered ${firstItemName}`,
-      { type: 'order', orderId: order.id },
-    ).catch((err: unknown) => console.error('[push] new order notify failed:', err));
+    try {
+      // Allocate the order number, insert the order + items, and decrement stock
+      // as ONE transaction. Retry on a (businessId, orderNumber) unique collision
+      // (P2002) when two customers order at once. The guarded decrement
+      // (updateMany … stockQty >= qty) makes overselling the last unit
+      // impossible: matching 0 rows means another order took the stock first.
+      const order = await (async () => {
+        for (let attempt = 0; ; attempt++) {
+          try {
+            return await prisma.$transaction(async (tx) => {
+              const orderNumber = await allocateOrderNumber(business.id);
+              const created = await tx.order.create({
+                data: {
+                  businessId: business.id,
+                  customerId,
+                  orderNumber,
+                  idempotencyKey,
+                  total,
+                  deliveryMethod,
+                  deliveryAddress,
+                  deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined,
+                  notes,
+                  customAnswers: customAnswers ?? undefined,
+                  timeline: [{ status: 'NEW', at: new Date().toISOString(), by: 'bot' }],
+                  items: { create: lineItems },
+                },
+                include: BOT_ORDER_INCLUDE,
+              });
 
-    return reply.status(201).send({ order });
+              for (const item of items) {
+                const product = productById.get(item.productId)!;
+                if (product.unlimited) continue;
+                const { count } = await tx.product.updateMany({
+                  where: {
+                    id: item.productId,
+                    businessId: business.id,
+                    deletedAt: null,
+                    stockQty: { gte: item.quantity },
+                  },
+                  data: { stockQty: { decrement: item.quantity } },
+                });
+                if (count !== 1) throw new InsufficientStockError(product.name);
+              }
+
+              return created;
+            });
+          } catch (e) {
+            if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+              const target = e.meta?.target;
+              const onIdempotencyKey =
+                (Array.isArray(target) && target.includes('idempotencyKey')) ||
+                (typeof target === 'string' && target.includes('idempotencyKey'));
+              if (onIdempotencyKey) {
+                // A concurrent request with the SAME key already created it —
+                // return that order instead of creating a duplicate.
+                const existing = await prisma.order.findFirst({
+                  where: { businessId: business.id, idempotencyKey },
+                  include: BOT_ORDER_INCLUDE,
+                });
+                if (existing) return existing;
+              } else if (attempt < MAX_ORDER_ATTEMPTS - 1) {
+                continue; // (businessId, orderNumber) collision — retry with a new number
+              }
+            }
+            throw e;
+          }
+        }
+      })();
+
+      await prisma.customer.update({
+        where: { id: customerId },
+        data: { lastInteractionAt: new Date() },
+      });
+
+      const firstItemName = order.items[0]?.product.name ?? 'items';
+      sendPushToAll(
+        business.id,
+        `New order #${order.orderNumber}`,
+        `${order.customer.name} ordered ${firstItemName}`,
+        { type: 'order', orderId: order.id },
+      ).catch((err: unknown) => console.error('[push] new order notify failed:', err));
+
+      return reply.status(201).send({ order });
+    } catch (e) {
+      if (e instanceof InsufficientStockError) {
+        return reply.status(409).send({
+          error: 'INSUFFICIENT_STOCK',
+          productName: e.productName,
+        });
+      }
+      throw e;
+    }
   });
 
   // POST /bot/payment-received

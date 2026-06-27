@@ -32,6 +32,7 @@ export function registerCatalogHandlers(bot: import('grammy').Bot<MyContext>) {
     await ctx.answerCallbackQuery();
     const productId = ctx.match[1];
     ctx.session.cart = ctx.session.cart.filter((i) => i.productId !== productId);
+    ctx.session.orderIdemKey = undefined; // cart changed → next order is distinct
     await showCart(ctx);
   });
 
@@ -180,6 +181,7 @@ async function addToCart(ctx: MyContext, productId: string, qty: number) {
       photoUrl: product.photos[0],
     });
   }
+  ctx.session.orderIdemKey = undefined; // cart changed → next order is distinct
 
   const total = ctx.session.cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const cartCount = ctx.session.cart.reduce((sum, i) => sum + i.quantity, 0);

@@ -34,7 +34,16 @@ class FloatingTabBar extends StatelessWidget {
     required this.onTap,
   });
 
-  static const double _barHeight = 62;
+  /// Height of the pill bar itself.
+  static const double barHeight = 62;
+
+  /// Gap between the bar and the bottom safe-area edge (the SafeArea below).
+  static const double bottomMargin = AppSpacing.s3;
+
+  /// Total vertical space the floating bar reserves above the bottom safe area
+  /// (bar + its bottom margin). Screens lift their FAB by this so it clears the
+  /// bar; the Scaffold's `endFloat` then adds the standard 16px gap on top.
+  static const double reservedHeight = barHeight + bottomMargin;
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +58,7 @@ class FloatingTabBar extends StatelessWidget {
     const selectorInset = AppSpacing.s1;
 
     final content = Container(
-      height: _barHeight,
+      height: barHeight,
       decoration: BoxDecoration(
         color: barColor,
         borderRadius: radius,
@@ -100,7 +109,10 @@ class FloatingTabBar extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: AppTextSizes.caption,
+                                // Slightly smaller than caption (12) so the
+                                // longest active label fits across en/uz/ru
+                                // ("Appointments" / "Navbatlar" / "Записи").
+                                fontSize: 11,
                                 fontWeight: selected
                                     ? AppFontWeights.semibold
                                     : AppFontWeights.medium,
@@ -125,7 +137,7 @@ class FloatingTabBar extends StatelessWidget {
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
-            AppSpacing.s4, 0, AppSpacing.s4, AppSpacing.s3),
+            AppSpacing.s4, 0, AppSpacing.s4, bottomMargin),
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: radius,

@@ -12,7 +12,7 @@ const orderInclude = {
 
 export default async function homeRoutes(app: FastifyInstance) {
   app.get('/home', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const now = new Date();

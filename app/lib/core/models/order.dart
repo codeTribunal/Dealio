@@ -49,6 +49,7 @@ class Order {
   final int total;
   final String deliveryMethod;
   final String? deliveryAddress;
+  final DateTime? deliveryDate;
   final String orderStatus;
   final String paymentStatus;
   final List<dynamic> timeline;
@@ -65,6 +66,7 @@ class Order {
     required this.total,
     required this.deliveryMethod,
     this.deliveryAddress,
+    this.deliveryDate,
     required this.orderStatus,
     required this.paymentStatus,
     required this.timeline,
@@ -95,6 +97,9 @@ class Order {
       total: json['total'] as int,
       deliveryMethod: json['deliveryMethod'] as String,
       deliveryAddress: json['deliveryAddress'] as String?,
+      deliveryDate: json['deliveryDate'] != null
+          ? DateTime.parse(json['deliveryDate'] as String)
+          : null,
       orderStatus: json['orderStatus'] as String,
       paymentStatus: json['paymentStatus'] as String,
       timeline: json['timeline'] as List? ?? [],

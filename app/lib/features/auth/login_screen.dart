@@ -132,8 +132,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Row(
                         children: [
                           IconButton(
-                            icon:
-                                AppIcon(name: AppIconName.menu, color: t.text1),
+                            icon: AppIcon(
+                                name: AppIconName.arrowLeft, color: t.text1),
                             onPressed: () {
                               if (_codeStep) {
                                 setState(() {

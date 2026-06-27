@@ -1,5 +1,6 @@
 {
   "common": {
+    "notAvailableInMode": "Недоступно в вашем режиме бизнеса.",
     "save": "Сохранить",
     "saveChanges": "Сохранить изменения",
     "cancel": "Отмена",
@@ -45,7 +46,10 @@
     "deleteOrderTitle": "Удалить этот заказ?",
     "deleteOrderBody": "Он будет скрыт из списка заказов. Позже можно восстановить.",
     "deleteAppointmentTitle": "Удалить эту запись?",
-    "deleteAppointmentBody": "Она будет скрыта из списка записей. Позже можно восстановить."
+    "deleteAppointmentBody": "Она будет скрыта из списка записей. Позже можно восстановить.",
+    "deleteService": "Удалить услугу",
+    "deleteServiceTitle": "Удалить эту услугу?",
+    "deleteServiceBody": "Она будет скрыта из вашего бота и перемещена в удалённые. Вы сможете восстановить её позже."
   },
   "customers": {
     "title": "Клиенты",
@@ -102,7 +106,26 @@
     "staff": "Сотрудники",
     "projects": "Проекты",
     "analytics": "Аналитика",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "calendar": "Календарь"
+  },
+  "catalog": {
+    "empty": "Товаров пока нет",
+    "emptyHint": "Добавьте первый товар, чтобы начать продавать",
+    "addProduct": "Добавить товар",
+    "noMatch": "Нет товаров по вашему запросу"
+  },
+  "calendar": {
+    "title": "Календарь",
+    "projectDeadline": "Срок проекта",
+    "orderNumber": "Заказ #{n}",
+    "failedLoad": "Не удалось загрузить расписание",
+    "tomorrow": "Завтра",
+    "yesterday": "Вчера",
+    "emptyOrdersTitle": "Нет запланированных доставок",
+    "emptyOrdersMessage": "Заказы с датой доставки появятся здесь.",
+    "emptyDeadlinesTitle": "Нет сроков",
+    "emptyDeadlinesMessage": "Сроки проектов и этапов появятся здесь."
   },
   "status": {
     "NEW": "Новый",
@@ -161,6 +184,11 @@
     "language": "Язык",
     "languageHint": "Это меняет язык панели управления и язык, который ваш Telegram-бот использует с клиентами.",
     "failedLoad": "Не удалось загрузить настройки",
+    "paymentCard": "Платёжная карта",
+    "paymentHint": "Клиенты переводят на эту карту при оплате. Показывается в вашем Telegram-боте.",
+    "cardNumber": "Номер карты",
+    "cardHolder": "Имя владельца карты",
+    "cardSaved": "Платёжная карта сохранена",
     "businessProfile": "Профиль бизнеса",
     "businessName": "Название бизнеса",
     "description": "Описание",
@@ -217,7 +245,8 @@
     "modeNameServices": "Записи",
     "modeNameFreelance": "Проекты",
     "modeDataServices": "записи",
-    "modeDataFreelance": "проекты"
+    "modeDataFreelance": "проекты",
+    "modeDataProducts": "заказы"
   },
   "scheduling": {
     "workingHours": "Часы работы",

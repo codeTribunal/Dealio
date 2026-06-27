@@ -20,7 +20,7 @@ const updateQuestionBody = z.object({
 export default async function checkoutQuestionRoutes(app: FastifyInstance) {
   // ── List checkout questions ────────────────────────────────────
   app.get('/checkout-questions', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const questions = await prisma.checkoutQuestion.findMany({
@@ -32,7 +32,7 @@ export default async function checkoutQuestionRoutes(app: FastifyInstance) {
 
   // ── Create checkout question ───────────────────────────────────
   app.post('/checkout-questions', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = createQuestionBody.safeParse(request.body);
@@ -51,7 +51,7 @@ export default async function checkoutQuestionRoutes(app: FastifyInstance) {
 
   // ── Update checkout question ───────────────────────────────────
   app.patch('/checkout-questions/:questionId', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { questionId } = request.params as { questionId: string };
@@ -72,7 +72,7 @@ export default async function checkoutQuestionRoutes(app: FastifyInstance) {
 
   // ── Delete checkout question (soft delete) ─────────────────────
   app.delete('/checkout-questions/:questionId', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { questionId } = request.params as { questionId: string };

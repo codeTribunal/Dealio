@@ -15,7 +15,7 @@ const completeBody = z.object({
   businessName: z.string().min(1).max(100),
   // Single mode (scalar). PRODUCTS (product-seller) mode is disabled — only
   // SERVICES/FREELANCE are selectable. Product models/routes remain dormant.
-  mode: z.enum(['SERVICES', 'FREELANCE']),
+  mode: z.enum(['PRODUCTS', 'SERVICES', 'FREELANCE']),
   language: z.enum(['UZBEK', 'RUSSIAN', 'ENGLISH']),
   botToken: z.string().regex(BOT_TOKEN_REGEX, 'Invalid bot token format'),
 });

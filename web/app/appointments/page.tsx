@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import AuthLayout from '@/components/AuthLayout'
+import { useModeGuard } from '@/lib/businessContext'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -64,6 +65,7 @@ const SELECT_CLASS =
   'w-full bg-surface border border-border rounded-md py-2.5 px-3.5 text-sm text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors'
 
 export default function AppointmentsPage() {
+  const guardReady = useModeGuard('SERVICES')
   const { t } = useI18n()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
@@ -382,6 +384,8 @@ export default function AppointmentsPage() {
         : 'border border-border bg-surface text-text-1 hover:bg-surface-2'
     }`
 
+  if (!guardReady) return null
+
   return (
     <AuthLayout title="Appointments">
       {/* ── Header: date nav, actions, filters ───────────────────── */}
@@ -438,18 +442,24 @@ export default function AppointmentsPage() {
               Today
             </Button>
           )}
-          <Button
-            variant="primary"
-            leftIcon="add"
-            className="flex-1"
-            onClick={openCreate}
-          >
-            New appointment
-          </Button>
+          {/* Per-day rule: the small add button shows ONLY when this day has
+              appointments. On an empty day the big center button (empty state)
+              is the sole create affordance. appointments is the selected day's
+              list, so paging between days flips which button appears. */}
+          {!loading && !error && appointments.length > 0 && (
+            <Button
+              variant="primary"
+              leftIcon="add"
+              className="flex-1"
+              onClick={openCreate}
+            >
+              New appointment
+            </Button>
+          )}
           <Button
             variant={showDeleted ? 'primary' : 'secondary'}
             size="sm"
-            className="flex-shrink-0 whitespace-nowrap"
+            className="flex-shrink-0 whitespace-nowrap ml-auto"
             onClick={() => setShowDeleted((v) => !v)}
           >
             {t('common.showDeleted')}
@@ -486,6 +496,11 @@ export default function AppointmentsPage() {
                 ? `No ${statusFilter.toLowerCase()} appointments on this day`
                 : 'No appointments on this day'}
             </p>
+            <div className="mt-5 flex justify-center">
+              <Button variant="primary" leftIcon="add" onClick={openCreate}>
+                Create appointment
+              </Button>
+            </div>
           </Card>
         ) : (
           appointments.map((appointment) =>

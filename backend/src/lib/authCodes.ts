@@ -1,4 +1,5 @@
 import { randomInt, randomBytes, createHmac, timingSafeEqual } from 'crypto';
+import { requireSecret } from './validateEnv.js';
 
 /**
  * Security utilities for Telegram-based owner authentication.
@@ -26,12 +27,14 @@ export const RATE_WINDOW_MS = 10 * 60 * 1000;
 
 // ── Server-side secret for keyed hashing ────────────────────────────────────
 
-// Dedicated secret for hashing OTP codes; falls back to JWT_SECRET so a fresh
-// environment still works. Keyed (HMAC) hashing means a leaked DB alone cannot
-// be brute-forced without also knowing the server secret. `||` (not `??`) so an
-// empty-string env var falls through rather than becoming the secret.
-const HASH_SECRET =
-  process.env.OTP_HASH_SECRET || process.env.JWT_SECRET || 'dev-secret-change-me';
+// Dedicated, REQUIRED secret for hashing OTP codes — no fallback to JWT_SECRET
+// or any dev literal. Keyed (HMAC) hashing means a leaked DB alone cannot be
+// brute-forced without also knowing this server secret. requireSecret throws if
+// OTP_HASH_SECRET is missing/placeholder, so we never hash with a known value.
+// Read at call time (cheap env lookup); validateEnv() also checks it at boot.
+function hashSecret(): string {
+  return requireSecret('OTP_HASH_SECRET');
+}
 
 // ── Code generation & hashing ───────────────────────────────────────────────
 
@@ -42,7 +45,7 @@ export function generateCode(): string {
 
 /** Compute the stored hash for a code. Never store/transmit the plaintext. */
 export function hashCode(code: string): string {
-  return createHmac('sha256', HASH_SECRET).update(code).digest('hex');
+  return createHmac('sha256', hashSecret()).update(code).digest('hex');
 }
 
 /** Constant-time comparison of a candidate code against a stored hash. */

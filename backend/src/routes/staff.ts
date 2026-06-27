@@ -45,7 +45,7 @@ const staffInclude = {
 
 export default async function staffRoutes(app: FastifyInstance) {
   app.get('/staff', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const staff = await prisma.staff.findMany({
@@ -57,7 +57,7 @@ export default async function staffRoutes(app: FastifyInstance) {
   });
 
   app.post('/staff', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = createStaffBody.safeParse(request.body);
@@ -94,7 +94,7 @@ export default async function staffRoutes(app: FastifyInstance) {
   });
 
   app.patch('/staff/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -138,7 +138,7 @@ export default async function staffRoutes(app: FastifyInstance) {
   });
 
   app.delete('/staff/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };

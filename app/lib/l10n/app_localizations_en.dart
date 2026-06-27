@@ -9,6 +9,62 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String emptySearchTitle(String query) {
+    return 'No results for \"$query\"';
+  }
+
+  @override
+  String get emptyClearSearch => 'Clear search';
+
+  @override
+  String get emptyClearFilter => 'Clear filter';
+
+  @override
+  String get apptEmptyMessage =>
+      'Bookings from your bot and manual ones appear here.';
+
+  @override
+  String get projectsEmptyMessage =>
+      'Track client projects, milestones, and invoices here.';
+
+  @override
+  String get projectsEmptyCta => 'Create your first project';
+
+  @override
+  String get projectsFilterEmpty => 'No projects match this filter';
+
+  @override
+  String get servicesEmptyTitle => 'No services yet';
+
+  @override
+  String get servicesEmptyMessage =>
+      'Define the services customers can book through your bot.';
+
+  @override
+  String get servicesEmptyCta => 'Add a service';
+
+  @override
+  String get staffEmptyTitle => 'No staff yet';
+
+  @override
+  String get staffEmptyMessage =>
+      'Add team members so they can be assigned to appointments.';
+
+  @override
+  String get staffEmptyCta => 'Add a staff member';
+
+  @override
+  String get catalogEmptyMessage =>
+      'Build your catalog so customers can order through your bot.';
+
+  @override
+  String get catalogEmptyCta => 'Add a product';
+
+  @override
+  String get ordersEmptyMessage =>
+      'Orders placed through your bot appear here.';
+
+  @override
   String get appTitle => 'Dealio';
 
   @override
@@ -1006,6 +1062,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customerDetailTitle => 'Customer';
 
   @override
+  String get customerNewTitle => 'New customer';
+
+  @override
+  String get customerFormName => 'Name';
+
+  @override
+  String get customerFormNameHint => 'Customer name';
+
+  @override
+  String get customerFormNameRequired => 'Name is required';
+
+  @override
+  String get customerFormPhone => 'Phone';
+
+  @override
+  String get customerFormPhoneHint => 'Phone number (optional)';
+
+  @override
+  String get customerFormTelegram => 'Telegram';
+
+  @override
+  String get customerFormTelegramHint => 'username';
+
+  @override
+  String get customerFormNotes => 'Notes';
+
+  @override
+  String get customerFormNotesHint => 'Notes (optional)';
+
+  @override
+  String get customerCreate => 'Add customer';
+
+  @override
   String get customerAddTag => 'Add tag';
 
   @override
@@ -1207,6 +1296,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serviceFormActiveSubtitle => 'Visible to customers in the bot';
+
+  @override
+  String get serviceDeleteButton => 'Delete service';
+
+  @override
+  String get serviceDeleteTitle => 'Delete this service?';
+
+  @override
+  String get serviceDeleteConfirm =>
+      'It will be hidden from your bot and moved to deleted. You can restore it later.';
+
+  @override
+  String get productDeleteButton => 'Delete product';
+
+  @override
+  String get productDeleteTitle => 'Delete this product?';
+
+  @override
+  String get productDeleteConfirm =>
+      'It will be hidden from your bot and moved to deleted. You can restore it later.';
 
   @override
   String get staffTitle => 'Staff';
@@ -1800,6 +1909,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsModeDataFreelance => 'projects';
 
   @override
+  String get settingsModeDataProducts => 'orders';
+
+  @override
   String get buttonRestore => 'Restore';
 
   @override
@@ -1837,4 +1949,87 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationDismiss => 'Dismiss';
+
+  @override
+  String get modeNotAvailable => 'Not available in your business mode.';
+
+  @override
+  String get navCalendar => 'Calendar';
+
+  @override
+  String get calendarProjectDeadline => 'Project deadline';
+
+  @override
+  String get calendarEmptyOrdersTitle => 'No scheduled deliveries';
+
+  @override
+  String get calendarEmptyOrdersMessage =>
+      'Orders with a delivery date will appear here.';
+
+  @override
+  String get calendarEmptyDeadlinesTitle => 'No deadlines';
+
+  @override
+  String get calendarEmptyDeadlinesMessage =>
+      'Project deadlines and milestone due dates will appear here.';
+
+  @override
+  String get orderNewTitle => 'New order';
+
+  @override
+  String get orderCreate => 'Create order';
+
+  @override
+  String get orderCustomerExisting => 'Existing';
+
+  @override
+  String get orderCustomerNew => 'New';
+
+  @override
+  String get orderSelectCustomer => 'Select a customer';
+
+  @override
+  String get orderNoProducts => 'No products in your catalog yet.';
+
+  @override
+  String get orderDeliveryPickup => 'Pickup';
+
+  @override
+  String get orderDeliveryDelivery => 'Delivery';
+
+  @override
+  String get orderAddressLabel => 'Delivery address';
+
+  @override
+  String get orderDateLabel => 'Delivery date';
+
+  @override
+  String get orderErrSelectCustomer => 'Select or enter a customer';
+
+  @override
+  String get orderErrItems => 'Add at least one product';
+
+  @override
+  String get orderErrAddress => 'Enter a delivery address';
+
+  @override
+  String get orderLimitReached =>
+      'Customer limit reached. Upgrade to Pro to add more.';
+
+  @override
+  String get orderCreateError =>
+      'Couldn\'t create the order. Please try again.';
+
+  @override
+  String get settingsPaymentCard => 'PAYMENT CARD';
+
+  @override
+  String get settingsPaymentHint =>
+      'Customers transfer to this card when they pay. It\'s shown in your Telegram bot at checkout.';
+
+  @override
+  String get settingsCardHolderLabel => 'Cardholder name';
+
+  @override
+  String get settingsCardNotSet => 'No payment card added yet.';
 }

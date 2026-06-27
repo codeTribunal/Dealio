@@ -188,6 +188,28 @@ export async function impersonateBusiness(
   return res.data
 }
 
+// ── Platform settings (global flags) ──────────────────────────────────────────
+
+export interface PlatformSettings {
+  cardPaymentsEnabled: boolean
+}
+
+// Any authenticated admin may read (so the panel can show current state).
+export async function getPlatformSettings(): Promise<PlatformSettings> {
+  const res = await adminApi.get('/admin/platform-settings')
+  return res.data
+}
+
+// SUPER_ADMIN only — enforced on the backend (PATCH returns 403 for SUPPORT).
+export async function updatePlatformSettings(
+  cardPaymentsEnabled: boolean
+): Promise<PlatformSettings> {
+  const res = await adminApi.patch('/admin/platform-settings', {
+    cardPaymentsEnabled,
+  })
+  return res.data
+}
+
 export async function getAuditLog(params: {
   page?: number
   limit?: number

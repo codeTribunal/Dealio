@@ -11,7 +11,9 @@ import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_empty_state.dart';
 import '../../shared/widgets/app_spinner.dart';
+import '../../shared/widgets/floating_tab_bar.dart';
 import 'projects_provider.dart';
 
 const _statusFilterCodes = [
@@ -58,22 +60,19 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
     final t = AppTokens.of(context);
     final projectsAsync = ref.watch(projectsProvider);
 
+    // Records currently shown (after the status filter). Drives the FAB so it is
+    // mutually exclusive with the empty-state CTA: data-empty shows the long
+    // "Create your first project" CTA, filter-empty shows "Clear filter", and
+    // only a non-empty list shows the bottom-right + FAB.
+    final visibleProjects = projectsAsync.valueOrNull ?? const [];
+    final hasVisibleProjects = (_selectedStatus == null
+            ? visibleProjects
+            : visibleProjects.where((p) => p.status == _selectedStatus))
+        .isNotEmpty;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l.projectsTitle),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpacing.s3),
-            child: Center(
-              child: AppButton(
-                label: l.projectFormTitle,
-                leftIcon: AppIconName.add,
-                size: AppButtonSize.sm,
-                onPressed: () => context.push('/projects/new'),
-              ),
-            ),
-          ),
-        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
           child: _FilterBar(
@@ -98,15 +97,25 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
               : projects.where((p) => p.status == _selectedStatus).toList();
 
           if (filtered.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppIcon(name: AppIconName.projects, size: 56, color: t.text3),
-                  const SizedBox(height: AppSpacing.s3),
-                  Text(l.projectsEmpty, style: TextStyle(color: t.text2)),
-                ],
-              ),
+            // Data-empty (no projects) vs filter-empty (status matched none).
+            if (projects.isEmpty) {
+              return AppEmptyState(
+                icon: AppIconName.projects,
+                title: l.projectsEmpty,
+                message: l.projectsEmptyMessage,
+                ctaLabel: l.projectsEmptyCta,
+                ctaIcon: AppIconName.add,
+                onCta: () => context.push('/projects/new'),
+              );
+            }
+            return AppEmptyState(
+              icon: AppIconName.projects,
+              title: l.projectsFilterEmpty,
+              ctaLabel: l.emptyClearFilter,
+              onCta: () {
+                setState(() => _selectedStatus = null);
+                ref.read(projectsProvider.notifier).refresh(status: null);
+              },
             );
           }
 
@@ -126,6 +135,21 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
           );
         },
       ),
+      // Bottom-right create FAB, matching Customers/Appointments. Projects is a
+      // tab root inside the nav shell, so lift it above the floating bar. Hidden
+      // when the visible list is empty so it never doubles the empty-state CTA.
+      floatingActionButton: !hasVisibleProjects
+          ? null
+          : Padding(
+              padding:
+                  const EdgeInsets.only(bottom: FloatingTabBar.reservedHeight),
+              child: FloatingActionButton(
+                backgroundColor: t.accent,
+                foregroundColor: t.accentOn,
+                onPressed: () => context.push('/projects/new'),
+                child: AppIcon(name: AppIconName.add, color: t.accentOn),
+              ),
+            ),
     );
   }
 }

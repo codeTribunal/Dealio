@@ -24,7 +24,7 @@ const setCustomerStageBody = z.object({
 export default async function stageRoutes(app: FastifyInstance) {
   // ── List stages ────────────────────────────────────────────────
   app.get('/stages', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const stages = await prisma.customerStage.findMany({
@@ -36,7 +36,7 @@ export default async function stageRoutes(app: FastifyInstance) {
 
   // ── Create stage ───────────────────────────────────────────────
   app.post('/stages', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = createStageBody.safeParse(request.body);
@@ -55,7 +55,7 @@ export default async function stageRoutes(app: FastifyInstance) {
 
   // ── Update stage ───────────────────────────────────────────────
   app.patch('/stages/:stageId', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { stageId } = request.params as { stageId: string };
@@ -76,7 +76,7 @@ export default async function stageRoutes(app: FastifyInstance) {
 
   // ── Delete stage (soft delete) ─────────────────────────────────
   app.delete('/stages/:stageId', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { stageId } = request.params as { stageId: string };
@@ -101,7 +101,7 @@ export default async function stageRoutes(app: FastifyInstance) {
 
   // ── Set a customer's stage ─────────────────────────────────────
   app.patch('/customers/:customerId/stage', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { customerId } = request.params as { customerId: string };

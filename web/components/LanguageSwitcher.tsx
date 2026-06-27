@@ -26,7 +26,7 @@ export default function LanguageSwitcher({
   }
 
   return (
-    <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden">
+    <div className="inline-flex rounded-lg border border-border overflow-hidden">
       {OPTIONS.map((o) => {
         const active = locale === o.code
         return (
@@ -36,8 +36,8 @@ export default function LanguageSwitcher({
             onClick={() => select(o.code)}
             className={`px-3 py-1.5 text-sm font-medium transition-colors ${
               active
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50'
+                ? 'bg-accent text-accent-on'
+                : 'bg-surface text-text-2 hover:bg-surface-2'
             }`}
           >
             {o.label}

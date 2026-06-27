@@ -24,6 +24,11 @@ model Business {
   workingHours          Json?
   // Gap (minutes) enforced after each appointment before the next can start.
   bufferMinutes         Int       @default(0)
+  // Payment — P2P card transfer. Owner edits via PATCH /business/payment.
+  // Display/edit visibility is gated GLOBALLY by
+  // PlatformSettings.cardPaymentsEnabled; the flag never clears stored data.
+  cardNumber            String?
+  cardHolderName        String?
   reminderSettings      Json?
   ownerTelegramChatId   String?
   fcmToken              String?
@@ -187,6 +192,7 @@ model Order {
   notes           String?
   internalNotes   String?
   customAnswers   Json?
+  idempotencyKey  String?
   paymentStatus   PaymentStatus  @default(PENDING)
   orderStatus     OrderStatus    @default(NEW)
   timeline        Json[]
@@ -196,6 +202,7 @@ model Order {
   updatedAt DateTime @updatedAt
 
   @@unique([businessId, orderNumber])
+  @@unique([businessId, idempotencyKey])
   @@index([customerId])
   @@index([businessId])
 }
@@ -505,6 +512,20 @@ model UsageLog {
 enum AdminRole {
   SUPER_ADMIN
   SUPPORT
+}
+
+/// Global, platform-wide settings — a single row (id = "singleton").
+/// NOT per-business: superadmin-controlled toggles that apply to the whole
+/// platform. Keep this separate from Business precisely because it is global.
+model PlatformSettings {
+  id String @id @default("singleton")
+
+  /// When false, the card-payment SETUP (onboarding/Settings) and DISPLAY
+  /// (bot checkout) are hidden platform-wide. Default true = shown. This is a
+  /// visibility flag only — no payment fields/data are removed when it is off.
+  cardPaymentsEnabled Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
 }
 
 enum Mode {

@@ -181,10 +181,6 @@ class _StaffFormScreenState extends ConsumerState<StaffFormScreen> {
               style: TextButton.styleFrom(foregroundColor: t.errorStrong),
               child: Text(l.buttonDelete),
             ),
-          TextButton(
-            onPressed: _saving ? null : _save,
-            child: Text(l.buttonSave),
-          ),
         ],
       ),
       body: Form(

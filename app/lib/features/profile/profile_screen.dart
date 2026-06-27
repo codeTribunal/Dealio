@@ -140,13 +140,19 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppTokens.of(context);
+    // One Expanded value (not Spacer + Flexible): the value Text fills ALL the
+    // space after icon+label and right-aligns within it, so every row's value —
+    // short ones like "FREE" included — shares the exact right edge. (Spacer +
+    // loose Flexible split the free space by flex, leaving short values short of
+    // the edge.) crossAxisAlignment.center keeps label and value on one line.
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         AppIcon(name: icon, size: 18, color: t.text3),
         const SizedBox(width: AppSpacing.s3),
         Text(label, style: TextStyle(color: t.text2, fontSize: AppTextSizes.sm)),
-        const Spacer(),
-        Flexible(
+        const SizedBox(width: AppSpacing.s3),
+        Expanded(
           child: Text(
             value,
             textAlign: TextAlign.right,

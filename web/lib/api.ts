@@ -308,6 +308,15 @@ export async function updateBotToken(data: {
   return res.data
 }
 
+// Set/update/clear the owner's P2P payment card. null clears a field.
+export async function updatePayment(data: {
+  cardNumber: string | null
+  cardHolderName: string | null
+}): Promise<Business> {
+  const res = await api.patch('/business/payment', data)
+  return res.data
+}
+
 export async function generateCalendarToken(): Promise<string> {
   const res = await api.post('/business/calendar-token')
   return res.data.calendarToken
@@ -396,12 +405,14 @@ export async function createProject(data: {
   name: string
   description?: string
   totalPrice: number
+  startDate?: string
   deadline?: string
   customerId: string
   paymentTerms?: string
 }): Promise<Project> {
   const res = await api.post('/projects', {
     ...data,
+    startDate: toIsoDateTime(data.startDate),
     deadline: toIsoDateTime(data.deadline),
   })
   return res.data
@@ -547,6 +558,11 @@ export async function updateService(
 ): Promise<Service> {
   const res = await api.patch(`/services/${id}`, data)
   return res.data
+}
+
+// Soft-delete (recoverable): hides the service from the owner UI and the bot.
+export async function deleteService(id: string): Promise<void> {
+  await api.delete(`/services/${id}`)
 }
 
 // ── Products (Catalog) ──────────────────────────────────────────────────────

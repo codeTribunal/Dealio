@@ -4,6 +4,7 @@ import './globals.css'
 import './tokens.css'
 import { BusinessProvider } from '@/lib/businessContext'
 import { I18nProvider } from '@/lib/i18n/i18nContext'
+import { ToastProvider } from '@/lib/toast'
 
 const manrope = Manrope({
   subsets: ['latin', 'cyrillic'],
@@ -55,7 +56,9 @@ export default function RootLayout({
       </head>
       <body>
         <I18nProvider>
-          <BusinessProvider>{children}</BusinessProvider>
+          <BusinessProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </BusinessProvider>
         </I18nProvider>
       </body>
     </html>

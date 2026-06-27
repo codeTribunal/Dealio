@@ -6,8 +6,7 @@ export type WorkingDay = { start: string; end: string }
 export type WorkingHours = Record<string, WorkingDay | WorkingDay[] | null>
 
 // Single business mode (was string[] — migrated to a scalar in Step 2).
-// PRODUCTS is dormant and no longer assignable.
-export type Mode = 'SERVICES' | 'FREELANCE'
+export type Mode = 'PRODUCTS' | 'SERVICES' | 'FREELANCE'
 
 export interface Business {
   id: string
@@ -20,6 +19,14 @@ export interface Business {
   calendarToken?: string | null
   workingHours?: WorkingHours | null
   bufferMinutes?: number
+  // Payment — P2P card transfer (Uzcard/Humo). Edited in Settings via
+  // PATCH /business/payment; shown to customers in the Telegram bot. Visibility
+  // gated by cardPaymentsEnabled below.
+  cardNumber?: string | null
+  cardHolderName?: string | null
+  // Global, superadmin-controlled flag (default ON) carried on GET /business.
+  // When false, card-payment SETUP UI should be hidden. Visibility only.
+  cardPaymentsEnabled?: boolean
 }
 
 export interface BlockedSlot {

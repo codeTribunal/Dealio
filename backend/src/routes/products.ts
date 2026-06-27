@@ -20,7 +20,7 @@ const updateProductBody = createProductBody.partial();
 
 export default async function productRoutes(app: FastifyInstance) {
   app.get('/products', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const products = await prisma.product.findMany({
@@ -31,7 +31,7 @@ export default async function productRoutes(app: FastifyInstance) {
   });
 
   app.post('/products', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = createProductBody.safeParse(request.body);
@@ -44,7 +44,7 @@ export default async function productRoutes(app: FastifyInstance) {
   });
 
   app.get('/products/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -56,7 +56,7 @@ export default async function productRoutes(app: FastifyInstance) {
   });
 
   app.patch('/products/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -73,7 +73,7 @@ export default async function productRoutes(app: FastifyInstance) {
   });
 
   app.delete('/products/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -87,7 +87,7 @@ export default async function productRoutes(app: FastifyInstance) {
   });
 
   app.patch('/products/:id/toggle', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };

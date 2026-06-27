@@ -11,7 +11,9 @@ import '../../shared/utils/status_labels.dart';
 import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_empty_state.dart';
 import '../../shared/widgets/app_spinner.dart';
+import '../../shared/widgets/floating_tab_bar.dart';
 import 'orders_provider.dart';
 
 const _statusFilters = [
@@ -61,6 +63,11 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
       appBar: AppBar(
         title: Text(l.ordersTitle),
         actions: [
+          IconButton(
+            icon: AppIcon(name: AppIconName.catalog, color: t.text1),
+            tooltip: l.catalogTitle,
+            onPressed: () => context.push('/catalog'),
+          ),
           TextButton(
             onPressed: () => notifier.setShowDeleted(!notifier.showDeleted),
             style: TextButton.styleFrom(
@@ -157,9 +164,35 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
               data: (_) {
                 final orders = notifier.filteredOrders;
                 if (orders.isEmpty) {
-                  return _EmptyView(
-                    hasFilter: filter.status != null ||
-                        filter.searchQuery.isNotEmpty,
+                  final query = filter.searchQuery.trim();
+                  final hasFilter = filter.status != null || query.isNotEmpty;
+                  if (hasFilter) {
+                    // Search-empty (active query) vs filter-empty (status only).
+                    return AppEmptyState(
+                      icon: AppIconName.search,
+                      title: query.isNotEmpty
+                          ? l.emptySearchTitle(query)
+                          : l.ordersEmptyFiltered,
+                      ctaLabel: query.isNotEmpty
+                          ? l.emptyClearSearch
+                          : l.emptyClearFilter,
+                      onCta: () {
+                        _searchController.clear();
+                        notifier.setSearch('');
+                        notifier.setStatus(null);
+                        setState(() {});
+                      },
+                    );
+                  }
+                  // Data-empty: the owner can create an order manually (the
+                  // big CTA); the FAB is hidden in this state (one at a time).
+                  return AppEmptyState(
+                    icon: AppIconName.orders,
+                    title: l.ordersEmpty,
+                    message: l.ordersEmptyMessage,
+                    ctaLabel: l.orderCreate,
+                    ctaIcon: AppIconName.add,
+                    onCta: () => context.push('/orders/new'),
                   );
                 }
                 return RefreshIndicator(
@@ -188,6 +221,20 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
           ),
         ],
       ),
+      // Create action, mutually exclusive with the data-empty CTA: shown only
+      // when the (post-filter) list has records. Lifted above the floating nav.
+      floatingActionButton: notifier.filteredOrders.isEmpty
+          ? null
+          : Padding(
+              padding:
+                  const EdgeInsets.only(bottom: FloatingTabBar.reservedHeight),
+              child: FloatingActionButton(
+                backgroundColor: t.accent,
+                foregroundColor: t.accentOn,
+                onPressed: () => context.push('/orders/new'),
+                child: AppIcon(name: AppIconName.add, color: t.accentOn),
+              ),
+            ),
     );
   }
 }
@@ -408,31 +455,7 @@ class _DeletedOrderCard extends StatelessWidget {
   }
 }
 
-// ── Empty / error ───────────────────────────────────────────────────
-
-class _EmptyView extends StatelessWidget {
-  final bool hasFilter;
-  const _EmptyView({required this.hasFilter});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppIcon(name: AppIconName.orders, size: 56, color: t.text3),
-          const SizedBox(height: AppSpacing.s3),
-          Text(
-            hasFilter ? l.ordersEmptyFiltered : l.ordersEmpty,
-            style: TextStyle(color: t.text2),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ── Error ────────────────────────────────────────────────────────────
 
 class _ErrorView extends StatelessWidget {
   final String message;

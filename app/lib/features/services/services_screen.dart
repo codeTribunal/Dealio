@@ -9,8 +9,8 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_empty_state.dart';
 import '../../shared/widgets/app_spinner.dart';
-import '../../shared/widgets/app_switch.dart';
 import 'services_provider.dart';
 
 class ServicesScreen extends ConsumerWidget {
@@ -25,20 +25,20 @@ class ServicesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(l.servicesTitle),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpacing.s3),
-            child: Center(
-              child: AppButton(
-                label: l.serviceFormNewTitle,
-                leftIcon: AppIconName.add,
-                size: AppButtonSize.sm,
-                onPressed: () => context.push('/services/new'),
-              ),
-            ),
-          ),
-        ],
       ),
+      // Bottom-right create FAB, matching Customers/Appointments. Services is a
+      // pushed route (no nav shell), so the default endFloat position already
+      // clears the bottom safe-area inset — no extra offset needed. Hidden when
+      // there are no services, so the empty-state "Add a service" CTA stands
+      // alone (services has no search/filter, so empty == data-empty).
+      floatingActionButton: (servicesAsync.valueOrNull?.isNotEmpty ?? false)
+          ? FloatingActionButton(
+              backgroundColor: t.accent,
+              foregroundColor: t.accentOn,
+              onPressed: () => context.push('/services/new'),
+              child: AppIcon(name: AppIconName.add, color: t.accentOn),
+            )
+          : null,
       body: servicesAsync.when(
         // Keep the list visible during the refetch after a toggle, so the
         // switch animates instead of flashing the loading spinner.
@@ -50,15 +50,13 @@ class ServicesScreen extends ConsumerWidget {
         ),
         data: (services) {
           if (services.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppIcon(name: AppIconName.staff, size: 56, color: t.text3),
-                  const SizedBox(height: AppSpacing.s3),
-                  Text(l.servicesEmpty, style: TextStyle(color: t.text2)),
-                ],
-              ),
+            return AppEmptyState(
+              icon: AppIconName.catalog,
+              title: l.servicesEmptyTitle,
+              message: l.servicesEmptyMessage,
+              ctaLabel: l.servicesEmptyCta,
+              ctaIcon: AppIconName.add,
+              onCta: () => context.push('/services/new'),
             );
           }
           return ListView.separated(
@@ -69,9 +67,6 @@ class ServicesScreen extends ConsumerWidget {
               final service = services[i];
               return _ServiceCard(
                 service: service,
-                onToggle: () => ref
-                    .read(servicesProvider.notifier)
-                    .toggleActive(service.id, service.active),
                 onTap: () => context.push('/services/${service.id}'),
               );
             },
@@ -84,12 +79,10 @@ class ServicesScreen extends ConsumerWidget {
 
 class _ServiceCard extends StatelessWidget {
   final Service service;
-  final VoidCallback onToggle;
   final VoidCallback onTap;
 
   const _ServiceCard({
     required this.service,
-    required this.onToggle,
     required this.onTap,
   });
 
@@ -106,21 +99,13 @@ class _ServiceCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        service.name,
-                        style: TextStyle(
-                          fontWeight: AppFontWeights.semibold,
-                          fontSize: AppTextSizes.sm,
-                          color: t.text1,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.s2),
-                    _ActiveBadge(active: service.active),
-                  ],
+                Text(
+                  service.name,
+                  style: TextStyle(
+                    fontWeight: AppFontWeights.semibold,
+                    fontSize: AppTextSizes.sm,
+                    color: t.text1,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.s1),
                 Text(
@@ -134,10 +119,8 @@ class _ServiceCard extends StatelessWidget {
               ],
             ),
           ),
-          AppSwitch(
-            value: service.active,
-            onChanged: (_) => onToggle(),
-          ),
+          const SizedBox(width: AppSpacing.s2),
+          _ActiveBadge(active: service.active),
         ],
       ),
     );

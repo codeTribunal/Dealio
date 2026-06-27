@@ -47,7 +47,7 @@ const appointmentInclude = {
 
 export default async function appointmentRoutes(app: FastifyInstance) {
   app.get('/appointments', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const query = request.query as Record<string, string>;
@@ -82,7 +82,7 @@ export default async function appointmentRoutes(app: FastifyInstance) {
   });
 
   app.post('/appointments', { preHandler: [authenticate, checkAppointmentLimit()] }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = createAppointmentBody.safeParse(request.body);
@@ -132,7 +132,7 @@ export default async function appointmentRoutes(app: FastifyInstance) {
   });
 
   app.get('/appointments/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -150,7 +150,7 @@ export default async function appointmentRoutes(app: FastifyInstance) {
   // overlap warns (overridable via allowConflict), and the appointment is
   // self-excluded from the overlap check. businessId-scoped → 404 on foreign id.
   app.patch('/appointments/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -227,7 +227,7 @@ export default async function appointmentRoutes(app: FastifyInstance) {
   });
 
   app.patch('/appointments/:id/status', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -248,7 +248,7 @@ export default async function appointmentRoutes(app: FastifyInstance) {
   });
 
   app.patch('/appointments/:id/payment', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -267,7 +267,7 @@ export default async function appointmentRoutes(app: FastifyInstance) {
   });
 
   app.patch('/appointments/:id/notes', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -289,7 +289,7 @@ export default async function appointmentRoutes(app: FastifyInstance) {
 
   // GET /availability?serviceId=&staffId=&date=YYYY-MM-DD
   app.get('/availability', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const query = request.query as Record<string, string>;
@@ -322,7 +322,7 @@ export default async function appointmentRoutes(app: FastifyInstance) {
 
   // ── Soft-delete appointment (recoverable) ───────────────────────
   app.delete('/appointments/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -333,7 +333,7 @@ export default async function appointmentRoutes(app: FastifyInstance) {
 
   // ── Restore a soft-deleted appointment ──────────────────────────
   app.post('/appointments/:id/restore', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };

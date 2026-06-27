@@ -10,8 +10,10 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_dialog.dart';
 import '../../shared/widgets/app_spinner.dart';
 import '../../shared/widgets/app_switch.dart';
+import 'catalog_provider.dart';
 
 class ProductFormScreen extends ConsumerStatefulWidget {
   final String? productId;
@@ -134,6 +136,48 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     return data;
   }
 
+  // Soft-delete (edit mode only), mirroring the Edit Service screen: confirm
+  // dialog → DELETE via the catalog provider (which invalidates the list) → pop.
+  Future<void> _confirmDelete() async {
+    final l = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AppDialog(
+        title: l.productDeleteTitle,
+        content: Text(l.productDeleteConfirm),
+        actions: [
+          AppButton(
+            label: l.buttonCancel,
+            variant: AppButtonVariant.ghost,
+            size: AppButtonSize.sm,
+            onPressed: () => Navigator.of(ctx).pop(false),
+          ),
+          AppButton(
+            label: l.buttonDelete,
+            variant: AppButtonVariant.danger,
+            size: AppButtonSize.sm,
+            onPressed: () => Navigator.of(ctx).pop(true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await ref.read(catalogProvider.notifier).deleteProduct(widget.productId!);
+      if (mounted) context.pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(e.toString()),
+              backgroundColor: AppTokens.of(context).error),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -142,18 +186,6 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         title: Text(widget.isEditing
             ? l.productFormEditTitle
             : l.productFormNewTitle),
-        actions: [
-          if (_saving)
-            const Padding(
-              padding: EdgeInsets.all(AppSpacing.s4),
-              child: AppSpinner(),
-            )
-          else
-            TextButton(
-              onPressed: _save,
-              child: Text(l.buttonSave),
-            ),
-        ],
       ),
       body: _buildBody(l),
     );
@@ -250,7 +282,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       child: Column(
@@ -398,6 +430,17 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
             loading: _saving,
             onPressed: _saving ? null : _save,
           ),
+
+          // Edit mode only: danger soft-delete below Save (mirrors Edit Service).
+          if (widget.isEditing) ...[
+            const SizedBox(height: AppSpacing.s3),
+            AppButton(
+              label: l.productDeleteButton,
+              variant: AppButtonVariant.danger,
+              fullWidth: true,
+              onPressed: _saving ? null : _confirmDelete,
+            ),
+          ],
 
           const SizedBox(height: AppSpacing.s6),
         ],

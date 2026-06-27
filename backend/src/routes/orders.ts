@@ -41,7 +41,7 @@ const orderInclude = {
 
 export default async function orderRoutes(app: FastifyInstance) {
   app.get('/orders', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const query = request.query as Record<string, string>;
@@ -87,7 +87,7 @@ export default async function orderRoutes(app: FastifyInstance) {
   });
 
   app.post('/orders', { preHandler: [authenticate, checkOrderLimit()] }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const parsed = createOrderBody.safeParse(request.body);
@@ -138,7 +138,7 @@ export default async function orderRoutes(app: FastifyInstance) {
   });
 
   app.get('/orders/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -151,7 +151,7 @@ export default async function orderRoutes(app: FastifyInstance) {
   });
 
   app.patch('/orders/:id/status', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -182,7 +182,7 @@ export default async function orderRoutes(app: FastifyInstance) {
   });
 
   app.patch('/orders/:id/payment', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -214,7 +214,7 @@ export default async function orderRoutes(app: FastifyInstance) {
 
   // ── Soft-delete order (recoverable) ─────────────────────────────
   app.delete('/orders/:id', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };
@@ -225,7 +225,7 @@ export default async function orderRoutes(app: FastifyInstance) {
 
   // ── Restore a soft-deleted order ────────────────────────────────
   app.post('/orders/:id/restore', { preHandler: authenticate }, async (request, reply) => {
-    const business = await getBusinessOrFail(request.user.userId, reply);
+    const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
     const { id } = request.params as { id: string };

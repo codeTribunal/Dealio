@@ -1,12 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
 import AuthLayout from '@/components/AuthLayout'
+import { useModeGuard } from '@/lib/businessContext'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Icon } from '@/components/icons/Icon'
-import { getServices, createService, updateService } from '@/lib/api'
+import { getServices, createService, updateService, deleteService } from '@/lib/api'
 import { formatUZS, currencyWord } from '@/lib/format'
 import { useI18n } from '@/lib/i18n/i18nContext'
 import type { Service } from '@/types'
@@ -41,11 +42,11 @@ function Toggle({
 }
 
 export default function ServicesPage() {
+  const guardReady = useModeGuard('SERVICES')
   const { t } = useI18n()
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Service | null>(null)
@@ -55,6 +56,8 @@ export default function ServicesPage() {
   const [active, setActive] = useState(true)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   function fetchServices() {
     setLoading(true)
@@ -75,6 +78,7 @@ export default function ServicesPage() {
     setPrice('')
     setActive(true)
     setFormError(null)
+    setShowDeleteConfirm(false)
     setShowForm(true)
   }
 
@@ -85,28 +89,8 @@ export default function ServicesPage() {
     setPrice(String(s.price))
     setActive(s.active)
     setFormError(null)
+    setShowDeleteConfirm(false)
     setShowForm(true)
-  }
-
-  async function handleToggle(s: Service) {
-    setTogglingId(s.id)
-    // Optimistic flip, reconciled with the server response.
-    setServices((prev) =>
-      prev.map((x) => (x.id === s.id ? { ...x, active: !x.active } : x)),
-    )
-    try {
-      const updated = await updateService(s.id, { active: !s.active })
-      setServices((prev) =>
-        prev.map((x) => (x.id === s.id ? { ...x, active: updated.active } : x)),
-      )
-    } catch {
-      // Revert on failure.
-      setServices((prev) =>
-        prev.map((x) => (x.id === s.id ? { ...x, active: s.active } : x)),
-      )
-    } finally {
-      setTogglingId(null)
-    }
   }
 
   async function handleSave() {
@@ -153,6 +137,25 @@ export default function ServicesPage() {
       setSaving(false)
     }
   }
+
+  // Soft delete (edit mode only): hides the service from the list + the bot but
+  // keeps it (and its appointment history) so it can be restored later.
+  async function handleDelete() {
+    if (!editing) return
+    setDeleting(true)
+    setFormError(null)
+    try {
+      await deleteService(editing.id)
+      setServices((prev) => prev.filter((x) => x.id !== editing.id))
+      setShowForm(false)
+    } catch {
+      setFormError('Could not delete. Please try again.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  if (!guardReady) return null
 
   return (
     <AuthLayout title="Services">
@@ -208,11 +211,6 @@ export default function ServicesPage() {
                 >
                   {s.active ? 'Active' : 'Paused'}
                 </span>
-                <Toggle
-                  active={s.active}
-                  disabled={togglingId === s.id}
-                  onClick={() => handleToggle(s)}
-                />
               </Card>
             ))}
           </div>
@@ -311,6 +309,46 @@ export default function ServicesPage() {
               >
                 {t('common.cancel')}
               </Button>
+
+              {/* Soft-delete (edit mode only) — danger button below Save, with
+                  an inline confirm matching the orders/catalog delete pattern. */}
+              {editing && !showDeleteConfirm && (
+                <Button
+                  variant="danger"
+                  fullWidth
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  {t('common.deleteService')}
+                </Button>
+              )}
+              {editing && showDeleteConfirm && (
+                <div className="p-4 bg-error-soft border border-error-strong rounded-md space-y-3">
+                  <p className="text-sm font-semibold text-error-strong">
+                    {t('common.deleteServiceTitle')}
+                  </p>
+                  <p className="text-xs text-error-strong">
+                    {t('common.deleteServiceBody')}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="danger"
+                      fullWidth
+                      loading={deleting}
+                      onClick={handleDelete}
+                    >
+                      {t('common.yesDelete')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      fullWidth
+                      disabled={deleting}
+                      onClick={() => setShowDeleteConfirm(false)}
+                    >
+                      {t('common.cancel')}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
