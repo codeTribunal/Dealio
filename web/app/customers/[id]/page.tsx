@@ -56,10 +56,14 @@ export default function CustomerDetailPage() {
   }, [id])
 
   async function handleSaveNotes() {
-    if (!customer) return
+    if (!customer || savingNotes) return
     setSavingNotes(true)
-    await updateCustomerNotes(customer.id, notes)
-    setSavingNotes(false)
+    try {
+      await updateCustomerNotes(customer.id, notes)
+    } finally {
+      // Reset even on failure so the Save button never sticks disabled.
+      setSavingNotes(false)
+    }
   }
 
   async function handleDelete() {

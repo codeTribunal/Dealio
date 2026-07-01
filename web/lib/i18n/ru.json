@@ -75,9 +75,11 @@
     "title": "Главная",
     "revenueLabel": "Доход за этот месяц",
     "revenueSub": "{count} записей в этом месяце",
+    "revenueSubCompleted": "{count} завершено в этом месяце",
     "statOrdersToday": "Заказы сегодня",
     "statPending": "Ожидающие платежи",
     "statAppointmentsToday": "Сегодняшние встречи",
+    "statProjectsToday": "Проекты сегодня",
     "quickActionNewOrder": "Новый заказ",
     "quickActionNewAppointment": "Новая встреча",
     "quickActionNewProject": "Новый проект",
@@ -135,6 +137,7 @@
     "CANCELLED": "Отменён",
     "PENDING": "Ожидает",
     "PAYMENT_RECEIVED": "Оплата получена",
+    "PAYMENT_CONFIRMED": "Оплата подтверждена",
     "CONFIRMED": "Подтверждён",
     "REQUESTED": "Запрошена",
     "COMPLETED": "Завершён",
@@ -149,7 +152,19 @@
   },
   "delivery": {
     "PICKUP": "Самовывоз",
-    "DELIVERY": "Доставка"
+    "DELIVERY": "Доставка",
+    "method": "Способ доставки",
+    "address": "Адрес доставки"
+  },
+  "orders": {
+    "paymentProof": "Чек оплаты",
+    "proofUnavailable": "Чек недоступен"
+  },
+  "emailPrompt": {
+    "heading": "Получайте еженедельные отчёты на почту",
+    "subtext": "Сводки по бизнесу и обновления продукта",
+    "consent": "Присылайте мне еженедельные отчёты и обновления продукта",
+    "skip": "Пропустить"
   },
   "welcome": {
     "title": "Добро пожаловать в вашу CRM",
@@ -192,6 +207,10 @@
     "businessProfile": "Профиль бизнеса",
     "businessName": "Название бизнеса",
     "description": "Описание",
+    "address": "Адрес",
+    "addressHint": "Адрес, куда приходят клиенты (самовывоз или место встречи)",
+    "email": "Email",
+    "emailInvalid": "Введите корректный адрес эл. почты",
     "profileSaved": "Профиль сохранён",
     "businessMode": "Тип бизнеса",
     "businessModeHint": "Выберите, какие функции активны для вашего бизнеса.",

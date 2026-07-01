@@ -75,9 +75,11 @@
     "title": "Bosh sahifa",
     "revenueLabel": "Bu oygi daromad",
     "revenueSub": "Bu oyda {count} ta navbat",
+    "revenueSubCompleted": "Bu oyda {count} ta yakunlandi",
     "statOrdersToday": "Bugungi buyurtmalar",
     "statPending": "Kutilayotgan to'lovlar",
     "statAppointmentsToday": "Bugungi uchrashuvlar",
+    "statProjectsToday": "Bugungi loyihalar",
     "quickActionNewOrder": "Yangi buyurtma",
     "quickActionNewAppointment": "Yangi uchrashuv",
     "quickActionNewProject": "Yangi loyiha",
@@ -135,6 +137,7 @@
     "CANCELLED": "Bekor qilindi",
     "PENDING": "Kutilmoqda",
     "PAYMENT_RECEIVED": "To'lov qabul qilindi",
+    "PAYMENT_CONFIRMED": "To'lov tasdiqlandi",
     "CONFIRMED": "Tasdiqlangan",
     "REQUESTED": "So'ralgan",
     "COMPLETED": "Yakunlandi",
@@ -149,7 +152,19 @@
   },
   "delivery": {
     "PICKUP": "Olib ketish",
-    "DELIVERY": "Yetkazib berish"
+    "DELIVERY": "Yetkazib berish",
+    "method": "Yetkazib berish usuli",
+    "address": "Yetkazib berish manzili"
+  },
+  "orders": {
+    "paymentProof": "To'lov cheki",
+    "proofUnavailable": "Chek mavjud emas"
+  },
+  "emailPrompt": {
+    "heading": "Haftalik hisobotlarni pochta orqali oling",
+    "subtext": "Biznes hisobotlari va mahsulot yangiliklari",
+    "consent": "Menga haftalik hisobotlar va mahsulot yangiliklarini yuboring",
+    "skip": "O'tkazib yuborish"
   },
   "welcome": {
     "title": "CRM tizimiga xush kelibsiz",
@@ -192,6 +207,10 @@
     "businessProfile": "Biznes profili",
     "businessName": "Biznes nomi",
     "description": "Tavsif",
+    "address": "Manzil",
+    "addressHint": "Mijozlar keladigan manzil (olib ketish yoki uchrashuv joyi)",
+    "email": "Email",
+    "emailInvalid": "To'g'ri email manzilini kiriting",
     "profileSaved": "Profil saqlandi",
     "businessMode": "Biznes turi",
     "businessModeHint": "Biznesingiz uchun qaysi funksiyalar faolligini tanlang.",

@@ -1,9 +1,37 @@
-import { InlineKeyboard } from 'grammy';
+import { GrammyError, InlineKeyboard } from 'grammy';
 import { MyContext, ApiProduct } from '../lib/types.js';
 import { getCatalog, SuspendedError } from '../lib/api.js';
 import { buildCartSummary } from '../lib/format.js';
 import { t, formatMoney } from '../lib/i18n.js';
 import { getLang } from '../lib/lang.js';
+
+// Edit-in-place for pure NAVIGATION renders: evolve the SAME message bubble the
+// tapped button lives on instead of sending a new one each tap. Presentation
+// only — never changes cart/session state.
+//  - From a callback: try editMessageText. A "message is not modified" 400 is
+//    swallowed silently (the bubble already shows this). ANY other edit failure
+//    (the bubble is a photo with no text, the message is too old, etc.) falls
+//    back to a fresh reply so the customer is never stranded and nothing throws.
+//  - Outside a callback (e.g. the /cart command) there is no message to edit —
+//    reply directly.
+async function editOrSend(
+  ctx: MyContext,
+  text: string,
+  other?: { parse_mode?: 'HTML'; reply_markup?: InlineKeyboard },
+): Promise<void> {
+  if (ctx.callbackQuery) {
+    try {
+      await ctx.editMessageText(text, other);
+      return;
+    } catch (err) {
+      if (err instanceof GrammyError && err.description.includes('message is not modified')) {
+        return; // identical content — nothing to do, swallow silently
+      }
+      // fall through to a new message (photo bubble / too old / not editable)
+    }
+  }
+  await ctx.reply(text, other);
+}
 
 export function registerCatalogHandlers(bot: import('grammy').Bot<MyContext>) {
   // "Browse catalog" button → show product list
@@ -78,7 +106,7 @@ export async function showCatalog(ctx: MyContext) {
     keyboard.text(t(lang, 'cartButton', { count: cartCount }), 'cart');
   }
 
-  await ctx.reply(t(lang, 'chooseProduct'), { reply_markup: keyboard });
+  await editOrSend(ctx, t(lang, 'chooseProduct'), { reply_markup: keyboard });
 }
 
 async function showProduct(ctx: MyContext, productId: string) {
@@ -132,7 +160,9 @@ async function showProduct(ctx: MyContext, productId: string) {
 
   qtyKeyboard.text(t(lang, 'backToCatalogText'), 'catalog');
 
-  // Send photo if available, otherwise just text
+  // A product WITH a photo is a fresh photo bubble (a text bubble can't be edited
+  // into a photo), so it is sent new. A text-only product edits the current
+  // navigation bubble in place.
   if (product.photos.length > 0) {
     try {
       await ctx.replyWithPhoto(product.photos[0], {
@@ -146,7 +176,7 @@ async function showProduct(ctx: MyContext, productId: string) {
     }
   }
 
-  await ctx.reply(caption, { parse_mode: 'HTML', reply_markup: qtyKeyboard });
+  await editOrSend(ctx, caption, { parse_mode: 'HTML', reply_markup: qtyKeyboard });
 }
 
 async function addToCart(ctx: MyContext, productId: string, qty: number) {
@@ -192,7 +222,8 @@ async function addToCart(ctx: MyContext, productId: string, qty: number) {
     .row()
     .text(t(lang, 'checkout'), 'checkout');
 
-  await ctx.reply(
+  await editOrSend(
+    ctx,
     t(lang, 'addedToCartFull', {
       qty,
       name: product.name,
@@ -219,5 +250,5 @@ export async function showCart(ctx: MyContext) {
     keyboard.text(t(lang, 'browseCatalog'), 'catalog');
   }
 
-  await ctx.reply(summary, { parse_mode: 'HTML', reply_markup: keyboard });
+  await editOrSend(ctx, summary, { parse_mode: 'HTML', reply_markup: keyboard });
 }

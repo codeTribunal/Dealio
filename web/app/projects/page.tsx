@@ -200,16 +200,32 @@ export default function ProjectsPage() {
     )
   }
 
+  // Double-submit guards: track the id being processed so the specific button
+  // disables + shows a spinner while its PATCH is in flight, preventing repeat
+  // clicks from firing duplicate requests before the optimistic update lands.
+  const [payingMilestoneId, setPayingMilestoneId] = useState<string | null>(null)
+  const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null)
+
   async function handleMilestonePayment(milestone: ProjectMilestone) {
-    if (!selectedProject) return
-    await updateMilestoneStatus(selectedProject.id, milestone.id, 'PAYMENT_RECEIVED')
-    updateProjectMilestone(selectedProject.id, milestone.id, 'PAYMENT_RECEIVED')
+    if (!selectedProject || payingMilestoneId) return
+    setPayingMilestoneId(milestone.id)
+    try {
+      await updateMilestoneStatus(selectedProject.id, milestone.id, 'PAYMENT_RECEIVED')
+      updateProjectMilestone(selectedProject.id, milestone.id, 'PAYMENT_RECEIVED')
+    } finally {
+      setPayingMilestoneId(null)
+    }
   }
 
   async function handleMarkInvoicePaid(invoice: ProjectInvoice) {
-    if (!selectedProject) return
-    await markInvoicePaid(selectedProject.id, invoice.id)
-    updateProjectInvoice(selectedProject.id, invoice.id, 'PAID')
+    if (!selectedProject || payingInvoiceId) return
+    setPayingInvoiceId(invoice.id)
+    try {
+      await markInvoicePaid(selectedProject.id, invoice.id)
+      updateProjectInvoice(selectedProject.id, invoice.id, 'PAID')
+    } finally {
+      setPayingInvoiceId(null)
+    }
   }
 
   function copyProposalLink() {
@@ -688,6 +704,7 @@ export default function ProjectsPage() {
                             <Button
                               variant="primary"
                               size="sm"
+                              loading={payingMilestoneId === milestone.id}
                               onClick={() => handleMilestonePayment(milestone)}
                             >
                               Mark payment received
@@ -797,6 +814,7 @@ export default function ProjectsPage() {
                             <Button
                               variant="primary"
                               size="sm"
+                              loading={payingInvoiceId === invoice.id}
                               onClick={() => handleMarkInvoicePaid(invoice)}
                             >
                               Mark paid

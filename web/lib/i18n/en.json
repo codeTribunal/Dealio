@@ -75,9 +75,11 @@
     "title": "Home",
     "revenueLabel": "Revenue this month",
     "revenueSub": "{count} appointments this month",
+    "revenueSubCompleted": "{count} completed this month",
     "statOrdersToday": "Orders today",
     "statPending": "Pending payments",
     "statAppointmentsToday": "Today's appointments",
+    "statProjectsToday": "Projects today",
     "quickActionNewOrder": "New order",
     "quickActionNewAppointment": "New appointment",
     "quickActionNewProject": "New project",
@@ -135,6 +137,7 @@
     "CANCELLED": "Cancelled",
     "PENDING": "Pending",
     "PAYMENT_RECEIVED": "Payment received",
+    "PAYMENT_CONFIRMED": "Payment confirmed",
     "CONFIRMED": "Confirmed",
     "REQUESTED": "Requested",
     "COMPLETED": "Completed",
@@ -149,7 +152,19 @@
   },
   "delivery": {
     "PICKUP": "Pickup",
-    "DELIVERY": "Delivery"
+    "DELIVERY": "Delivery",
+    "method": "Delivery method",
+    "address": "Delivery address"
+  },
+  "orders": {
+    "paymentProof": "Payment proof",
+    "proofUnavailable": "Proof unavailable"
+  },
+  "emailPrompt": {
+    "heading": "Get weekly reports by email",
+    "subtext": "Business summaries and product updates",
+    "consent": "Send me weekly reports and product updates",
+    "skip": "Skip"
   },
   "welcome": {
     "title": "Welcome to your CRM",
@@ -192,6 +207,10 @@
     "businessProfile": "Business profile",
     "businessName": "Business name",
     "description": "Description",
+    "address": "Address",
+    "addressHint": "Address customers come to (pickup or meeting point)",
+    "email": "Email",
+    "emailInvalid": "Enter a valid email address",
     "profileSaved": "Profile saved",
     "businessMode": "Business mode",
     "businessModeHint": "Select which features are active for your business.",

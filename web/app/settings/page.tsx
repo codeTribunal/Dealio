@@ -10,6 +10,7 @@ import { Icon } from '@/components/icons/Icon'
 import {
   getBusiness,
   updateBusiness,
+  updateEmailConsent,
   updateBotToken,
   updatePayment,
   generateCalendarToken,
@@ -83,6 +84,9 @@ export default function SettingsPage() {
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [address, setAddress] = useState('')
+  const [email, setEmail] = useState('')
+  const [newsletterConsent, setNewsletterConsent] = useState(false)
   const [language, setLanguage] = useState('UZBEK')
 
   const [mode, setMode] = useState<string>('SERVICES')
@@ -116,6 +120,9 @@ export default function SettingsPage() {
         setBusiness(data)
         setName(data.name)
         setDescription(data.description || '')
+        setAddress(data.address || '')
+        setEmail(data.ownerEmail || '')
+        setNewsletterConsent(data.newsletterConsent ?? false)
         setLanguage(data.language)
         setMode(data.mode)
         setCalendarToken(data.calendarToken || null)
@@ -167,9 +174,20 @@ export default function SettingsPage() {
   }
 
   async function saveProfile() {
+    const trimmedEmail = email.trim()
+    if (trimmedEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmedEmail)) {
+      showSaved(t('settings.emailInvalid'))
+      return
+    }
     setSaving(true)
     try {
-      const updated = await updateBusiness({ name, description, language })
+      // Email/consent (User) first, so the PATCH /business flatten below returns
+      // the fresh ownerEmail into the page + context. Empty clears the email.
+      await updateEmailConsent({
+        email: trimmedEmail || null,
+        newsletterConsent,
+      })
+      const updated = await updateBusiness({ name, description, address: address.trim() || null, language })
       setBusiness(updated)
       setEditingProfile(false)
       showSaved(t('settings.profileSaved'))
@@ -336,6 +354,18 @@ export default function SettingsPage() {
                   {business.description || '—'}
                 </p>
               </div>
+              <div className="flex justify-between items-center py-2 border-b border-border">
+                <p className="text-sm text-text-2">{t('settings.address')}</p>
+                <p className="text-sm font-medium text-text-1">
+                  {business.address || '—'}
+                </p>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-border">
+                <p className="text-sm text-text-2">{t('settings.email')}</p>
+                <p className="text-sm font-medium text-text-1">
+                  {business.ownerEmail || '—'}
+                </p>
+              </div>
               <div className="flex justify-between items-center py-2">
                 <p className="text-sm text-text-2">{t('settings.language')}</p>
                 <p className="text-sm font-medium text-text-1">
@@ -371,6 +401,40 @@ export default function SettingsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-2 mb-1.5">
+                  {t('settings.address')}
+                </label>
+                <Textarea
+                  rows={2}
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                />
+                <p className="text-xs text-text-3 mt-1.5">
+                  {t('settings.addressHint')}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
+                  {t('settings.email')}
+                </label>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+                <label className="flex items-start gap-2.5 mt-3 text-sm text-text-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newsletterConsent}
+                    onChange={(e) => setNewsletterConsent(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                    style={{ accentColor: 'var(--accent)' }}
+                  />
+                  <span>{t('emailPrompt.consent')}</span>
+                </label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-2 mb-1.5">
                   {t('settings.language')}
                 </label>
                 <LanguageSwitcher onChange={selectLanguage} />
@@ -391,6 +455,9 @@ export default function SettingsPage() {
                   onClick={() => {
                     setName(business.name)
                     setDescription(business.description || '')
+                    setAddress(business.address || '')
+                    setEmail(business.ownerEmail || '')
+                    setNewsletterConsent(business.newsletterConsent ?? false)
                     setLanguage(business.language)
                     setEditingProfile(false)
                   }}

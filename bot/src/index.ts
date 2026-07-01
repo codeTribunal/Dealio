@@ -8,9 +8,9 @@ import { RedisAdapter } from '@grammyjs/storage-redis';
 import { Redis } from 'ioredis';
 import { MyContext, SessionData } from './lib/types.js';
 import { registerCatalogHandlers } from './scenes/catalog.js';
-import { checkoutConversation } from './scenes/checkout.js';
+import { registerCheckoutHandlers } from './scenes/checkout.js';
 import { bookingConversation } from './scenes/booking.js';
-import { registerCommandHandlers } from './handlers/commands.js';
+import { registerCommandHandlers, registerBotCommandMenu } from './handlers/commands.js';
 import { registerOwnerHandlers } from './handlers/owner.js';
 import { registerProjectHandlers } from './scenes/project.js';
 import { runReminderJob } from './jobs/reminders.js';
@@ -44,7 +44,12 @@ let sessionStorage: RedisAdapter<SessionData> | undefined;
 if (process.env.REDIS_URL) {
   const redis = new Redis(process.env.REDIS_URL);
   redis.on('error', (err) => console.error('[bot] Redis error:', err));
-  sessionStorage = new RedisAdapter<SessionData>({ instance: redis });
+  // 24h TTL (SECONDS, per @grammyjs/storage-redis v2.5.1) so abandoned-flow PII
+  // (name/phone/address left in a half-finished checkout/booking) auto-expires
+  // instead of lingering forever — closes the gap in docs/REDIS_SESSION_AUDIT.md.
+  // The adapter re-issues EXPIRE on every write, so an active customer mid-flow
+  // is never expired as long as they keep interacting within any 24h window.
+  sessionStorage = new RedisAdapter<SessionData>({ instance: redis, ttl: 86400 });
   console.log('[bot] Session storage: Redis (persistent)');
 } else {
   console.warn('[bot] REDIS_URL not set — sessions are IN-MEMORY and lost on restart');
@@ -154,31 +159,36 @@ function registerHandlers(
       // flavor). ctx.session is MaybePromise under the flavor, so await it; with
       // the eager session() above this resolves to the same in-memory object the
       // engine will read next, so clearing it here takes effect this update.
-      const sess = await ctx.session;
+      const sess = (await ctx.session) as SessionData & { conversation?: unknown };
+      // Reset BOTH flows so a command always starts clean: the booking
+      // conversation slot AND the manual checkout state machine.
       const hadConversation = sess.conversation != null;
       if (hadConversation) sess.conversation = undefined;
+      const hadCheckout = sess.checkout != null && sess.checkout.step !== 'idle';
+      if (sess.checkout) sess.checkout = { step: 'idle' };
       console.log(
-        `[${botUsername}] command "${text.split(/\s/)[0]}" before conversations()` +
-          (hadConversation ? ' — cleared an active conversation' : ' (none active)'),
+        `[${botUsername}] command "${text.split(/\s/)[0]}" reset flows` +
+          (hadConversation || hadCheckout
+            ? ` (booking:${hadConversation} checkout:${hadCheckout})`
+            : ' (none active)'),
       );
     }
     await next();
   });
 
+  // conversations() + booking only — checkout is now a manual state machine
+  // (registerCheckoutHandlers), no longer a @grammyjs/conversations flow.
   bot.use(conversations());
-  bot.use(createConversation(checkoutConversation));
   bot.use(createConversation(bookingConversation));
 
   registerCommandHandlers(bot);
   registerCatalogHandlers(bot);
   registerOwnerHandlers(bot);
   registerProjectHandlers(bot);
-
-  // Enter checkout conversation when "checkout" callback fires
-  bot.callbackQuery('checkout', async (ctx) => {
-    await ctx.answerCallbackQuery();
-    await ctx.conversation.enter('checkoutConversation');
-  });
+  // Manual checkout state machine — registers the "checkout" trigger, the
+  // step callbacks, and the bot.on('message') step handler (before the
+  // inbox-save catch-all below).
+  registerCheckoutHandlers(bot);
 
   // Free-text message catch-all — save to inbox and notify owner
   bot.on('message:text', async (ctx) => {
@@ -188,22 +198,25 @@ function registerHandlers(
     const telegramUserId = String(ctx.from?.id ?? '');
     if (!telegramUserId) return;
 
-    // If a conversation (checkout/booking) is active, this text is that flow's
-    // input (e.g. the phone-number step) — NOT a free-text inbox message. Skip
-    // the inbox-save (saving would 404 'Customer not found' before the order
-    // step). Use the RAW session slot (ctx.session.conversation) — the same
-    // reliable signal as the command-escape fix — NOT ctx.conversation.active(),
-    // whose Redis round-trip returned empty during active checkouts and let the
-    // 404 fire. The log also tells T1 vs T2: "active" => the conversation IS in
-    // the session (a wait failed to consume); "none in session" => the state was
-    // lost (not persisted) — distinct root causes.
+    // If a flow owns this update — the manual CHECKOUT state machine (step !=
+    // idle) or the BOOKING conversation — it's that flow's input (e.g. the phone
+    // number), NOT a free-text inbox message. Skip the inbox-save (saving would
+    // 404 'Customer not found' before the order step). Both signals are raw
+    // session reads (reliable) — checkout via ctx.session.checkout.step, booking
+    // via ctx.session.conversation — NOT ctx.conversation.active(), whose Redis
+    // round-trip returned empty during active checkouts and let the 404 fire.
+    // (Belt-and-suspenders: the checkout message handler already consumes these
+    // before the catch-all is reached.)
     try {
-      const sess = await ctx.session;
-      if (sess.conversation != null) {
-        console.log(`[${botUsername}] inbox-save skipped — conversation active in session`);
+      const sess = (await ctx.session) as SessionData & { conversation?: unknown };
+      const checkoutActive = sess.checkout != null && sess.checkout.step !== 'idle';
+      const bookingActive = sess.conversation != null;
+      if (checkoutActive || bookingActive) {
+        console.log(
+          `[${botUsername}] inbox-save skipped — active flow (checkout:${sess.checkout?.step ?? 'idle'} booking:${bookingActive})`,
+        );
         return;
       }
-      console.log(`[${botUsername}] inbox-save proceeding — NO conversation in session for this update`);
     } catch (err) {
       // Could NOT read the session — do NOT silently drop the update: log and
       // fall through to the guarded save below (a guard that can't decide must
@@ -292,6 +305,11 @@ async function startBotForBusiness(
     // since grammy disallows installing handlers once polling has begun.
     await bot.init();
     runReminderJob(bot, botUsername);
+    // Register the persistent command menu (setMyCommands). Best-effort and
+    // fire-and-forget so a slow/down backend never delays polling start.
+    void registerBotCommandMenu(bot, botUsername).catch((err) => {
+      console.error(`[bot-manager] command menu registration failed for @${botUsername}:`, err);
+    });
 
     console.log(`[bot-manager] Starting bot for business ${businessId} (@${botUsername})`);
 

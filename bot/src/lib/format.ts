@@ -1,6 +1,13 @@
 import { CartItem } from './types.js';
 import { t, formatMoney, type Lang } from './i18n.js';
 
+// Escape text for Telegram HTML parse_mode (only & < > matter). Used for any
+// user- or owner-provided value interpolated into an HTML-parsed message;
+// without it a value containing '<' or '&' makes Telegram reject the send.
+export function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 export function formatUZS(amount: number): string {
   return amount.toLocaleString('uz-UZ').replace(/,/g, ' ') + ' UZS';
 }
@@ -48,7 +55,7 @@ export function buildOrderSummary(
   deliveryAddress?: string,
 ): string {
   const items = cart
-    .map((i) => `• ${i.name} × ${i.quantity} — ${formatMoney(lang, i.price * i.quantity)}`)
+    .map((i) => `• ${escapeHtml(i.name)} × ${i.quantity} — ${formatMoney(lang, i.price * i.quantity)}`)
     .join('\n');
   const total = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const deliveryLabel =
@@ -58,9 +65,9 @@ export function buildOrderSummary(
     `${t(lang, 'orderSummaryTitle')}\n\n` +
     `${items}\n\n` +
     `<b>${t(lang, 'labelTotal')}:</b> ${formatMoney(lang, total)}\n` +
-    `<b>${t(lang, 'labelName')}:</b> ${name}\n` +
-    `<b>${t(lang, 'labelPhone')}:</b> ${phone}\n` +
+    `<b>${t(lang, 'labelName')}:</b> ${escapeHtml(name)}\n` +
+    `<b>${t(lang, 'labelPhone')}:</b> ${escapeHtml(phone)}\n` +
     `<b>${t(lang, 'labelDelivery')}:</b> ${deliveryLabel}\n` +
-    (deliveryAddress ? `<b>${t(lang, 'labelAddress')}:</b> ${deliveryAddress}\n` : '')
+    (deliveryAddress ? `<b>${t(lang, 'labelAddress')}:</b> ${escapeHtml(deliveryAddress)}\n` : '')
   );
 }

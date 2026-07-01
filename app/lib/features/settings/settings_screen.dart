@@ -14,12 +14,14 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_checkbox.dart';
 import '../../shared/widgets/app_dialog.dart';
 import '../../shared/widgets/app_spinner.dart';
 import '../../shared/widgets/app_switch.dart';
 import '../staff/staff_provider.dart';
 import 'blocked_time_provider.dart';
 import 'customization_provider.dart';
+import 'email_consent_actions.dart';
 import 'reminder_settings_provider.dart';
 import 'settings_provider.dart';
 
@@ -229,8 +231,13 @@ class _ProfileSection extends ConsumerStatefulWidget {
 class _ProfileSectionState extends ConsumerState<_ProfileSection> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _descCtrl;
+  late final TextEditingController _addressCtrl;
+  late final TextEditingController _emailCtrl;
+  bool _consent = false;
   bool _editing = false;
   bool _saving = false;
+
+  static final _emailRe = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
   @override
   void initState() {
@@ -238,22 +245,43 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
     _nameCtrl = TextEditingController(text: widget.data.business.name);
     _descCtrl =
         TextEditingController(text: widget.data.business.description ?? '');
+    _addressCtrl =
+        TextEditingController(text: widget.data.business.address ?? '');
+    _emailCtrl =
+        TextEditingController(text: widget.data.business.ownerEmail ?? '');
+    _consent = widget.data.business.newsletterConsent;
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _descCtrl.dispose();
+    _addressCtrl.dispose();
+    _emailCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     if (_nameCtrl.text.trim().isEmpty) return;
+    final email = _emailCtrl.text.trim();
+    if (email.isNotEmpty && !_emailRe.hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.settingsEmailInvalid)),
+      );
+      return;
+    }
     setState(() => _saving = true);
     try {
+      // Email/consent (on User) first, so the subsequent PATCH /business flatten
+      // returns the fresh ownerEmail into the settings state. Empty clears it.
+      await ref.read(emailConsentActionsProvider).saveEmailConsent(
+            email: email.isEmpty ? null : email,
+            consent: _consent,
+          );
       await ref.read(settingsProvider.notifier).saveProfile(
             name: _nameCtrl.text.trim(),
             description: _descCtrl.text.trim(),
+            address: _addressCtrl.text.trim(),
           );
       if (!mounted) return;
       setState(() {
@@ -271,6 +299,9 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
     setState(() {
       _nameCtrl.text = widget.data.business.name;
       _descCtrl.text = widget.data.business.description ?? '';
+      _addressCtrl.text = widget.data.business.address ?? '';
+      _emailCtrl.text = widget.data.business.ownerEmail ?? '';
+      _consent = widget.data.business.newsletterConsent;
       _editing = false;
     });
   }
@@ -306,6 +337,57 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
                   style: TextStyle(color: t.text1),
                   decoration: _decoration(context,
                       label: l.settingsDescriptionLabel(l.commonOptional)),
+                ),
+                const SizedBox(height: AppSpacing.s3),
+                TextField(
+                  controller: _addressCtrl,
+                  maxLines: 2,
+                  style: TextStyle(color: t.text1),
+                  decoration:
+                      _decoration(context, label: l.settingsAddressLabel),
+                ),
+                const SizedBox(height: AppSpacing.s1),
+                Text(
+                  l.settingsAddressHelper,
+                  style: TextStyle(
+                      color: t.text3, fontSize: AppTextSizes.caption),
+                ),
+                const SizedBox(height: AppSpacing.s3),
+                TextField(
+                  controller: _emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  style: TextStyle(color: t.text1),
+                  decoration: _decoration(context,
+                      label: l.settingsEmailLabel, hint: 'you@example.com'),
+                ),
+                const SizedBox(height: AppSpacing.s2),
+                InkWell(
+                  onTap:
+                      _saving ? null : () => setState(() => _consent = !_consent),
+                  borderRadius: AppRadii.sm,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppCheckbox(
+                        value: _consent,
+                        onChanged:
+                            _saving ? null : (v) => setState(() => _consent = v),
+                      ),
+                      const SizedBox(width: AppSpacing.s2),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            l.emailPromptConsent,
+                            style: TextStyle(
+                                color: t.text2, fontSize: AppTextSizes.sm),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.s3),
                 Row(
@@ -344,6 +426,24 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
                   const SizedBox(height: AppSpacing.s1),
                   Text(
                     widget.data.business.description!,
+                    style:
+                        TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
+                  ),
+                ],
+                if (widget.data.business.address != null &&
+                    widget.data.business.address!.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.s1),
+                  Text(
+                    '📍 ${widget.data.business.address!}',
+                    style:
+                        TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
+                  ),
+                ],
+                if (widget.data.business.ownerEmail != null &&
+                    widget.data.business.ownerEmail!.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.s1),
+                  Text(
+                    '✉️ ${widget.data.business.ownerEmail!}',
                     style:
                         TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
                   ),

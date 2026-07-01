@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 
+import '../../core/icons/app_icon.dart';
 import '../../core/theme/app_tokens.dart';
 import 'app_card.dart';
 
 /// A compact metric tile built on [AppCard]: an uppercase [label], a large
 /// [value], and an optional [delta]. When [money] is true the value is colored
 /// with [AppTokens.successStrong]. A [delta] string beginning with '-' is
-/// colored error, otherwise success.
+/// colored error, otherwise success. An optional [icon] renders a small
+/// accent-tinted glyph chip at the top-right (purely decorative).
 class AppStatCard extends StatelessWidget {
   final String label;
   final String value;
   final String? delta;
   final bool money;
   final VoidCallback? onTap;
+  final AppIconName? icon;
 
   const AppStatCard({
     super.key,
@@ -21,6 +24,7 @@ class AppStatCard extends StatelessWidget {
     this.delta,
     this.money = false,
     this.onTap,
+    this.icon,
   });
 
   @override
@@ -52,11 +56,31 @@ class AppStatCard extends StatelessWidget {
           SizedBox(
             height: labelHeight,
             width: double.infinity,
-            child: Text(
-              label.toUpperCase(),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: labelStyle,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    label.toUpperCase(),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: labelStyle,
+                  ),
+                ),
+                if (icon != null) ...[
+                  const SizedBox(width: AppSpacing.s2),
+                  Container(
+                    width: 28,
+                    height: 28,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: t.accentSoft,
+                      borderRadius: AppRadii.sm,
+                    ),
+                    child: AppIcon(name: icon!, size: 15, color: t.accent),
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(height: AppSpacing.s2),

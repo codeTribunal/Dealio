@@ -14,6 +14,7 @@ const SAFE_BUSINESS_SELECT = {
   id: true,
   name: true,
   description: true,
+  address: true,
   photoUrl: true,
   mode: true,
   language: true,
@@ -30,11 +31,60 @@ const SAFE_BUSINESS_SELECT = {
   suspendedAt: true,
   createdAt: true,
   updatedAt: true,
+  // Owner email + newsletter-consent fields, flattened onto the payload by
+  // flattenOwner() (email → ownerEmail) like cardPaymentsEnabled — so both
+  // clients read them off the flat business object with no extra fetch.
+  owner: {
+    select: {
+      email: true,
+      newsletterConsent: true,
+      newsletterConsentAt: true,
+      emailPromptDismissedAt: true,
+      emailPromptDismissCount: true,
+    },
+  },
 } as const;
+
+type OwnerConsentFields = {
+  email: string | null;
+  newsletterConsent: boolean;
+  newsletterConsentAt: Date | null;
+  emailPromptDismissedAt: Date | null;
+  emailPromptDismissCount: number;
+};
+
+// Flatten a business row selected with SAFE_BUSINESS_SELECT: drop the nested
+// `owner` object and spread its fields (email → ownerEmail) + cardPaymentsEnabled
+// onto a flat payload. Owner is always present for an owned business but is
+// defensively defaulted.
+function flattenOwner<T extends { owner?: OwnerConsentFields | null }>(
+  business: T,
+  cardPaymentsEnabled: boolean,
+): Omit<T, 'owner'> & {
+  ownerEmail: string | null;
+  newsletterConsent: boolean;
+  newsletterConsentAt: Date | null;
+  emailPromptDismissedAt: Date | null;
+  emailPromptDismissCount: number;
+  cardPaymentsEnabled: boolean;
+} {
+  const { owner, ...biz } = business;
+  return {
+    ...biz,
+    ownerEmail: owner?.email ?? null,
+    newsletterConsent: owner?.newsletterConsent ?? false,
+    newsletterConsentAt: owner?.newsletterConsentAt ?? null,
+    emailPromptDismissedAt: owner?.emailPromptDismissedAt ?? null,
+    emailPromptDismissCount: owner?.emailPromptDismissCount ?? 0,
+    cardPaymentsEnabled,
+  };
+}
 
 const createBusinessBody = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
+  // Physical location (pickup / appointment). Optional; empty → null.
+  address: z.string().trim().max(200).nullable().optional(),
   // Single mode (scalar). PRODUCTS disabled — only SERVICES/FREELANCE accepted.
   mode: z.enum(['PRODUCTS', 'SERVICES', 'FREELANCE']),
   language: z.enum(['UZBEK', 'RUSSIAN', 'ENGLISH']).optional(),
@@ -77,6 +127,8 @@ const workingHoursSchema = z.record(
 const updateBusinessBody = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional(),
+  // Physical location (pickup / appointment). Optional; empty → null (clear).
+  address: z.string().trim().max(200).nullable().optional(),
   photoUrl: z.string().url().optional(),
   // Single mode (scalar). PRODUCTS disabled — only SERVICES/FREELANCE accepted.
   mode: z.enum(['PRODUCTS', 'SERVICES', 'FREELANCE']).optional(),
@@ -169,7 +221,7 @@ export default async function businessRoutes(app: FastifyInstance) {
     // Carry the global card-payments flag on the business payload so the app/web
     // get it with their existing bootstrap fetch (no extra round-trip needed).
     const cardPaymentsEnabled = await getCardPaymentsEnabled();
-    return reply.send({ ...business, cardPaymentsEnabled });
+    return reply.send(flattenOwner(business, cardPaymentsEnabled));
   });
 
   // GET /platform-settings — global, superadmin-controlled flags any
@@ -189,20 +241,22 @@ export default async function businessRoutes(app: FastifyInstance) {
     const parsed = createBusinessBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const { botToken, ...rest } = parsed.data;
+    const { botToken, address, ...rest } = parsed.data;
 
     const business = await prisma.business.create({
       data: {
         ...rest,
         ...buildTokenData(botToken),
         ownerId: request.user.userId,
+        // Empty string → null; undefined → omit (column defaults null).
+        ...(address === undefined ? {} : { address: address || null }),
       },
       select: SAFE_BUSINESS_SELECT,
     });
     // Keep cardPaymentsEnabled present on every full-business payload (as GET
     // does) so clients gate the card UI consistently after any mutation.
     const cardPaymentsEnabled = await getCardPaymentsEnabled();
-    return reply.status(201).send({ ...business, cardPaymentsEnabled });
+    return reply.status(201).send(flattenOwner(business, cardPaymentsEnabled));
   });
 
   app.patch('/business', { preHandler: authenticate }, async (request, reply) => {
@@ -212,20 +266,22 @@ export default async function businessRoutes(app: FastifyInstance) {
     const parsed = updateBusinessBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const { botToken, ...rest } = parsed.data;
+    const { botToken, address, ...rest } = parsed.data;
 
     const updated = await prisma.business.update({
       where: { id: business.id },
       data: {
         ...rest,
         ...buildTokenData(botToken),
+        // Empty string → null (clear); undefined → leave unchanged.
+        ...(address === undefined ? {} : { address: address || null }),
       },
       select: SAFE_BUSINESS_SELECT,
     });
     // Carry the global flag (PATCH select omits it) so the card UI gate stays
     // correct after profile/mode/language edits.
     const cardPaymentsEnabled = await getCardPaymentsEnabled();
-    return reply.send({ ...updated, cardPaymentsEnabled });
+    return reply.send(flattenOwner(updated, cardPaymentsEnabled));
   });
 
   // PATCH /business/payment
@@ -256,7 +312,7 @@ export default async function businessRoutes(app: FastifyInstance) {
     });
     // Mirror GET /business: carry the global flag so clients refresh their model.
     const cardPaymentsEnabled = await getCardPaymentsEnabled();
-    return reply.send({ ...updated, cardPaymentsEnabled });
+    return reply.send(flattenOwner(updated, cardPaymentsEnabled));
   });
 
   // PATCH /business/bot-token

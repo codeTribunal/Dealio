@@ -69,6 +69,11 @@ export default function AdminBusinessDetailPage() {
   const [eraseConfirmText, setEraseConfirmText] = useState('')
   const [erasing, setErasing] = useState(false)
   const [eraseCounts, setEraseCounts] = useState<Record<string, number> | null>(null)
+  // Impersonation and unsuspend now require a justification (captured, audited).
+  const [showImpersonateModal, setShowImpersonateModal] = useState(false)
+  const [impersonateReason, setImpersonateReason] = useState('')
+  const [showUnsuspendModal, setShowUnsuspendModal] = useState(false)
+  const [unsuspendReason, setUnsuspendReason] = useState('')
   const role = getAdminRole()
 
   useEffect(() => {
@@ -84,14 +89,16 @@ export default function AdminBusinessDetailPage() {
   }
 
   const handleImpersonate = async () => {
-    if (!business) return
+    if (!business || impersonateReason.trim().length < 10) return
     setImpersonating(true)
     try {
-      const data = await impersonateBusiness(id)
+      const data = await impersonateBusiness(id, impersonateReason.trim())
       Cookies.set('crm_token', data.token, { expires: 1 / 96, sameSite: 'strict' })
       const appUrl =
         process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
       window.open(appUrl, '_blank')
+      setShowImpersonateModal(false)
+      setImpersonateReason('')
       showSaved('Impersonation active (15 min)')
     } catch {
       showSaved('Failed to impersonate')
@@ -101,11 +108,13 @@ export default function AdminBusinessDetailPage() {
   }
 
   const handleUnsuspend = async () => {
-    if (!business) return
+    if (!business || unsuspendReason.trim().length < 10) return
     setSaving(true)
     try {
-      const updated = await unsuspendBusiness(id)
+      const updated = await unsuspendBusiness(id, unsuspendReason.trim())
       setBusiness((prev) => prev ? { ...prev, ...updated } : prev)
+      setShowUnsuspendModal(false)
+      setUnsuspendReason('')
       showSaved('Business unsuspended')
     } finally {
       setSaving(false)
@@ -265,11 +274,13 @@ export default function AdminBusinessDetailPage() {
               </p>
               <div className="space-y-2">
                 <button
-                  onClick={handleImpersonate}
-                  disabled={impersonating}
-                  className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  onClick={() => {
+                    setImpersonateReason('')
+                    setShowImpersonateModal(true)
+                  }}
+                  className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors"
                 >
-                  {impersonating ? 'Opening...' : 'View as owner'}
+                  View as owner
                 </button>
 
                 <button
@@ -291,9 +302,11 @@ export default function AdminBusinessDetailPage() {
                   </button>
                 ) : (
                   <button
-                    onClick={handleUnsuspend}
-                    disabled={saving}
-                    className="w-full py-2.5 bg-green-700 text-white rounded-xl text-xs font-semibold hover:bg-green-600 transition-colors disabled:opacity-50"
+                    onClick={() => {
+                      setUnsuspendReason('')
+                      setShowUnsuspendModal(true)
+                    }}
+                    className="w-full py-2.5 bg-green-700 text-white rounded-xl text-xs font-semibold hover:bg-green-600 transition-colors"
                   >
                     Unsuspend business
                   </button>
@@ -363,6 +376,78 @@ export default function AdminBusinessDetailPage() {
                 className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
               >
                 {saving ? 'Suspending...' : 'Suspend'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Impersonate modal — reason required, captured in the audit log */}
+      {showImpersonateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6 w-full max-w-md">
+            <h3 className="text-base font-bold text-white mb-2">
+              View as owner
+            </h3>
+            <p className="text-sm text-gray-400 mb-4">
+              A read-only owner session (15 minutes). The reason is recorded in the audit log.
+            </p>
+            <textarea
+              rows={3}
+              value={impersonateReason}
+              onChange={(e) => setImpersonateReason(e.target.value)}
+              placeholder="Reason for impersonation (min 10 characters)..."
+              className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setShowImpersonateModal(false)}
+                className="px-4 py-2 bg-gray-700 text-white rounded-xl text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleImpersonate}
+                disabled={impersonateReason.trim().length < 10 || impersonating}
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {impersonating ? 'Opening...' : 'View as owner'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unsuspend modal — reason required, captured in the audit log */}
+      {showUnsuspendModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6 w-full max-w-md">
+            <h3 className="text-base font-bold text-white mb-2">
+              Unsuspend business
+            </h3>
+            <p className="text-sm text-gray-400 mb-4">
+              The reason is recorded in the audit log.
+            </p>
+            <textarea
+              rows={3}
+              value={unsuspendReason}
+              onChange={(e) => setUnsuspendReason(e.target.value)}
+              placeholder="Reason for unsuspending (min 10 characters)..."
+              className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setShowUnsuspendModal(false)}
+                className="px-4 py-2 bg-gray-700 text-white rounded-xl text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUnsuspend}
+                disabled={unsuspendReason.trim().length < 10 || saving}
+                className="px-4 py-2 bg-green-700 text-white rounded-xl text-sm font-semibold hover:bg-green-600 disabled:opacity-50 transition-colors"
+              >
+                {saving ? 'Unsuspending...' : 'Unsuspend'}
               </button>
             </div>
           </div>

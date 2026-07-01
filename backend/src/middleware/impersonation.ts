@@ -9,21 +9,30 @@ import { FastifyRequest, FastifyReply } from 'fastify';
  * guard enforces it: support staff may view and help, but may not destroy data
  * or move money while wearing an owner's identity.
  *
- * Deny-list (conservative — read-only and routine writes stay allowed):
- *  - every DELETE on an owner route (all current owner deletes are soft, but
- *    the destructive intent is identical),
- *  - any PATCH whose route ends in `/payment`, which covers:
- *      · PATCH /orders/:id/payment        — confirm a customer order payment
- *      · PATCH /appointments/:id/payment  — confirm an appointment payment
- *
- * The bot payment-confirm route (POST /bot/confirm-payment) is authenticated by
- * the shared bot secret, never an owner token, so an impersonation flag can
- * never reach it — it needs no entry here.
+ * Model: DENY-BY-DEFAULT (allow-list). An impersonation session is read-only.
+ * Every state-changing method (POST/PATCH/PUT/DELETE) is blocked unless its
+ * { method, route } is on IMPERSONATION_WRITE_ALLOWLIST (currently empty), so a
+ * newly-added destructive/write route is blocked automatically with no suffix
+ * pattern to maintain. Only GET/HEAD/OPTIONS pass. The bot payment routes use
+ * the shared bot secret (never an owner token), so an impersonation flag can
+ * never reach them regardless.
  */
+// Non-mutating HTTP methods — always safe during impersonation.
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+// Explicit allow-list of state-changing routes an impersonation session MAY
+// perform (deny-by-default: anything not listed is blocked). Empty = strictly
+// read-only. To permit a specific write, add { method, url } where url is the
+// Fastify route pattern (e.g. '/orders/:id/status').
+const IMPERSONATION_WRITE_ALLOWLIST: ReadonlyArray<{ method: string; url: string }> = [];
+
 export function isImpersonationBlocked(method: string, routeUrl: string): boolean {
-  if (method === 'DELETE') return true;
-  if (method === 'PATCH' && routeUrl.endsWith('/payment')) return true;
-  return false;
+  const m = method.toUpperCase();
+  if (SAFE_METHODS.has(m)) return false;
+  // Deny-by-default: every mutating method is blocked unless explicitly allowed.
+  return !IMPERSONATION_WRITE_ALLOWLIST.some(
+    (e) => e.method === m && e.url === routeUrl,
+  );
 }
 
 /**

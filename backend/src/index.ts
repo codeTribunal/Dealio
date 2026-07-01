@@ -6,6 +6,7 @@ import rateLimitPlugin from './plugins/rateLimit.js';
 import helmetPlugin from './plugins/helmet.js';
 import authRoutes from './routes/auth.js';
 import businessRoutes from './routes/business.js';
+import userRoutes from './routes/user.js';
 import productRoutes from './routes/products.js';
 import orderRoutes from './routes/orders.js';
 import customerRoutes from './routes/customers.js';
@@ -69,6 +70,7 @@ async function bootstrap() {
 
   await app.register(authRoutes, { prefix: '/api/v1' });
   await app.register(businessRoutes, { prefix: '/api/v1' });
+  await app.register(userRoutes, { prefix: '/api/v1' });
   await app.register(productRoutes, { prefix: '/api/v1' });
   await app.register(orderRoutes, { prefix: '/api/v1' });
   await app.register(customerRoutes, { prefix: '/api/v1' });

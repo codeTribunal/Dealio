@@ -23,13 +23,47 @@ export interface BookingState {
   timeLabel?: string;  // "HH:MM"
 }
 
+/** Manual checkout state-machine step (replaces the @grammyjs/conversations
+ *  checkout flow). 'idle' = not in checkout. */
+export type CheckoutStep =
+  | 'idle'
+  | 'awaiting_name'
+  | 'awaiting_phone'
+  | 'awaiting_delivery'
+  | 'awaiting_address'
+  | 'awaiting_confirm'
+  | 'awaiting_payment'
+  | 'awaiting_payment_proof';
+
+export interface CheckoutState {
+  step: CheckoutStep;
+  name?: string;
+  phone?: string;
+  deliveryMethod?: 'PICKUP' | 'DELIVERY';
+  address?: string;
+  /** Idempotency key — generated ONCE at checkout start, reused through order
+   *  creation (incl. retries), so a lost response never duplicates the order. */
+  idemKey?: string;
+  /** Order id, set after creation — used by the awaiting_payment step. */
+  orderId?: string;
+  /** Transient id of the LAST data-collection prompt the bot sent (name / phone /
+   *  delivery / address) so the next step can delete it and keep the chat tidy.
+   *  At most ONE at a time — no history, no cross-step editing. Cleared on finish. */
+  lastPromptMsgId?: number;
+}
+
 export interface SessionData {
   cart: CartItem[];
   customerId?: string;
-  /** Idempotency key for the in-progress order: set once at checkout, reused on
-   *  retry, cleared on success or when the cart changes. */
+  /** Vestigial: previously the order idempotency key (now in checkout.idemKey).
+   *  Still written by the catalog cart handlers; kept to avoid touching them. */
   orderIdemKey?: string;
+  /** Manual checkout state-machine (replaces the conversations-based checkout). */
+  checkout?: CheckoutState;
   booking?: BookingState;
+  /** What to resume after the first-contact consent gate is accepted (set when
+   *  the gate is shown from a checkout/booking entry; undefined = from /start). */
+  consentReturnTo?: 'checkout' | 'booking';
   /** Cached customer language preference for this chat (UZBEK | RUSSIAN | ENGLISH). */
   lang?: 'UZBEK' | 'RUSSIAN' | 'ENGLISH';
 }
@@ -74,6 +108,8 @@ export interface ApiAppointmentResult {
     customer: { id: string; name: string; telegramUserId?: string };
   };
   ownerTelegramChatId: string | null;
+  // Business physical location — appended to the client's booking confirmation.
+  businessAddress: string | null;
 }
 
 export type MyContext = Context &
@@ -108,6 +144,8 @@ export interface ApiBusiness {
   // cardPaymentsEnabled AND cardNumber is present.
   cardNumber?: string | null;
   cardHolderName?: string | null;
+  // Physical location — pickup address appended to PICKUP order confirmations.
+  address?: string | null;
 }
 
 export interface ApiCustomer {

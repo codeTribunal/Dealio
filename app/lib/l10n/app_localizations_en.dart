@@ -370,7 +370,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get loginCodeSentNotice =>
-      'If an account exists, we\'ve sent a 6-digit code to your Telegram.';
+      'If an account exists, we\'ve sent a 6-digit code to your Telegram. It comes from our login bot. If it does not arrive, open that bot, tap Start, then request the code again.';
 
   @override
   String get loginTooManyAttempts =>
@@ -605,6 +605,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsDescriptionLabel(String optional) {
     return 'Description ($optional)';
   }
+
+  @override
+  String get settingsAddressLabel => 'Address';
+
+  @override
+  String get settingsAddressHelper =>
+      'Address customers come to (pickup or meeting point)';
+
+  @override
+  String get settingsEmailLabel => 'Email';
+
+  @override
+  String get settingsEmailInvalid => 'Enter a valid email address';
+
+  @override
+  String get emailPromptHeading => 'Get weekly reports by email';
+
+  @override
+  String get emailPromptSubtext => 'Business summaries and product updates';
+
+  @override
+  String get emailPromptConsent => 'Send me weekly reports and product updates';
+
+  @override
+  String get emailPromptSkip => 'Skip';
+
+  @override
+  String get emailPromptError => 'Something went wrong. Please try again.';
 
   @override
   String get settingsBusinessMode => 'BUSINESS MODE';
@@ -996,6 +1024,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get orderSectionDelivery => 'Delivery';
+
+  @override
+  String get orderSectionPaymentProof => 'Payment proof';
+
+  @override
+  String get orderProofUnavailable => 'Proof unavailable';
 
   @override
   String get orderSectionNotes => 'Notes';
@@ -1744,8 +1778,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsTopCustomers => 'Top customers — last 90 days';
 
   @override
+  String get analyticsLast6Months => 'Last 6 months';
+
+  @override
   String get analyticsNoConfirmedOrders =>
-      'No completed appointments in the last 90 days';
+      'No confirmed revenue in the last 90 days';
 
   @override
   String get analyticsBestSelling => 'Best selling product';

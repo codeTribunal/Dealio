@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma, prismaUnscoped } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { getBusinessOrFail } from '../lib/businessFromUser.js';
+import { getBotToken, hasBotToken } from '../lib/getBotToken.js';
 import { sendError } from '../lib/errors.js';
 import { allocateOrderNumber } from '../services/orderNumber.js';
 import { checkOrderLimit } from '../middleware/checkLimits.js';
@@ -83,7 +84,15 @@ export default async function orderRoutes(app: FastifyInstance) {
       include: orderInclude,
       orderBy: { createdAt: 'desc' },
     });
-    return reply.send(orders.map((o) => ({ ...o, deleted: o.deletedAt != null })));
+    return reply.send(
+      orders.map(({ paymentProofFileId, ...o }) => ({
+        ...o,
+        deleted: o.deletedAt != null,
+        // Boolean only — the raw Telegram file_id is never exposed; the image is
+        // fetched via the authenticated GET /orders/:id/payment-proof proxy.
+        hasPaymentProof: paymentProofFileId != null,
+      })),
+    );
   });
 
   app.post('/orders', { preHandler: [authenticate, checkOrderLimit()] }, async (request, reply) => {
@@ -147,7 +156,51 @@ export default async function orderRoutes(app: FastifyInstance) {
       include: orderInclude,
     });
     if (!order) return sendError(reply, 404, 'Order not found');
-    return reply.send(order);
+    // Strip the raw file_id; surface only the boolean (image via the proxy below).
+    const { paymentProofFileId, ...rest } = order;
+    return reply.send({ ...rest, hasPaymentProof: paymentProofFileId != null });
+  });
+
+  // GET /orders/:id/payment-proof — stream the customer's payment screenshot.
+  // The proof is a Telegram file_id (stored by /bot/payment-received); we resolve
+  // it on demand with THIS business's own bot token (getFile URLs are ~1h and
+  // regenerated each view) and stream the bytes so the token never leaves the
+  // server. Tenant-scoped via getBusinessOrFail. 404 = no order/no proof;
+  // 502 = getFile/download failed (file_id is permanent, so a retry works).
+  app.get('/orders/:id/payment-proof', { preHandler: authenticate }, async (request, reply) => {
+    const business = await getBusinessOrFail(request, reply);
+    if (!business) return;
+
+    const { id } = request.params as { id: string };
+    const order = await prisma.order.findFirst({
+      where: { id, businessId: business.id, deletedAt: null },
+      select: { paymentProofFileId: true },
+    });
+    if (!order) return sendError(reply, 404, 'Order not found');
+    if (!order.paymentProofFileId) return sendError(reply, 404, 'No payment proof');
+    if (!hasBotToken(business)) return sendError(reply, 502, 'Bot not configured');
+
+    const token = getBotToken(business);
+    try {
+      const gfRes = await fetch(
+        `https://api.telegram.org/bot${token}/getFile?file_id=${encodeURIComponent(order.paymentProofFileId)}`,
+      );
+      const gf = (await gfRes.json()) as { ok: boolean; result?: { file_path?: string } };
+      if (!gfRes.ok || !gf.ok || !gf.result?.file_path) {
+        throw new Error('getFile failed');
+      }
+      const fileRes = await fetch(
+        `https://api.telegram.org/file/bot${token}/${gf.result.file_path}`,
+      );
+      if (!fileRes.ok) throw new Error(`file download ${fileRes.status}`);
+      const bytes = Buffer.from(await fileRes.arrayBuffer());
+      reply.header('Content-Type', fileRes.headers.get('content-type') ?? 'image/jpeg');
+      reply.header('Cache-Control', 'private, max-age=60');
+      return reply.send(bytes);
+    } catch (e) {
+      console.error('[orders/payment-proof] getFile/download failed:', e);
+      return sendError(reply, 502, 'Payment proof unavailable');
+    }
   });
 
   app.patch('/orders/:id/status', { preHandler: authenticate }, async (request, reply) => {

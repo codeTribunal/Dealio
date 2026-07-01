@@ -6,6 +6,24 @@ import { sendError } from '../lib/errors.js';
 import { requireAdmin, requireSuperAdmin } from '../middleware/adminAuth.js';
 import { writeAuditLog } from '../lib/audit.js';
 import { getCardPaymentsEnabled, setCardPaymentsEnabled } from '../lib/platformSettings.js';
+import { invalidateVersionCache, type LegalDocType } from '../lib/legalVersion.js';
+
+// Admin login lockout: after ADMIN_LOCK_THRESHOLD consecutive failures, lock the
+// ACCOUNT for ADMIN_LOCK_MINUTES. This is the PRIMARY brute-force defense (the
+// per-IP rate limit is secondary, since x-forwarded-for is client-spoofable).
+// DUMMY_HASH equalizes bcrypt timing for unknown emails so login responses do
+// not reveal whether an account exists.
+const ADMIN_LOCK_THRESHOLD = 5;
+const ADMIN_LOCK_MINUTES = 15;
+const DUMMY_HASH = bcrypt.hashSync('unused-timing-equalizer', 12);
+
+// Legal-document publish body. Version must be a non-empty string; a no-op
+// (same-as-current) publish is rejected in the handler.
+const publishLegalBody = z.object({
+  version: z.string().trim().min(1).max(100),
+});
+
+const LEGAL_DOC_TYPES = ['PRIVACY', 'OFFER'] as const;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +70,16 @@ const suspendBody = z.object({
   reason: z.string().min(10),
 });
 
+// Unsuspend and impersonation now require a justification (like suspend), stored
+// in the audit log. Bounded length; trimmed.
+const unsuspendBody = z.object({
+  reason: z.string().trim().min(10).max(500),
+});
+
+const impersonateBody = z.object({
+  reason: z.string().trim().min(10).max(500),
+});
+
 const createAdminBody = z.object({
   email: z.string().email(),
   name: z.string().min(1),
@@ -87,14 +115,44 @@ export default async function adminRoutes(app: FastifyInstance) {
       const { email, password } = parsed.data;
 
       const admin = await prisma.adminUser.findUnique({ where: { email } });
-      if (!admin) return reply.status(401).send({ error: 'Invalid credentials' });
+
+      // Unknown account: dummy compare to equalize timing, then the SAME generic
+      // error (no account-existence leak). Per-account lockout is impossible with
+      // no account; the per-IP limit covers this path.
+      if (!admin) {
+        await bcrypt.compare(password, DUMMY_HASH);
+        return reply.status(401).send({ error: 'Invalid credentials' });
+      }
+
+      // Locked account: deny even a correct password during the cooldown, with
+      // the SAME generic error (do not reveal lock state).
+      if (admin.lockedUntil && admin.lockedUntil.getTime() > Date.now()) {
+        await bcrypt.compare(password, admin.passwordHash); // equalize timing
+        return reply.status(401).send({ error: 'Invalid credentials' });
+      }
 
       const valid = await bcrypt.compare(password, admin.passwordHash);
-      if (!valid) return reply.status(401).send({ error: 'Invalid credentials' });
+      if (!valid) {
+        // Count the failure; at the threshold, lock the account for the cooldown
+        // (and reset the counter so a fresh window starts after it expires).
+        const nextCount = admin.failedLoginCount + 1;
+        const lock = nextCount >= ADMIN_LOCK_THRESHOLD;
+        await prisma.adminUser.update({
+          where: { id: admin.id },
+          data: lock
+            ? {
+                failedLoginCount: 0,
+                lockedUntil: new Date(Date.now() + ADMIN_LOCK_MINUTES * 60_000),
+              }
+            : { failedLoginCount: nextCount },
+        });
+        return reply.status(401).send({ error: 'Invalid credentials' });
+      }
 
+      // Success: clear the counter + any lock, stamp lastLoginAt.
       await prisma.adminUser.update({
         where: { id: admin.id },
-        data: { lastLoginAt: new Date() },
+        data: { failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() },
       });
 
       const token = await reply.adminSign(
@@ -353,6 +411,9 @@ export default async function adminRoutes(app: FastifyInstance) {
       const existing = await prisma.business.findUnique({ where: { id }, select: { id: true } });
       if (!existing) return sendError(reply, 404, 'Business not found');
 
+      const parsed = unsuspendBody.safeParse(request.body);
+      if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
+
       const updated = await prisma.business.update({
         where: { id },
         data: { suspendedAt: null, suspendedReason: null },
@@ -364,6 +425,7 @@ export default async function adminRoutes(app: FastifyInstance) {
         action: 'UNSUSPEND_BUSINESS',
         targetType: 'Business',
         targetId: id,
+        metadata: { reason: parsed.data.reason },
         ipAddress: request.ip,
       });
 
@@ -374,9 +436,12 @@ export default async function adminRoutes(app: FastifyInstance) {
   // POST /admin/businesses/:id/impersonate
   app.post(
     '/admin/businesses/:id/impersonate',
-    { preHandler: requireAdmin },
+    { preHandler: requireSuperAdmin },
     async (request, reply) => {
       const { id } = request.params as { id: string };
+
+      const parsed = impersonateBody.safeParse(request.body);
+      if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
       const business = await prisma.business.findUnique({
         where: { id },
@@ -400,6 +465,7 @@ export default async function adminRoutes(app: FastifyInstance) {
         action: 'IMPERSONATE_BUSINESS',
         targetType: 'Business',
         targetId: id,
+        metadata: { reason: parsed.data.reason },
         ipAddress: request.ip,
       });
 
@@ -539,4 +605,85 @@ export default async function adminRoutes(app: FastifyInstance) {
 
     return reply.send(updated);
   });
+
+  // ── Legal documents (versioning + re-consent) ─────────────────────────────
+  // The document TEXT lives in the codebase (web/lib/legalConfig.ts) and deploys
+  // separately; these endpoints only read/bump the in-force VERSION. Publishing a
+  // new PRIVACY version is what forces re-consent (customers via the bot consent
+  // gate, owners via the login CONSENT_REQUIRED gate). SuperAdmin only.
+
+  // GET /admin/legal-docs — both documents with current version + publish info.
+  app.get('/admin/legal-docs', { preHandler: requireSuperAdmin }, async (_request, reply) => {
+    const rows = await prisma.legalDocument.findMany({
+      select: { docType: true, version: true, publishedAt: true, publishedByAdminId: true },
+    });
+    const docs: Record<
+      string,
+      { version: string; publishedAt: string; publishedByAdminId: string | null }
+    > = {};
+    for (const d of rows) {
+      docs[d.docType] = {
+        version: d.version,
+        publishedAt: d.publishedAt.toISOString(),
+        publishedByAdminId: d.publishedByAdminId ?? null,
+      };
+    }
+    return reply.send({ docs });
+  });
+
+  // POST /admin/legal-docs/:docType/publish — bump the in-force version. THIS is
+  // the action that forces re-consent (for PRIVACY). Rejects an empty version and
+  // a no-op (same-as-current) publish.
+  app.post(
+    '/admin/legal-docs/:docType/publish',
+    { preHandler: requireSuperAdmin },
+    async (request, reply) => {
+      const { docType } = request.params as { docType: string };
+      if (!LEGAL_DOC_TYPES.includes(docType as (typeof LEGAL_DOC_TYPES)[number])) {
+        return sendError(reply, 400, 'Unknown document type');
+      }
+
+      const parsed = publishLegalBody.safeParse(request.body);
+      if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
+      const newVersion = parsed.data.version;
+
+      const existing = await prisma.legalDocument.findUnique({
+        where: { docType: docType as LegalDocType },
+        select: { version: true },
+      });
+      if (!existing) return sendError(reply, 404, 'Legal document not found');
+      if (existing.version === newVersion) {
+        return sendError(reply, 400, 'New version must differ from the current version');
+      }
+
+      const updated = await prisma.legalDocument.update({
+        where: { docType: docType as LegalDocType },
+        data: {
+          version: newVersion,
+          publishedAt: new Date(),
+          publishedByAdminId: request.adminUser!.id,
+        },
+        select: { docType: true, version: true, publishedAt: true, publishedByAdminId: true },
+      });
+
+      // Drop the cache so the new version is in force immediately (this instance).
+      invalidateVersionCache(docType as LegalDocType);
+
+      await writeAuditLog({
+        adminUserId: request.adminUser!.id,
+        action: 'PUBLISH_LEGAL_VERSION',
+        targetType: 'LegalDocument',
+        targetId: docType,
+        metadata: { docType, fromVersion: existing.version, toVersion: newVersion },
+        ipAddress: request.ip,
+      });
+
+      return reply.send({
+        docType: updated.docType,
+        version: updated.version,
+        publishedAt: updated.publishedAt.toISOString(),
+        publishedByAdminId: updated.publishedByAdminId ?? null,
+      });
+    },
+  );
 }

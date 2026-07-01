@@ -52,6 +52,9 @@ class Order {
   final DateTime? deliveryDate;
   final String orderStatus;
   final String paymentStatus;
+  // Whether a payment-proof screenshot exists. The image itself is streamed by
+  // the authenticated proxy GET /orders/:id/payment-proof (never a raw URL).
+  final bool hasPaymentProof;
   final List<dynamic> timeline;
   final String? notes;
   final Map<String, String> customAnswers;
@@ -69,6 +72,7 @@ class Order {
     this.deliveryDate,
     required this.orderStatus,
     required this.paymentStatus,
+    this.hasPaymentProof = false,
     required this.timeline,
     this.notes,
     this.customAnswers = const {},
@@ -102,6 +106,7 @@ class Order {
           : null,
       orderStatus: json['orderStatus'] as String,
       paymentStatus: json['paymentStatus'] as String,
+      hasPaymentProof: json['hasPaymentProof'] as bool? ?? false,
       timeline: json['timeline'] as List? ?? [],
       notes: json['notes'] as String?,
       customAnswers: answers,

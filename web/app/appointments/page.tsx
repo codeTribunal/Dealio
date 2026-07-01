@@ -181,14 +181,25 @@ export default function AppointmentsPage() {
     setTimeout(() => setSavedMessage(null), 3000)
   }
 
+  // Double-submit guard: disable the whole status group while a PATCH is in
+  // flight so rapid clicks across different chips cannot fire concurrent
+  // /appointments/:id/status calls before the optimistic update lands.
+  const [statusUpdating, setStatusUpdating] = useState(false)
+
   async function handleStatusUpdate(appointmentId: string, newStatus: string) {
-    await updateAppointmentStatus(appointmentId, newStatus)
-    setAppointments((prev) =>
-      prev.map((a) => (a.id === appointmentId ? { ...a, status: newStatus } : a))
-    )
-    setSelectedAppointment((prev) =>
-      prev && prev.id === appointmentId ? { ...prev, status: newStatus } : prev
-    )
+    if (statusUpdating) return
+    setStatusUpdating(true)
+    try {
+      await updateAppointmentStatus(appointmentId, newStatus)
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === appointmentId ? { ...a, status: newStatus } : a))
+      )
+      setSelectedAppointment((prev) =>
+        prev && prev.id === appointmentId ? { ...prev, status: newStatus } : prev
+      )
+    } finally {
+      setStatusUpdating(false)
+    }
   }
 
   function resetFormFields() {
@@ -773,7 +784,7 @@ export default function AppointmentsPage() {
                         <button
                           key={s}
                           type="button"
-                          disabled={active}
+                          disabled={active || statusUpdating}
                           onClick={() =>
                             handleStatusUpdate(selectedAppointment.id, s)
                           }

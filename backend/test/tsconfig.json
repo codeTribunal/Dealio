@@ -1,0 +1,13 @@
+{
+  "//": "Type-check-only config for the test suite (src/ tsconfig excludes test/). Vitest runs the tests without this; use `npx tsc -p test/tsconfig.json` to type-check them.",
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "../src/**/*.ts"]
+}

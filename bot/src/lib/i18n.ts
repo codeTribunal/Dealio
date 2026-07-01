@@ -38,6 +38,111 @@ const messages: Record<string, Entry> = {
     RUSSIAN: '👋 Здравствуйте, {name}!\n\nДобро пожаловать! Используйте кнопки ниже, чтобы начать.',
     ENGLISH: '👋 Hello, {name}!\n\nWelcome! Use the buttons below to get started.',
   },
+  // First-contact consent gate (ZRU-547). {business} is HTML-escaped by the caller.
+  consentNotice: {
+    UZBEK:
+      '<b>{business}</b> xizmatidan foydalanish uchun shaxsiy ma\'lumotlaringizni qayta ishlashga rozilik bering.\n\n' +
+      'Davom etsangiz, ismingiz, telefon raqamingiz, yetkazib berish manzilingiz, Telegram ma\'lumotlaringiz hamda buyurtma va navbatlar tarixi {business} tomonidan Dealio platformasi orqali qayta ishlanishiga va O\'zbekistondan tashqarida joylashgan serverlarda saqlanishiga rozilik bildirasiz.',
+    RUSSIAN:
+      'Для использования сервиса <b>{business}</b> дайте согласие на обработку ваших персональных данных.\n\n' +
+      'Продолжая, вы соглашаетесь, что ваше имя, номер телефона, адрес доставки, данные Telegram, а также история заказов и записей будут обрабатываться компанией {business} через платформу Dealio и храниться на серверах, расположенных за пределами Узбекистана.',
+    ENGLISH:
+      'To use <b>{business}</b>, please consent to the processing of your personal data.\n\n' +
+      'By continuing, you agree that your name, phone number, delivery address, Telegram identity, and order/appointment history will be processed by {business} through the Dealio platform and stored on servers located outside Uzbekistan.',
+  },
+  // Appended when PRIVACY_POLICY_URL is set. {url} is HTML-escaped by the caller.
+  consentPolicyLine: {
+    UZBEK: 'Maxfiylik siyosati: {url}',
+    RUSSIAN: 'Политика конфиденциальности: {url}',
+    ENGLISH: 'Privacy policy: {url}',
+  },
+  consentAgree: {
+    UZBEK: '✅ Roziman',
+    RUSSIAN: '✅ Соглашаюсь',
+    ENGLISH: '✅ I agree',
+  },
+  consentDecline: {
+    UZBEK: 'Bekor qilish',
+    RUSSIAN: 'Отмена',
+    ENGLISH: 'Cancel',
+  },
+  consentDeclined: {
+    UZBEK: 'Rozilik berilmagani sababli davom eta olmaymiz. Fikringizni o\'zgartirsangiz, /start buyrug\'ini yuboring.',
+    RUSSIAN: 'Без вашего согласия мы не можем продолжить. Если передумаете — отправьте /start.',
+    ENGLISH: 'We can\'t continue without your consent. If you change your mind, send /start.',
+  },
+  consentSaveError: {
+    UZBEK: '⚠️ Xatolik yuz berdi. Iltimos, qayta urinib ko\'ring.',
+    RUSSIAN: '⚠️ Произошла ошибка. Пожалуйста, попробуйте ещё раз.',
+    ENGLISH: '⚠️ Something went wrong. Please try again.',
+  },
+  // ── Navigation (no emojis) ───────────────────────────────────────────
+  backToMenu: {
+    UZBEK: 'Bosh sahifa',
+    RUSSIAN: 'Главная',
+    ENGLISH: 'Menu',
+  },
+  menuDeleteData: {
+    UZBEK: 'Ma\'lumotlarimni o\'chirish',
+    RUSSIAN: 'Удалить мои данные',
+    ENGLISH: 'Delete my data',
+  },
+  // Persistent command-menu descriptions (setMyCommands). Plain text, no emojis.
+  cmdStart: {
+    UZBEK: 'Bosh sahifa',
+    RUSSIAN: 'Главное меню',
+    ENGLISH: 'Main menu',
+  },
+  cmdOrders: {
+    UZBEK: 'Buyurtmalarim',
+    RUSSIAN: 'Мои заказы',
+    ENGLISH: 'My orders',
+  },
+  cmdAppointments: {
+    UZBEK: 'Navbatlarim',
+    RUSSIAN: 'Мои записи',
+    ENGLISH: 'My appointments',
+  },
+  cmdProjects: {
+    UZBEK: 'Loyihalarim',
+    RUSSIAN: 'Мои проекты',
+    ENGLISH: 'My projects',
+  },
+  cmdHelp: {
+    UZBEK: 'Yordam',
+    RUSSIAN: 'Помощь',
+    ENGLISH: 'Help',
+  },
+  cmdDeleteData: {
+    UZBEK: 'Ma\'lumotlarimni o\'chirish',
+    RUSSIAN: 'Удалить мои данные',
+    ENGLISH: 'Delete my data',
+  },
+  // ── Customer data deletion (ZRU-547). Plain text, no emojis. ──────────
+  deleteDataConfirm: {
+    UZBEK:
+      'Shaxsiy ma\'lumotlaringizni o\'chirishni xohlaysizmi? Bu amalni bekor qilib bo\'lmaydi.\n\n' +
+      'Quyidagilar butunlay o\'chiriladi: ismingiz, telefon raqamingiz, yetkazib berish manzilingiz, Telegram ma\'lumotlaringiz va siz haqingizdagi eslatmalar.\n\n' +
+      'Buyurtma va navbatlaringiz tarixi (raqamlar, summalar, sanalar va holat) biznesning hisob-kitob va qonuniy talablari uchun saqlanadi, lekin ismingiz, telefoningiz va manzilingiz ulardan olib tashlanadi.',
+    RUSSIAN:
+      'Вы хотите удалить свои персональные данные? Это действие необратимо.\n\n' +
+      'Будут безвозвратно удалены: ваше имя, номер телефона, адрес доставки, данные Telegram и заметки о вас.\n\n' +
+      'История ваших заказов и записей (номера, суммы, даты и статус) сохраняется для бухгалтерских и юридических целей бизнеса, но ваше имя, телефон и адрес из неё удаляются.',
+    ENGLISH:
+      'Do you want to delete your personal data? This cannot be undone.\n\n' +
+      'The following will be permanently erased: your name, phone number, delivery address, Telegram identity, and any notes about you.\n\n' +
+      'Your order and appointment history (numbers, amounts, dates, and status) is kept for the business\'s accounting and legal records, but your name, phone, and address are removed from it.',
+  },
+  deleteDataYes: {
+    UZBEK: 'Ha, ma\'lumotlarimni o\'chir',
+    RUSSIAN: 'Да, удалить мои данные',
+    ENGLISH: 'Yes, delete my data',
+  },
+  deleteDataDone: {
+    UZBEK: 'Shaxsiy ma\'lumotlaringiz o\'chirildi.',
+    RUSSIAN: 'Ваши персональные данные удалены.',
+    ENGLISH: 'Your personal data has been deleted.',
+  },
   browseCatalog: {
     UZBEK: '🛍 Katalogni ko\'rish',
     RUSSIAN: '🛍 Смотреть каталог',
@@ -93,7 +198,8 @@ const messages: Record<string, Entry> = {
       '/projects — Loyihalaringiz\n' +
       '/cart — Savatingiz\n' +
       '/language — Tilni o\'zgartirish\n' +
-      '/help — Ushbu xabarni ko\'rsatish',
+      '/help — Ushbu xabarni ko\'rsatish\n' +
+      '/deletedata — Shaxsiy ma\'lumotlarimni o\'chirish',
     RUSSIAN:
       '<b>Доступные команды:</b>\n\n' +
       '/start — Главное меню\n' +
@@ -102,7 +208,8 @@ const messages: Record<string, Entry> = {
       '/projects — Ваши проекты\n' +
       '/cart — Ваша корзина\n' +
       '/language — Изменить язык\n' +
-      '/help — Показать это сообщение',
+      '/help — Показать это сообщение\n' +
+      '/deletedata — Удалить мои персональные данные',
     ENGLISH:
       '<b>Available commands:</b>\n\n' +
       '/start — Main menu\n' +
@@ -111,7 +218,8 @@ const messages: Record<string, Entry> = {
       '/projects — View your active projects\n' +
       '/cart — View your cart\n' +
       '/language — Change language\n' +
-      '/help — Show this message',
+      '/help — Show this message\n' +
+      '/deletedata — Delete my personal data',
   },
   // ── Generic ──────────────────────────────────────────────────────
   cantIdentify: {
@@ -461,6 +569,24 @@ const messages: Record<string, Entry> = {
     RUSSIAN: '⚠️ Не удалось отправить уведомление об оплате. Нажмите «✅ Я оплатил» ещё раз.',
     ENGLISH: '⚠️ Couldn\'t send the payment notification. Please tap "✅ I have paid" again.',
   },
+  // Prompt after "I have paid": the customer must send a payment screenshot.
+  askPaymentProof: {
+    UZBEK: '📸 To\'lov skrinshotini yuboring (rasm).',
+    RUSSIAN: '📸 Отправьте скриншот оплаты (изображение).',
+    ENGLISH: '📸 Please send a screenshot of your payment (as a photo or JPEG/PNG image).',
+  },
+  // Sent when the message at the proof step is not an image.
+  paymentProofNotImage: {
+    UZBEK: '⚠️ Iltimos, to\'lov skrinshotini rasm sifatida yuboring.',
+    RUSSIAN: '⚠️ Пожалуйста, отправьте скриншот оплаты в виде изображения.',
+    ENGLISH: '⚠️ Please send the payment screenshot as an image (photo or JPEG/PNG file).',
+  },
+  // Sent when download/upload of the proof fails — the customer should re-send.
+  paymentProofFailed: {
+    UZBEK: '⚠️ Skrinshotni saqlab bo\'lmadi. Iltimos, rasmni qayta yuboring.',
+    RUSSIAN: '⚠️ Не удалось сохранить скриншот. Пожалуйста, отправьте изображение ещё раз.',
+    ENGLISH: '⚠️ Couldn\'t save your screenshot. Please send the image again.',
+  },
   orderError: {
     UZBEK: 'Buyurtmani rasmiylashtirib bo\'lmadi. Qayta urinib ko\'ring.',
     RUSSIAN: 'Не удалось оформить заказ. Попробуйте снова.',
@@ -543,6 +669,20 @@ const messages: Record<string, Entry> = {
     UZBEK: '✅ <b>№{number} buyurtma qabul qilindi!</b>\n\nTo\'lovni tasdiqlash uchun siz bilan bog\'lanamiz.',
     RUSSIAN: '✅ <b>Заказ №{number} принят!</b>\n\nМы свяжемся с вами для подтверждения оплаты.',
     ENGLISH: '✅ <b>Order #{number} placed!</b>\n\nWe will contact you to confirm payment.',
+  },
+  // Appended (on a new line) to a PICKUP order confirmation. {address} is HTML-
+  // escaped by the caller before interpolation.
+  pickupAddressLine: {
+    UZBEK: '📍 Olib ketish manzili: {address}',
+    RUSSIAN: '📍 Адрес самовывоза: {address}',
+    ENGLISH: '📍 Pickup address: {address}',
+  },
+  // Appended (on a new line) to a booking confirmation. {address} is HTML-escaped
+  // by the caller before interpolation.
+  appointmentAddressLine: {
+    UZBEK: '📍 Manzil: {address}',
+    RUSSIAN: '📍 Адрес: {address}',
+    ENGLISH: '📍 Address: {address}',
   },
   orderPlacedPayment: {
     UZBEK:

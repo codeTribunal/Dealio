@@ -201,11 +201,23 @@ export async function getOrderDetail(id: string): Promise<Order> {
   return res.data
 }
 
+// Fetch the payment-proof image through the authenticated proxy as a blob (an
+// <img src> can't send the Bearer token; the axios interceptor does). Returns an
+// object URL the caller MUST revokeObjectURL when done. Throws on 404/502.
+export async function getPaymentProofUrl(orderId: string): Promise<string> {
+  const res = await api.get(`/orders/${orderId}/payment-proof`, {
+    responseType: 'blob',
+  })
+  return URL.createObjectURL(res.data as Blob)
+}
+
 export async function updateOrderStatus(
   id: string,
   orderStatus: string
 ): Promise<void> {
-  await api.patch(`/orders/${id}/status`, { orderStatus })
+  // Backend expects the field name `status` (uppercase enum value), not
+  // `orderStatus` — sending the wrong key made zod reject the body with 400.
+  await api.patch(`/orders/${id}/status`, { status: orderStatus })
 }
 
 export async function confirmOrderPayment(id: string): Promise<void> {
@@ -290,6 +302,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
 export async function updateBusiness(data: {
   name?: string
   description?: string
+  address?: string | null
   language?: string
   mode?: string
   workingHours?: WorkingHours
@@ -315,6 +328,22 @@ export async function updatePayment(data: {
 }): Promise<Business> {
   const res = await api.patch('/business/payment', data)
   return res.data
+}
+
+// Set the owner's email + newsletter consent (User-scoped). email=null clears it;
+// consent is separate from the email. Callers should refetchContext() afterward
+// to pick up the flattened owner fields on GET /business.
+export async function updateEmailConsent(data: {
+  email: string | null
+  newsletterConsent: boolean
+}): Promise<void> {
+  await api.patch('/user/email-consent', data)
+}
+
+// Dismiss the analytics email-capture card (Skip): stamps dismissedAt + bumps the
+// count server-side (drives the capped one-retry re-push).
+export async function dismissEmailPrompt(): Promise<void> {
+  await api.patch('/user/dismiss-email-prompt')
 }
 
 export async function generateCalendarToken(): Promise<string> {

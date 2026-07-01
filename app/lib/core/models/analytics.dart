@@ -26,6 +26,9 @@ class AnalyticsData {
   final int appointmentsThisMonth;
   final int pendingPaymentsTotal;
   final List<TopCustomer> topCustomers;
+  // Realised revenue for the last 6 calendar months (oldest → current); the
+  // final entry is the current month. Empty on older backends.
+  final List<int> revenueTrend;
 
   const AnalyticsData({
     required this.revenueThisMonth,
@@ -34,6 +37,7 @@ class AnalyticsData {
     required this.appointmentsThisMonth,
     required this.pendingPaymentsTotal,
     required this.topCustomers,
+    this.revenueTrend = const [],
   });
 
   // Positive = growth, negative = decline, null = no last-month data
@@ -52,5 +56,10 @@ class AnalyticsData {
         topCustomers: (json['topCustomers'] as List)
             .map((e) => TopCustomer.fromJson(e as Map<String, dynamic>))
             .toList(),
+        revenueTrend: (json['revenueTrend'] as List?)
+                ?.map((e) =>
+                    ((e as Map<String, dynamic>)['revenue'] as num).toInt())
+                .toList() ??
+            const [],
       );
 }

@@ -13,6 +13,7 @@ import {
   X,
   Search,
   Settings,
+  FileText,
 } from 'lucide-react'
 import { isAdminAuthenticated, clearAdminToken, getAdminRole } from '@/lib/adminApi'
 
@@ -43,9 +44,13 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     { icon: Building2, label: 'Businesses', href: '/admin/businesses' },
     { icon: ScrollText, label: 'Audit log', href: '/admin/audit' },
     { icon: Users, label: 'Admin users', href: '/admin/users' },
-    // Platform-wide flags (incl. the card-payments toggle) — Super Admin only.
+    // Platform-wide flags (incl. the card-payments toggle) + legal-document
+    // versioning — Super Admin only.
     ...(getAdminRole() === 'SUPER_ADMIN'
-      ? [{ icon: Settings, label: 'Settings', href: '/admin/settings' }]
+      ? [
+          { icon: FileText, label: 'Legal documents', href: '/admin/legal' },
+          { icon: Settings, label: 'Settings', href: '/admin/settings' },
+        ]
       : []),
   ]
 

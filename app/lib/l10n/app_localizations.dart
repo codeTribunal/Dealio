@@ -793,7 +793,7 @@ abstract class AppLocalizations {
   /// No description provided for @loginCodeSentNotice.
   ///
   /// In en, this message translates to:
-  /// **'If an account exists, we\'ve sent a 6-digit code to your Telegram.'**
+  /// **'If an account exists, we\'ve sent a 6-digit code to your Telegram. It comes from our login bot. If it does not arrive, open that bot, tap Start, then request the code again.'**
   String get loginCodeSentNotice;
 
   /// No description provided for @loginTooManyAttempts.
@@ -1221,6 +1221,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Description ({optional})'**
   String settingsDescriptionLabel(String optional);
+
+  /// No description provided for @settingsAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get settingsAddressLabel;
+
+  /// No description provided for @settingsAddressHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Address customers come to (pickup or meeting point)'**
+  String get settingsAddressHelper;
+
+  /// No description provided for @settingsEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get settingsEmailLabel;
+
+  /// No description provided for @settingsEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address'**
+  String get settingsEmailInvalid;
+
+  /// No description provided for @emailPromptHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Get weekly reports by email'**
+  String get emailPromptHeading;
+
+  /// No description provided for @emailPromptSubtext.
+  ///
+  /// In en, this message translates to:
+  /// **'Business summaries and product updates'**
+  String get emailPromptSubtext;
+
+  /// No description provided for @emailPromptConsent.
+  ///
+  /// In en, this message translates to:
+  /// **'Send me weekly reports and product updates'**
+  String get emailPromptConsent;
+
+  /// No description provided for @emailPromptSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get emailPromptSkip;
+
+  /// No description provided for @emailPromptError.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get emailPromptError;
 
   /// No description provided for @settingsBusinessMode.
   ///
@@ -1881,6 +1935,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delivery'**
   String get orderSectionDelivery;
+
+  /// No description provided for @orderSectionPaymentProof.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment proof'**
+  String get orderSectionPaymentProof;
+
+  /// No description provided for @orderProofUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof unavailable'**
+  String get orderProofUnavailable;
 
   /// No description provided for @orderSectionNotes.
   ///
@@ -3298,10 +3364,16 @@ abstract class AppLocalizations {
   /// **'Top customers — last 90 days'**
   String get analyticsTopCustomers;
 
+  /// No description provided for @analyticsLast6Months.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 6 months'**
+  String get analyticsLast6Months;
+
   /// No description provided for @analyticsNoConfirmedOrders.
   ///
   /// In en, this message translates to:
-  /// **'No completed appointments in the last 90 days'**
+  /// **'No confirmed revenue in the last 90 days'**
   String get analyticsNoConfirmedOrders;
 
   /// No description provided for @analyticsBestSelling.

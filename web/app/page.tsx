@@ -135,6 +135,12 @@ export default function HomePage() {
 
   const activity = useMemo(() => (home ? buildActivity(home, t) : []), [home, t])
 
+  // Mode-aware home cards. business.mode is a single value, so it selects the
+  // one "today" activity metric that matters (orders / appointments / projects);
+  // Pending payments is universal. This is why a products business never sees a
+  // "Today's appointments" card. SERVICES is the default until business loads.
+  const mode = business?.mode ?? 'SERVICES'
+
   return (
     <AuthLayout title={t('home.title')}>
       {loading ? (
@@ -164,23 +170,41 @@ export default function HomePage() {
           <HeroCard
             label={t('home.revenueLabel')}
             value={formatUZS(analytics.revenueThisMonth)}
-            sub={t('home.revenueSub', { count: analytics.appointmentsThisMonth })}
+            sub={
+              // Mode-aware: SERVICES references appointments; PRODUCTS/FREELANCE
+              // use the neutral completed count (backend exposes no orders count).
+              (business?.mode ?? 'SERVICES') === 'SERVICES'
+                ? t('home.revenueSub', { count: analytics.appointmentsThisMonth })
+                : t('home.revenueSubCompleted', {
+                    count: analytics.completedThisMonth,
+                  })
+            }
           />
 
-          {/* StatCard bento row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* StatCard bento row — mode-aware. The "today" activity card follows
+              business.mode (orders / appointments / projects); Pending payments
+              is universal. A products business never sees "Today's appointments". */}
+          <div className="grid grid-cols-2 gap-4">
             <StatCard
-              label={t('home.statOrdersToday')}
-              value={String(home.todayOrders.length)}
+              label={
+                mode === 'PRODUCTS'
+                  ? t('home.statOrdersToday')
+                  : mode === 'FREELANCE'
+                    ? t('home.statProjectsToday')
+                    : t('home.statAppointmentsToday')
+              }
+              value={String(
+                mode === 'PRODUCTS'
+                  ? home.todayOrders.length
+                  : mode === 'FREELANCE'
+                    ? home.todayProjects.length
+                    : home.todayAppointments.length,
+              )}
             />
             <StatCard
               label={t('home.statPending')}
               value={formatUZS(analytics.pendingPaymentsTotal)}
               money={analytics.pendingPaymentsTotal > 0}
-            />
-            <StatCard
-              label={t('home.statAppointmentsToday')}
-              value={String(home.todayAppointments.length)}
             />
           </div>
 

@@ -97,12 +97,26 @@ export async function upsertCustomer(data: {
   name: string;
   phone?: string;
   languagePreference?: 'UZBEK' | 'RUSSIAN' | 'ENGLISH';
+  // First-contact consent (ZRU-547). consentedAt is an ISO datetime string.
+  consentedAt?: string;
+  consentVersion?: string;
 }): Promise<ApiCustomer> {
   const res = await client.post('/api/v1/bot/customers', data);
   return res.data;
 }
 
-/** Read-only lookup used to decide whether to show the language picker. */
+/** Customer-initiated data deletion (ZRU-547). The backend runs the SAME
+ *  irreversible scrub as the admin anonymize path. Idempotent — safe to re-call. */
+export async function eraseCustomer(
+  botUsername: string,
+  telegramUserId: string,
+): Promise<{ erased: boolean }> {
+  const res = await client.post('/api/v1/bot/customers/erase', { botUsername, telegramUserId });
+  return res.data;
+}
+
+/** Read-only lookup used to decide whether to show the language picker AND
+ *  whether first-contact consent has been recorded (against the live version). */
 export async function getCustomerLanguage(
   botUsername: string,
   telegramUserId: string,
@@ -110,6 +124,12 @@ export async function getCustomerLanguage(
   exists: boolean;
   languagePreference: 'UZBEK' | 'RUSSIAN' | 'ENGLISH' | null;
   businessLanguage: 'UZBEK' | 'RUSSIAN' | 'ENGLISH';
+  businessName: string;
+  consentedAt: string | null;
+  consentVersion: string | null;
+  // Live in-force PRIVACY version from the backend (LegalDocument). needsConsent
+  // compares the stored consentVersion against this, not a bot-side constant.
+  currentPrivacyVersion: string;
 }> {
   const res = await client.get(`/api/v1/bot/customer/${botUsername}/${telegramUserId}`);
   return res.data;
@@ -151,7 +171,14 @@ export async function getCheckoutQuestions(botUsername: string): Promise<Array<{
   return res.data;
 }
 
-export async function notifyPaymentReceived(botUsername: string, orderId: string): Promise<{
+/** Mark payment received. paymentProofFileId (the customer's screenshot Telegram
+ *  file_id) is REQUIRED — the backend stores it (proxied on demand via getFile)
+ *  and marks PAYMENT_RECEIVED. No bytes transit this hop. */
+export async function notifyPaymentReceived(
+  botUsername: string,
+  orderId: string,
+  paymentProofFileId: string,
+): Promise<{
   order: { id: string; orderNumber: number; paymentStatus: string };
   notification: {
     ownerTelegramChatId: string | null;
@@ -162,7 +189,11 @@ export async function notifyPaymentReceived(botUsername: string, orderId: string
     customerName: string;
   };
 }> {
-  const res = await client.post('/api/v1/bot/payment-received', { botUsername, orderId });
+  const res = await client.post('/api/v1/bot/payment-received', {
+    botUsername,
+    orderId,
+    paymentProofFileId,
+  });
   return res.data;
 }
 

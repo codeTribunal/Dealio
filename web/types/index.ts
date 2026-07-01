@@ -12,6 +12,9 @@ export interface Business {
   id: string
   name: string
   description: string | null
+  // Physical location shown to customers: pickup point (PRODUCTS) and
+  // appointment location (SERVICES). One field, both uses. Optional.
+  address?: string | null
   mode: Mode
   language: string
   plan?: string | null
@@ -27,6 +30,14 @@ export interface Business {
   // Global, superadmin-controlled flag (default ON) carried on GET /business.
   // When false, card-payment SETUP UI should be hidden. Visibility only.
   cardPaymentsEnabled?: boolean
+  // Owner email + newsletter/marketing consent — flattened onto GET /business
+  // (email → ownerEmail) like cardPaymentsEnabled. These live on the User
+  // (owner) server-side; the web has no separate owner object.
+  ownerEmail?: string | null
+  newsletterConsent?: boolean
+  newsletterConsentAt?: string | null
+  emailPromptDismissedAt?: string | null
+  emailPromptDismissCount?: number
 }
 
 export interface BlockedSlot {
@@ -171,6 +182,9 @@ export interface Order {
   total: number
   orderStatus: string
   paymentStatus: string
+  // Whether a payment-proof screenshot exists. The image is streamed by the
+  // authenticated proxy GET /orders/:id/payment-proof (never a raw URL).
+  hasPaymentProof: boolean
   deliveryMethod: string
   deliveryAddress: string | null
   deliveryDate: string | null
@@ -345,4 +359,7 @@ export interface AnalyticsData {
     totalSpent: number
     appointmentCount: number
   }[]
+  // Last 6 calendar months of realised revenue (oldest → current); the final
+  // entry is the current month. Optional so older backends degrade gracefully.
+  revenueTrend?: { month: string; revenue: number }[]
 }

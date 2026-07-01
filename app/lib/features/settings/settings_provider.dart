@@ -49,6 +49,7 @@ class SettingsNotifier extends AsyncNotifier<SettingsState> {
   Future<void> saveProfile({
     required String name,
     String? description,
+    String? address,
   }) async {
     final current = state.valueOrNull;
     if (current == null) return;
@@ -56,8 +57,15 @@ class SettingsNotifier extends AsyncNotifier<SettingsState> {
       'name': name,
       if (description != null && description.isNotEmpty) 'description': description,
       if (description != null && description.isEmpty) 'description': null,
+      if (address != null && address.isNotEmpty) 'address': address,
+      if (address != null && address.isEmpty) 'address': null,
     });
     state = AsyncData(current.copyWith(business: updated));
+    // Push the confirmed business into the WATCHED auth notifier so the profile
+    // (incl. address) updates live everywhere that reads business — same pattern
+    // as saveMode. invalidate(businessProvider) alone leaves the watched shell/
+    // home/profile stale until a manual reload.
+    ref.read(authNotifierProvider).setBusiness(updated);
     ref.invalidate(businessProvider);
   }
 

@@ -12,6 +12,9 @@ model Business {
   name         String
   description  String?
   photoUrl     String?
+  // Physical location shown to customers: pickup point (PRODUCTS) and
+  // appointment location (SERVICES). One field, both uses. Optional.
+  address      String?
   // Single business mode (was Mode[] — migrated to a scalar in Step 2).
   // PRODUCTS remains in the enum but is no longer selectable (dormant).
   mode         Mode      @default(SERVICES)
@@ -104,6 +107,16 @@ model User {
   // completes enrollment (shares contact + enters the ENROLL code).
   telegramChatId     String?
   telegramVerifiedAt DateTime?
+  // Optional owner email + newsletter/marketing consent (SEPARATE from the GDPR
+  // enrollment consents in ConsentRecord). email is stored trimmed+lowercased or
+  // null. newsletterConsentAt is set ONLY when consent is true (provable opt-in
+  // time). The emailPrompt* fields drive the capped re-push of the analytics
+  // email-capture card (one retry after 30 days, then never).
+  email                   String?
+  newsletterConsent       Boolean   @default(false)
+  newsletterConsentAt     DateTime?
+  emailPromptDismissedAt  DateTime?
+  emailPromptDismissCount Int       @default(0)
   business       Business?
   consentRecords ConsentRecord[]
   createdAt      DateTime        @default(now())
@@ -137,6 +150,12 @@ model Customer {
   currentStageId     String?
   currentStage       CustomerStage? @relation(fields: [currentStageId], references: [id])
   languagePreference Language?
+  // First-contact data-subject consent (ZRU-547): captured by the bot BEFORE any
+  // personal data is stored. "consented" = consentedAt set AND consentVersion ===
+  // the current CONSENT_VERSION; a version bump forces re-consent. Covers both
+  // ordinary processing and cross-border transfer in one acceptance.
+  consentedAt        DateTime?
+  consentVersion     String?
   deletedAt          DateTime?
   // Set by the irreversible GDPR-style anonymize path (Phase C). When non-null
   // the row's personal fields have been scrubbed and the customer is "erased"
@@ -194,6 +213,16 @@ model Order {
   customAnswers   Json?
   idempotencyKey  String?
   paymentStatus   PaymentStatus  @default(PENDING)
+  // Telegram file_id of the customer's payment-proof screenshot. Set when the
+  // customer sends the screenshot after "I have paid". Proxied on demand via
+  // getFile using THIS business's bot token; never returned raw to clients (the
+  // API exposes only the boolean hasPaymentProof).
+  paymentProofFileId String?
+  paymentProofAt     DateTime?
+  // Optional public URL of the proof once archived to R2 by a FUTURE background
+  // job (reads paymentProofFileId → downloads → uploads → sets this). Not
+  // written in the live checkout path today.
+  paymentProofUrl String?
   orderStatus     OrderStatus    @default(NEW)
   timeline        Json[]
   deletedAt       DateTime?
@@ -473,6 +502,11 @@ model AdminUser {
   name         String
   role         AdminRole  @default(SUPPORT)
   lastLoginAt  DateTime?
+  // Per-account login lockout (brute-force defense). failedLoginCount is the
+  // consecutive-failure counter (reset on success); lockedUntil, when in the
+  // future, denies login regardless of password.
+  failedLoginCount Int    @default(0)
+  lockedUntil  DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -512,6 +546,28 @@ model UsageLog {
 enum AdminRole {
   SUPER_ADMIN
   SUPPORT
+}
+
+/// The two in-force legal documents. The document TEXT lives in the codebase
+/// (web/lib/legalConfig.ts) and deploys separately; this enum + LegalDocument
+/// only track which VERSION is currently in force.
+enum LegalDocType {
+  PRIVACY
+  OFFER
+}
+
+/// One row per legal document (PRIVACY, OFFER). Stores ONLY the in-force version
+/// + when/by whom it was published — never the document text. Publishing a new
+/// PRIVACY version is what forces re-consent (customers via the bot consent gate,
+/// owners via the login CONSENT_REQUIRED gate); both read this row's version.
+/// publishedByAdminId is a plain id (the authoritative "who" is the AuditLog).
+model LegalDocument {
+  id                 String       @id @default(cuid())
+  docType            LegalDocType @unique
+  version            String
+  publishedAt        DateTime     @default(now())
+  publishedByAdminId String?
+  updatedAt          DateTime     @updatedAt
 }
 
 /// Global, platform-wide settings — a single row (id = "singleton").

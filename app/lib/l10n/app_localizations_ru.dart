@@ -370,7 +370,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get loginCodeSentNotice =>
-      'Если аккаунт существует, мы отправили 6-значный код в ваш Telegram.';
+      'Если аккаунт существует, мы отправили 6-значный код в ваш Telegram. Код приходит от нашего бота входа. Если он не пришёл, откройте этого бота, нажмите Start и запросите код снова.';
 
   @override
   String get loginTooManyAttempts =>
@@ -604,6 +604,35 @@ class AppLocalizationsRu extends AppLocalizations {
   String settingsDescriptionLabel(String optional) {
     return 'Описание ($optional)';
   }
+
+  @override
+  String get settingsAddressLabel => 'Адрес';
+
+  @override
+  String get settingsAddressHelper =>
+      'Адрес, куда приходят клиенты (самовывоз или место встречи)';
+
+  @override
+  String get settingsEmailLabel => 'Email';
+
+  @override
+  String get settingsEmailInvalid => 'Введите корректный адрес эл. почты';
+
+  @override
+  String get emailPromptHeading => 'Получайте еженедельные отчёты на почту';
+
+  @override
+  String get emailPromptSubtext => 'Сводки по бизнесу и обновления продукта';
+
+  @override
+  String get emailPromptConsent =>
+      'Присылайте мне еженедельные отчёты и обновления продукта';
+
+  @override
+  String get emailPromptSkip => 'Пропустить';
+
+  @override
+  String get emailPromptError => 'Что-то пошло не так. Попробуйте ещё раз.';
 
   @override
   String get settingsBusinessMode => 'ТИП БИЗНЕСА';
@@ -997,6 +1026,12 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get orderSectionDelivery => 'Доставка';
+
+  @override
+  String get orderSectionPaymentProof => 'Чек оплаты';
+
+  @override
+  String get orderProofUnavailable => 'Чек недоступен';
 
   @override
   String get orderSectionNotes => 'Заметки';
@@ -1751,8 +1786,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get analyticsTopCustomers => 'Лучшие клиенты — последние 90 дней';
 
   @override
+  String get analyticsLast6Months => 'Последние 6 месяцев';
+
+  @override
   String get analyticsNoConfirmedOrders =>
-      'Нет завершённых записей за последние 90 дней';
+      'Нет подтверждённого дохода за последние 90 дней';
 
   @override
   String get analyticsBestSelling => 'Самый продаваемый товар';

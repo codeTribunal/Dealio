@@ -214,6 +214,34 @@ class ApiService {
     }
   }
 
+  /// Set the owner's email + newsletter consent (User-scoped). Pass email=null to
+  /// clear it. Consent is SEPARATE from the email; the server sets consentAt only
+  /// when consent is true. The caller should refetch the business to pick up the
+  /// flattened owner fields (ownerEmail/newsletterConsent/...).
+  Future<void> patchEmailConsent({
+    String? email,
+    required bool newsletterConsent,
+  }) async {
+    try {
+      await _dio.patch('/user/email-consent', data: {
+        'email': email,
+        'newsletterConsent': newsletterConsent,
+      });
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  /// Dismiss the analytics email-capture card (Skip): stamps dismissedAt + bumps
+  /// the count server-side (drives the capped one-retry re-push).
+  Future<void> dismissEmailPrompt() async {
+    try {
+      await _dio.patch('/user/dismiss-email-prompt');
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
   Future<void> registerFcmToken(String token) async {
     try {
       await _dio.patch('/business/fcm-token', data: {'fcmToken': token});

@@ -11,6 +11,8 @@ import { getBotToken, hasBotToken } from '../lib/getBotToken.js';
 import { getCardPaymentsEnabled } from '../lib/platformSettings.js';
 import { PLAN_LIMITS, planLimitError } from '../lib/planLimits.js';
 import { isSlotBookable } from '../services/availability.js';
+import { anonymizeCustomer } from '../services/anonymizeCustomer.js';
+import { getCurrentVersion } from '../lib/legalVersion.js';
 
 function verifyBotSecret(request: FastifyRequest, reply: FastifyReply): boolean {
   const secret = request.headers['x-bot-secret'];
@@ -59,6 +61,17 @@ const upsertCustomerBody = z.object({
   name: z.string().min(1),
   phone: z.string().optional(),
   languagePreference: z.enum(['UZBEK', 'RUSSIAN', 'ENGLISH']).optional(),
+  // First-contact data-subject consent (ZRU-547), sent when the bot records the
+  // customer's acceptance. consentedAt is an ISO datetime; both are optional so
+  // ordinary upserts (checkout name/phone) don't have to resend them.
+  consentedAt: z.string().datetime().optional(),
+  consentVersion: z.string().optional(),
+});
+
+// Customer-initiated data deletion (ZRU-547). Resolved by (business, tg user).
+const eraseCustomerBody = z.object({
+  botUsername: z.string(),
+  telegramUserId: z.string(),
 });
 
 const createBotOrderBody = z.object({
@@ -80,9 +93,12 @@ const createBotOrderBody = z.object({
   customAnswers: z.record(z.string()).optional(),
 });
 
+// Payment proof is REQUIRED to confirm: the bot sends the Telegram file_id of the
+// customer's screenshot (no bytes — the image is proxied on demand via getFile).
 const paymentReceivedBody = z.object({
   botUsername: z.string(),
   orderId: z.string(),
+  paymentProofFileId: z.string().min(1),
 });
 
 const confirmPaymentBody = z.object({
@@ -91,6 +107,38 @@ const confirmPaymentBody = z.object({
 });
 
 export default async function botRoutes(app: FastifyInstance) {
+  // Bot routes are trusted, single-process, high-volume internal traffic
+  // (authenticated per-request by x-bot-secret). Under the shared global
+  // limiter they ALL egress from one server IP and collapse into a single
+  // 100/min bucket, so one busy business could 429 the entire bot fleet
+  // platform-wide. Give each bot route its own generous bucket, keyed
+  // per-customer on the hottest paths (both ids in the URL), else per-business,
+  // else a shared bot fallback for the handful of routes that carry neither
+  // identifier in the path (they hold it in the body, which is not parsed at
+  // rate-limit time). This spreads legitimate customer traffic across many
+  // buckets so real usage is never throttled, while still capping runaway
+  // abuse per key. Owner/OTP/admin limits are untouched.
+  app.addHook('onRoute', (routeOptions) => {
+    routeOptions.config = {
+      ...routeOptions.config,
+      rateLimit: {
+        max: 600,
+        timeWindow: 60000,
+        keyGenerator: (request: FastifyRequest) => {
+          const p = (request.params ?? {}) as {
+            botUsername?: string;
+            telegramUserId?: string;
+          };
+          if (p.botUsername && p.telegramUserId) {
+            return `bot:${p.botUsername}:${p.telegramUserId}`;
+          }
+          if (p.botUsername) return `bot:${p.botUsername}`;
+          return 'bot:fleet';
+        },
+      },
+    };
+  });
+
   // GET /bot/checkout-questions/:botUsername
   app.get('/bot/checkout-questions/:botUsername', async (request, reply) => {
     if (!verifyBotSecret(request, reply)) return;
@@ -153,6 +201,9 @@ export default async function botRoutes(app: FastifyInstance) {
         name: business.name,
         language: business.language,
         mode: business.mode,
+        // Physical location — used as the pickup address on PICKUP order
+        // confirmations. Null when the owner hasn't set one.
+        address: business.address,
         // Card fields for the checkout payment step. The bot gates display on
         // cardPaymentsEnabled AND cardNumber present.
         cardNumber: business.cardNumber,
@@ -170,7 +221,7 @@ export default async function botRoutes(app: FastifyInstance) {
     const parsed = upsertCustomerBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const { botUsername, telegramUserId, telegramUsername, name, phone, languagePreference } = parsed.data;
+    const { botUsername, telegramUserId, telegramUsername, name, phone, languagePreference, consentedAt, consentVersion } = parsed.data;
 
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
@@ -209,16 +260,55 @@ export default async function botRoutes(app: FastifyInstance) {
         // Leave null when not provided so the bot shows a language picker on
         // first contact. The customer's choice is persisted via /bot/set-language.
         languagePreference: languagePreference ?? null,
+        consentedAt: consentedAt ? new Date(consentedAt) : null,
+        consentVersion: consentVersion ?? null,
       },
       update: {
         telegramUsername,
         name,
         ...(phone ? { phone } : {}),
         ...(languagePreference ? { languagePreference } : {}),
+        // Persist consent when the bot sends it (the first-contact consent write).
+        ...(consentedAt ? { consentedAt: new Date(consentedAt) } : {}),
+        ...(consentVersion !== undefined ? { consentVersion } : {}),
         lastInteractionAt: new Date(),
+        // Reactivate a previously soft-deleted customer who returns via the bot:
+        // they are transacting again, so they must be live. Without this, the
+        // order endpoint's `deletedAt: null` lookup would 404 'Customer not found'
+        // on every attempt for a customer the owner had deleted in the app.
+        deletedAt: null,
       },
     });
     return reply.send(customer);
+  });
+
+  // POST /bot/customers/erase — customer-initiated data deletion (ZRU-547). The
+  // bot's /deletedata flow calls this AFTER explicit confirmation. It runs the
+  // SAME shared scrub as the admin anonymize path (never diverges). Tenant-scoped
+  // by (business, telegramUserId). Idempotent: a re-request, or a customer with
+  // no record, returns 200 without erroring (after the first scrub telegramUserId
+  // is null, so the lookup no longer matches). Deliberately NOT blocked by
+  // suspension — a data subject's deletion right is unconditional.
+  app.post('/bot/customers/erase', async (request, reply) => {
+    if (!verifyBotSecret(request, reply)) return;
+
+    const parsed = eraseCustomerBody.safeParse(request.body);
+    if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
+
+    const { botUsername, telegramUserId } = parsed.data;
+
+    const business = await findBusinessByUsername(botUsername, reply);
+    if (!business) return;
+
+    const customer = await prisma.customer.findUnique({
+      where: { businessId_telegramUserId: { businessId: business.id, telegramUserId } },
+      select: { id: true, anonymizedAt: true },
+    });
+    if (!customer) return reply.send({ erased: false });
+    if (customer.anonymizedAt) return reply.send({ erased: true, idempotent: true });
+
+    await anonymizeCustomer(customer.id);
+    return reply.send({ erased: true });
   });
 
   // POST /bot/orders
@@ -301,6 +391,12 @@ export default async function botRoutes(app: FastifyInstance) {
       const order = await (async () => {
         for (let attempt = 0; ; attempt++) {
           try {
+            // Raise the interactive-transaction ceiling above Prisma's 5s default:
+            // remote (Railway) DB latency made allocate → create(+include) → per-item
+            // stock-decrement round-trips sum just over 5s, tripping P2028 (delivery
+            // orders crossed the line; pickup landed just under — same tx work either
+            // way). Low-volume P2P flow, so briefly holding the connection/row locks
+            // is fine. maxWait covers a slow connection acquire over the remote link.
             return await prisma.$transaction(async (tx) => {
               const orderNumber = await allocateOrderNumber(business.id);
               const created = await tx.order.create({
@@ -337,7 +433,7 @@ export default async function botRoutes(app: FastifyInstance) {
               }
 
               return created;
-            });
+            }, { maxWait: 10_000, timeout: 20_000 });
           } catch (e) {
             if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
               const target = e.meta?.target;
@@ -393,7 +489,7 @@ export default async function botRoutes(app: FastifyInstance) {
     const parsed = paymentReceivedBody.safeParse(request.body);
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const { botUsername, orderId } = parsed.data;
+    const { botUsername, orderId, paymentProofFileId } = parsed.data;
 
     const business = await findBusinessByUsername(botUsername, reply);
     if (!business) return;
@@ -419,6 +515,9 @@ export default async function botRoutes(app: FastifyInstance) {
       where: { id: orderId },
       data: {
         paymentStatus: 'PAYMENT_RECEIVED',
+        // Store the Telegram file_id (proxied on demand; never returned raw).
+        paymentProofFileId,
+        paymentProofAt: new Date(),
         timeline: {
           push: { status: 'PAYMENT_RECEIVED', at: new Date().toISOString(), by: 'customer' },
         },
@@ -698,6 +797,8 @@ export default async function botRoutes(app: FastifyInstance) {
     return reply.status(201).send({
       appointment,
       ownerTelegramChatId: business.ownerTelegramChatId,
+      // Physical location — appended to the client's booking confirmation.
+      businessAddress: business.address,
     });
   });
 
@@ -1168,13 +1269,23 @@ export default async function botRoutes(app: FastifyInstance) {
 
     const customer = await prisma.customer.findUnique({
       where: { businessId_telegramUserId: { businessId: business.id, telegramUserId } },
-      select: { languagePreference: true },
+      select: { languagePreference: true, consentedAt: true, consentVersion: true },
     });
+
+    // Live in-force PRIVACY version from the DB. The bot compares the customer's
+    // stored consentVersion against THIS (not a hardcoded constant), so an admin
+    // publish re-gates every customer at their next entry point.
+    const currentPrivacyVersion = await getCurrentVersion('PRIVACY');
 
     return reply.send({
       exists: customer !== null,
       languagePreference: customer?.languagePreference ?? null,
       businessLanguage: business.language,
+      businessName: business.name,
+      // First-contact consent status — the bot gates data capture on this.
+      consentedAt: customer?.consentedAt ? customer.consentedAt.toISOString() : null,
+      consentVersion: customer?.consentVersion ?? null,
+      currentPrivacyVersion,
     });
   });
 

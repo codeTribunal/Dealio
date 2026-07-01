@@ -9,7 +9,7 @@ import {
   SuspendedError,
   SlotUnavailableError,
 } from '../lib/api.js';
-import { formatDateWeekdayTZ, toTashkentDateStr } from '../lib/format.js';
+import { formatDateWeekdayTZ, toTashkentDateStr, escapeHtml } from '../lib/format.js';
 import { t, formatMoney, type Lang } from '../lib/i18n.js';
 
 export type MyConversation = Conversation<MyContext>;
@@ -439,18 +439,26 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
     }
   }
 
-  const { appointment, ownerTelegramChatId } = result;
+  const { appointment, ownerTelegramChatId, businessAddress } = result;
 
   // ── Step 10: Confirmation message ─────────────────────────────
   // No in-bot payment: the owner follows up about payment directly.
+  // Append the business location when set (escaped — owner-entered free text).
+  const addressLine =
+    businessAddress && businessAddress.trim()
+      ? '\n\n' + t(lang, 'appointmentAddressLine', { address: escapeHtml(businessAddress.trim()) })
+      : '';
   await ctx.reply(
     t(lang, 'bookingConfirmedNoPayment', {
       service: appointment.service.name,
       date: formatDateLabel(selectedDate),
       time: selectedSlot.startLabel,
       price: formatMoney(lang, appointment.price),
-    }),
-    { parse_mode: 'HTML' },
+    }) + addressLine,
+    {
+      parse_mode: 'HTML',
+      reply_markup: new InlineKeyboard().text(t(lang, 'backToMenu'), 'main_menu'),
+    },
   );
 
   // ownerTelegramChatId is available for future use (e.g. notify owner)

@@ -173,17 +173,22 @@ export async function suspendBusiness(
 }
 
 export async function unsuspendBusiness(
-  businessId: string
+  businessId: string,
+  reason: string
 ): Promise<AdminBusiness> {
-  const res = await adminApi.post(`/admin/businesses/${businessId}/unsuspend`)
+  const res = await adminApi.post(`/admin/businesses/${businessId}/unsuspend`, {
+    reason,
+  })
   return res.data
 }
 
 export async function impersonateBusiness(
-  businessId: string
+  businessId: string,
+  reason: string
 ): Promise<{ token: string; expiresAt: string; businessName: string }> {
   const res = await adminApi.post(
-    `/admin/businesses/${businessId}/impersonate`
+    `/admin/businesses/${businessId}/impersonate`,
+    { reason }
   )
   return res.data
 }
@@ -450,5 +455,31 @@ export async function adminSearch(params: {
       includeDeleted: params.includeDeleted ? 'true' : undefined,
     },
   })
+  return res.data
+}
+
+// ── Legal documents (versioning + re-consent) — SUPER_ADMIN only ──────────────
+
+export type LegalDocType = 'PRIVACY' | 'OFFER'
+
+export interface LegalDoc {
+  version: string
+  publishedAt: string
+  publishedByAdminId: string | null
+}
+
+/** Both legal documents keyed by type. Either may be absent if unseeded. */
+export async function getLegalDocs(): Promise<Partial<Record<LegalDocType, LegalDoc>>> {
+  const res = await adminApi.get('/admin/legal-docs')
+  return res.data.docs
+}
+
+/** Publish a new in-force version for a document. For PRIVACY this forces
+ *  re-consent. The backend rejects an empty or unchanged version. */
+export async function publishLegalVersion(
+  docType: LegalDocType,
+  version: string
+): Promise<LegalDoc & { docType: LegalDocType }> {
+  const res = await adminApi.post(`/admin/legal-docs/${docType}/publish`, { version })
   return res.data
 }

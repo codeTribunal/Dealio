@@ -371,7 +371,7 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get loginCodeSentNotice =>
-      'Agar hisob mavjud bo\'lsa, Telegramingizga 6 xonali kod yubordik.';
+      'Agar hisob mavjud bo\'lsa, Telegramingizga 6 xonali kod yubordik. Kod bizning kirish botimizdan keladi. Agar kelmasa, o\'sha botni oching, Start tugmasini bosing va kodni qayta so\'rang.';
 
   @override
   String get loginTooManyAttempts =>
@@ -611,6 +611,37 @@ class AppLocalizationsUz extends AppLocalizations {
   String settingsDescriptionLabel(String optional) {
     return 'Tavsif ($optional)';
   }
+
+  @override
+  String get settingsAddressLabel => 'Manzil';
+
+  @override
+  String get settingsAddressHelper =>
+      'Mijozlar keladigan manzil (olib ketish yoki uchrashuv joyi)';
+
+  @override
+  String get settingsEmailLabel => 'Email';
+
+  @override
+  String get settingsEmailInvalid => 'To\'g\'ri email manzilini kiriting';
+
+  @override
+  String get emailPromptHeading => 'Haftalik hisobotlarni pochta orqali oling';
+
+  @override
+  String get emailPromptSubtext =>
+      'Biznes hisobotlari va mahsulot yangiliklari';
+
+  @override
+  String get emailPromptConsent =>
+      'Menga haftalik hisobotlar va mahsulot yangiliklarini yuboring';
+
+  @override
+  String get emailPromptSkip => 'O\'tkazib yuborish';
+
+  @override
+  String get emailPromptError =>
+      'Xatolik yuz berdi. Iltimos, qayta urinib ko\'ring.';
 
   @override
   String get settingsBusinessMode => 'BIZNES TURI';
@@ -1006,6 +1037,12 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get orderSectionDelivery => 'Yetkazib berish';
+
+  @override
+  String get orderSectionPaymentProof => 'To\'lov cheki';
+
+  @override
+  String get orderProofUnavailable => 'Chek mavjud emas';
 
   @override
   String get orderSectionNotes => 'Izohlar';
@@ -1764,8 +1801,11 @@ class AppLocalizationsUz extends AppLocalizations {
   String get analyticsTopCustomers => 'Eng yaxshi mijozlar — so\'nggi 90 kun';
 
   @override
+  String get analyticsLast6Months => 'Oxirgi 6 oy';
+
+  @override
   String get analyticsNoConfirmedOrders =>
-      'So\'nggi 90 kunda yakunlangan navbatlar yo\'q';
+      'So\'nggi 90 kunda tasdiqlangan daromad yo\'q';
 
   @override
   String get analyticsBestSelling => 'Eng ko\'p sotilgan mahsulot';

@@ -1,11 +1,11 @@
 import { FastifyInstance } from 'fastify';
-import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma, prismaUnscoped } from '../lib/prisma.js';
 import { sendError } from '../lib/errors.js';
 import { requireAdmin, requireSuperAdmin } from '../middleware/adminAuth.js';
 import { writeAuditLog } from '../lib/audit.js';
 import { softDelete, restore, type BusinessScopedSoftDeletable } from '../services/softDelete.js';
+import { anonymizeCustomer, ANONYMIZE_SCRUBBED_FIELDS } from '../services/anonymizeCustomer.js';
 
 /**
  * Admin tenant data-management (Phase B).
@@ -302,7 +302,12 @@ export default async function adminDataRoutes(app: FastifyInstance) {
       },
     });
     if (!order) return sendError(reply, 404, 'Order not found');
-    return reply.send(flag(order));
+    // Never return the raw Telegram file_id or the internal proof URL to any
+    // client (same rule as the owner order serializer). Expose only a boolean;
+    // admins view the image via the authenticated proxy, not the raw pointer.
+    const { paymentProofFileId, paymentProofUrl, ...safeOrder } = order;
+    void paymentProofUrl; // intentionally omitted from the response
+    return reply.send(flag({ ...safeOrder, hasPaymentProof: paymentProofFileId != null }));
   });
 
   // GET /admin/appointments/:id
@@ -340,7 +345,7 @@ export default async function adminDataRoutes(app: FastifyInstance) {
   // ════════════════════════════════════════════════════════════════════════
 
   // PATCH /admin/customers/:id
-  app.patch('/admin/customers/:id', { preHandler: requireAdmin }, async (request, reply) => {
+  app.patch('/admin/customers/:id', { preHandler: requireSuperAdmin }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const existing = await unscoped.customer.findUnique({
       where: { id },
@@ -371,7 +376,7 @@ export default async function adminDataRoutes(app: FastifyInstance) {
   });
 
   // PATCH /admin/orders/:id
-  app.patch('/admin/orders/:id', { preHandler: requireAdmin }, async (request, reply) => {
+  app.patch('/admin/orders/:id', { preHandler: requireSuperAdmin }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const existing = await unscoped.order.findUnique({
       where: { id },
@@ -400,7 +405,7 @@ export default async function adminDataRoutes(app: FastifyInstance) {
   });
 
   // PATCH /admin/appointments/:id
-  app.patch('/admin/appointments/:id', { preHandler: requireAdmin }, async (request, reply) => {
+  app.patch('/admin/appointments/:id', { preHandler: requireSuperAdmin }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const existing = await unscoped.appointment.findUnique({
       where: { id },
@@ -429,7 +434,7 @@ export default async function adminDataRoutes(app: FastifyInstance) {
   });
 
   // PATCH /admin/projects/:id
-  app.patch('/admin/projects/:id', { preHandler: requireAdmin }, async (request, reply) => {
+  app.patch('/admin/projects/:id', { preHandler: requireSuperAdmin }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const existing = await unscoped.project.findUnique({
       where: { id },
@@ -535,57 +540,19 @@ export default async function adminDataRoutes(app: FastifyInstance) {
     });
     if (!customer) return sendError(reply, 404, 'Customer not found');
 
-    // Field NAMES only — never the scrubbed values (that would defeat erasure).
-    const scrubbedFields = [
-      'name',
-      'phone',
-      'telegramUserId',
-      'telegramUsername',
-      'notes',
-      'birthday',
-      'customFields',
-      'customFieldValues',
-      'tags',
-      'order.deliveryAddress',
-      'order.customAnswers',
-    ];
-
-    await prismaUnscoped.$transaction([
-      // Personal custom-field values and tags are deleted outright.
-      prismaUnscoped.customerFieldValue.deleteMany({ where: { customerId: id } }),
-      prismaUnscoped.customerTag.deleteMany({ where: { customerId: id } }),
-      // Scrub the clearly-personal structured fields on their orders (the home
-      // address and the free-text checkout answers, which routinely hold PII).
-      prismaUnscoped.order.updateMany({
-        where: { customerId: id },
-        data: { deliveryAddress: null, customAnswers: Prisma.DbNull },
-      }),
-      // De-identify the customer row itself; keep the row + transactional links.
-      prismaUnscoped.customer.update({
-        where: { id },
-        data: {
-          name: 'Deleted customer',
-          phone: null,
-          telegramUserId: null,
-          telegramUsername: null,
-          notes: null,
-          birthday: null,
-          customFields: Prisma.DbNull,
-          anonymizedAt: new Date(),
-        },
-      }),
-    ]);
+    // Shared, single-source scrub (also used by the bot /deletedata erase).
+    await anonymizeCustomer(id);
 
     await writeAuditLog({
       adminUserId: request.adminUser!.id,
       action: 'ANONYMIZE_CUSTOMER',
       targetType: 'Customer',
       targetId: id,
-      metadata: { businessId: customer.businessId, scrubbedFields },
+      metadata: { businessId: customer.businessId, scrubbedFields: ANONYMIZE_SCRUBBED_FIELDS },
       ipAddress: request.ip,
     });
 
-    return reply.send({ id, anonymized: true, scrubbedFields });
+    return reply.send({ id, anonymized: true, scrubbedFields: ANONYMIZE_SCRUBBED_FIELDS });
   });
 
   // POST /admin/businesses/:id/erase

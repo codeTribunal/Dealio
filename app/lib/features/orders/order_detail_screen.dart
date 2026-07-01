@@ -1,7 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/auth/auth_notifier.dart';
+import '../../core/config/app_config.dart';
 import '../../core/icons/app_icon.dart';
 import '../../core/models/order.dart';
 import '../../core/theme/app_tokens.dart';
@@ -108,6 +111,10 @@ class _OrderBody extends StatelessWidget {
           _ItemsCard(order: order),
           const SizedBox(height: AppSpacing.s3),
           _DeliveryCard(order: order),
+          if (order.hasPaymentProof) ...[
+            const SizedBox(height: AppSpacing.s3),
+            _PaymentProofCard(orderId: order.id),
+          ],
           if (order.notes != null && order.notes!.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.s3),
             _NotesCard(notes: order.notes!),
@@ -298,6 +305,82 @@ class _DeliveryCard extends StatelessWidget {
   }
 }
 
+// ── Payment proof card ──────────────────────────────────────────────
+
+class _PaymentProofCard extends ConsumerWidget {
+  final String orderId;
+  const _PaymentProofCard({required this.orderId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    // Authenticated proxy — the JWT rides in the header (same token the Dio
+    // interceptor uses). getFile URLs are ~1h and regenerated server-side, so
+    // the image loads fresh each view; the raw file_id is never exposed.
+    final token = ref.read(authNotifierProvider).state?.token;
+    final url = '${AppConfig.apiBaseUrl}/orders/$orderId/payment-proof';
+    final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
+
+    Widget unavailable() => SizedBox(
+          height: 220,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.broken_image_outlined, color: t.text3),
+                const SizedBox(height: AppSpacing.s1),
+                Text(
+                  l.orderProofUnavailable,
+                  style: TextStyle(color: t.text3, fontSize: AppTextSizes.sm),
+                ),
+              ],
+            ),
+          ),
+        );
+
+    return AppCard(
+      header: AppCardHeader(title: l.orderSectionPaymentProof),
+      child: GestureDetector(
+        onTap: () => showDialog<void>(
+          context: context,
+          builder: (dialogCtx) => Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.all(AppSpacing.s4),
+            // Tap anywhere on the full-size image to dismiss.
+            child: GestureDetector(
+              onTap: () => Navigator.of(dialogCtx).pop(),
+              child: InteractiveViewer(
+                child: CachedNetworkImage(
+                  imageUrl: url,
+                  httpHeaders: headers,
+                  fit: BoxFit.contain,
+                  errorWidget: (context, _, __) => unavailable(),
+                ),
+              ),
+            ),
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: AppRadii.md,
+          child: CachedNetworkImage(
+            imageUrl: url,
+            httpHeaders: headers,
+            width: double.infinity,
+            height: 220,
+            fit: BoxFit.cover,
+            placeholder: (context, _) => const SizedBox(
+              height: 220,
+              child: Center(child: AppSpinner()),
+            ),
+            errorWidget: (context, _, __) => unavailable(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Notes card ──────────────────────────────────────────────────────
 
 class _NotesCard extends StatelessWidget {
@@ -456,14 +539,37 @@ class _TimelineEntry extends StatelessWidget {
 
 // ── Action buttons ──────────────────────────────────────────────────
 
-class _ActionButtons extends StatelessWidget {
+class _ActionButtons extends StatefulWidget {
   final Order order;
   final OrderDetailNotifier notifier;
   const _ActionButtons({required this.order, required this.notifier});
 
   @override
+  State<_ActionButtons> createState() => _ActionButtonsState();
+}
+
+class _ActionButtonsState extends State<_ActionButtons> {
+  // Double-submit guard: while a mutation is in flight every action button is
+  // disabled and the tapped one shows a spinner, so a rapid second tap cannot
+  // fire a duplicate PATCH before the provider refresh rebuilds this widget.
+  // _pending holds the tag of the in-flight action ('PAY' or an order status).
+  String? _pending;
+  bool get _busy => _pending != null;
+
+  Future<void> _guard(String tag, Future<void> Function() action) async {
+    if (_busy) return;
+    setState(() => _pending = tag);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _pending = null);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final order = widget.order;
     final status = order.orderStatus;
     final showConfirmPayment = order.paymentStatus != 'CONFIRMED';
 
@@ -475,7 +581,8 @@ class _ActionButtons extends StatelessWidget {
             label: l.orderConfirmPayment,
             leftIcon: AppIconName.paid,
             fullWidth: true,
-            onPressed: () => _confirmPayment(context),
+            loading: _pending == 'PAY',
+            onPressed: _busy ? null : () => _confirmPayment(context),
           ),
         if (status == 'NEW') ...[
           if (showConfirmPayment) const SizedBox(height: AppSpacing.s2),
@@ -483,7 +590,8 @@ class _ActionButtons extends StatelessWidget {
             label: l.orderStartPreparing,
             variant: AppButtonVariant.secondary,
             fullWidth: true,
-            onPressed: () => _updateStatus(context, 'PREPARING'),
+            loading: _pending == 'PREPARING',
+            onPressed: _busy ? null : () => _updateStatus(context, 'PREPARING'),
           ),
         ],
         if (status == 'PREPARING') ...[
@@ -492,7 +600,8 @@ class _ActionButtons extends StatelessWidget {
             label: l.orderMarkReady,
             variant: AppButtonVariant.secondary,
             fullWidth: true,
-            onPressed: () => _updateStatus(context, 'READY'),
+            loading: _pending == 'READY',
+            onPressed: _busy ? null : () => _updateStatus(context, 'READY'),
           ),
         ],
         if (status == 'READY') ...[
@@ -501,7 +610,8 @@ class _ActionButtons extends StatelessWidget {
             label: l.orderMarkDelivered,
             variant: AppButtonVariant.secondary,
             fullWidth: true,
-            onPressed: () => _updateStatus(context, 'DELIVERED'),
+            loading: _pending == 'DELIVERED',
+            onPressed: _busy ? null : () => _updateStatus(context, 'DELIVERED'),
           ),
         ],
         if (status != 'DELIVERED' && status != 'CANCELLED') ...[
@@ -510,7 +620,8 @@ class _ActionButtons extends StatelessWidget {
             label: l.orderCancel,
             variant: AppButtonVariant.danger,
             fullWidth: true,
-            onPressed: () => _cancelOrder(context),
+            loading: _pending == 'CANCELLED',
+            onPressed: _busy ? null : () => _cancelOrder(context),
           ),
         ],
       ],
@@ -520,37 +631,41 @@ class _ActionButtons extends StatelessWidget {
   Future<void> _confirmPayment(BuildContext context) async {
     final l = AppLocalizations.of(context)!;
     final t = AppTokens.of(context);
-    try {
-      await notifier.confirmPayment();
-    } catch (e) {
-      if (!context.mounted) return;
-      final alreadyConfirmed = e.toString().contains('already confirmed');
-      final msg = alreadyConfirmed
-          ? l.orderPaymentAlreadyConfirmed
-          : l.errorWithMessage(e.toString());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          backgroundColor: alreadyConfirmed ? t.warning : t.error,
-        ),
-      );
-    }
-  }
-
-  Future<void> _updateStatus(BuildContext context, String status) async {
-    try {
-      await notifier.updateStatus(status);
-    } catch (e) {
-      if (context.mounted) {
+    await _guard('PAY', () async {
+      try {
+        await widget.notifier.confirmPayment();
+      } catch (e) {
+        if (!context.mounted) return;
+        final alreadyConfirmed = e.toString().contains('already confirmed');
+        final msg = alreadyConfirmed
+            ? l.orderPaymentAlreadyConfirmed
+            : l.errorWithMessage(e.toString());
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                AppLocalizations.of(context)!.errorWithMessage(e.toString())),
-            backgroundColor: AppTokens.of(context).error,
+            content: Text(msg),
+            backgroundColor: alreadyConfirmed ? t.warning : t.error,
           ),
         );
       }
-    }
+    });
+  }
+
+  Future<void> _updateStatus(BuildContext context, String status) async {
+    await _guard(status, () async {
+      try {
+        await widget.notifier.updateStatus(status);
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  AppLocalizations.of(context)!.errorWithMessage(e.toString())),
+              backgroundColor: AppTokens.of(context).error,
+            ),
+          );
+        }
+      }
+    });
   }
 
   Future<void> _cancelOrder(BuildContext context) async {

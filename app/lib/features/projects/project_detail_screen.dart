@@ -488,25 +488,47 @@ class _MilestoneChip extends StatelessWidget {
   }
 }
 
-class _MilestoneActions extends ConsumerWidget {
+class _MilestoneActions extends ConsumerStatefulWidget {
   final String projectId;
   final Milestone milestone;
   const _MilestoneActions({required this.projectId, required this.milestone});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MilestoneActions> createState() => _MilestoneActionsState();
+}
+
+class _MilestoneActionsState extends ConsumerState<_MilestoneActions> {
+  // Double-submit guard: disable the button while its mutation is in flight so
+  // a repeat tap cannot fire a duplicate PATCH before the provider refreshes.
+  bool _busy = false;
+
+  Future<void> _run(Future<void> Function() action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final t = AppTokens.of(context);
-    final notifier = ref.read(projectDetailProvider(projectId).notifier);
+    final notifier = ref.read(projectDetailProvider(widget.projectId).notifier);
 
-    switch (milestone.status) {
+    switch (widget.milestone.status) {
       case 'PENDING':
         return AppButton(
           label: l.projectSubmitForReview,
           variant: AppButtonVariant.secondary,
           size: AppButtonSize.sm,
           fullWidth: true,
-          onPressed: () => notifier.submitMilestone(milestone.id),
+          loading: _busy,
+          onPressed: _busy
+              ? null
+              : () => _run(() => notifier.submitMilestone(widget.milestone.id)),
         );
       case 'SUBMITTED_FOR_REVIEW':
         return Align(
@@ -530,7 +552,11 @@ class _MilestoneActions extends ConsumerWidget {
           label: l.projectMarkPaymentReceived,
           size: AppButtonSize.sm,
           fullWidth: true,
-          onPressed: () => notifier.markMilestonePaymentReceived(milestone.id),
+          loading: _busy,
+          onPressed: _busy
+              ? null
+              : () => _run(() =>
+                  notifier.markMilestonePaymentReceived(widget.milestone.id)),
         );
       case 'PAYMENT_RECEIVED':
         return const SizedBox.shrink();
@@ -590,15 +616,24 @@ class _InvoicesSection extends ConsumerWidget {
   }
 }
 
-class _InvoiceRow extends ConsumerWidget {
+class _InvoiceRow extends ConsumerStatefulWidget {
   final String projectId;
   final Invoice invoice;
   const _InvoiceRow({required this.projectId, required this.invoice});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_InvoiceRow> createState() => _InvoiceRowState();
+}
+
+class _InvoiceRowState extends ConsumerState<_InvoiceRow> {
+  // Double-submit guard for the "Mark paid" action.
+  bool _markingPaid = false;
+
+  @override
+  Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final t = AppTokens.of(context);
+    final invoice = widget.invoice;
     final isPaid = invoice.status == 'PAID';
 
     return Container(
@@ -665,9 +700,20 @@ class _InvoiceRow extends ConsumerWidget {
                 AppButton(
                   label: l.projectMarkPaid,
                   size: AppButtonSize.sm,
-                  onPressed: () => ref
-                      .read(projectDetailProvider(projectId).notifier)
-                      .markInvoicePaid(invoice.id),
+                  loading: _markingPaid,
+                  onPressed: _markingPaid
+                      ? null
+                      : () async {
+                          setState(() => _markingPaid = true);
+                          try {
+                            await ref
+                                .read(projectDetailProvider(widget.projectId)
+                                    .notifier)
+                                .markInvoicePaid(invoice.id);
+                          } finally {
+                            if (mounted) setState(() => _markingPaid = false);
+                          }
+                        },
                 ),
               ],
             ],

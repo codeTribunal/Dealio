@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
-import { getOrderDetail, updateOrderStatus, confirmOrderPayment, deleteOrder } from '@/lib/api'
+import { getOrderDetail, updateOrderStatus, confirmOrderPayment, deleteOrder, getPaymentProofUrl } from '@/lib/api'
 import { formatUZS, formatDate, formatDateTime } from '@/lib/format'
 import { useI18n } from '@/lib/i18n/i18nContext'
 import type { Order } from '@/types'
@@ -26,6 +26,8 @@ export default function OrderDetailPage() {
   const [confirmingPayment, setConfirmingPayment] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [proofSrc, setProofSrc] = useState<string | null>(null)
+  const [proofError, setProofError] = useState(false)
 
   function load() {
     setLoading(true)
@@ -39,6 +41,31 @@ export default function OrderDetailPage() {
   useEffect(() => {
     load()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load the payment-proof image through the authenticated proxy (as a blob, so
+  // the Bearer token is sent). Revoke the object URL on cleanup / re-fetch.
+  useEffect(() => {
+    if (!order?.hasPaymentProof) return
+    let objectUrl: string | null = null
+    let cancelled = false
+    setProofError(false)
+    getPaymentProofUrl(order.id)
+      .then((url) => {
+        if (cancelled) {
+          URL.revokeObjectURL(url)
+          return
+        }
+        objectUrl = url
+        setProofSrc(url)
+      })
+      .catch(() => {
+        if (!cancelled) setProofError(true)
+      })
+    return () => {
+      cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [order?.id, order?.hasPaymentProof])
 
   async function handleStatusChange(newStatus: string) {
     if (!order) return
@@ -127,14 +154,16 @@ export default function OrderDetailPage() {
                 <CardHeader title="Details" />
                 <div>
                   <div className="flex justify-between items-center py-2.5 border-b border-border">
-                    <p className="text-sm text-text-2">Delivery</p>
+                    <p className="text-sm text-text-2">{t('delivery.method')}</p>
                     <p className="text-sm font-medium text-text-1">
-                      {order.deliveryMethod === 'PICKUP' ? 'Pickup' : 'Delivery'}
+                      {order.deliveryMethod === 'PICKUP'
+                        ? t('delivery.PICKUP')
+                        : t('delivery.DELIVERY')}
                     </p>
                   </div>
                   {order.deliveryMethod === 'DELIVERY' && order.deliveryAddress !== null && (
                     <div className="flex justify-between items-start gap-3 py-2.5 border-b border-border">
-                      <p className="text-sm text-text-2 flex-shrink-0">Address</p>
+                      <p className="text-sm text-text-2 flex-shrink-0">{t('delivery.address')}</p>
                       <p className="text-sm font-medium text-text-1 text-right">{order.deliveryAddress}</p>
                     </div>
                   )}
@@ -307,6 +336,42 @@ export default function OrderDetailPage() {
                   <p className="text-lg font-bold text-text-1 tabular-nums">{formatUZS(order.total)}</p>
                 </div>
               </Card>
+
+              {/* Payment proof — image via the authenticated proxy (blob). */}
+              {order.hasPaymentProof && (
+                <Card padded={false} className="overflow-hidden">
+                  <div className="px-5 py-4 border-b border-border">
+                    <p className="text-sm font-semibold text-text-1">
+                      {t('orders.paymentProof')}
+                    </p>
+                  </div>
+                  <div className="p-5">
+                    {proofError ? (
+                      <p className="text-sm text-text-2">
+                        {t('orders.proofUnavailable')}
+                      </p>
+                    ) : proofSrc ? (
+                      <a
+                        href={proofSrc}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={proofSrc}
+                          alt={t('orders.paymentProof')}
+                          className="rounded-lg max-h-96 w-auto object-contain border border-border"
+                        />
+                      </a>
+                    ) : (
+                      <div className="flex items-center justify-center py-8">
+                        <Spinner />
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
 
               {/* Timeline */}
               <Card padded={false} className="overflow-hidden">

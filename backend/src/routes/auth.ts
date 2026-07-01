@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { sendError } from '../lib/errors.js';
 import { normalizePhone } from '../lib/phone.js';
-import { CURRENT_POLICY_VERSION } from '../lib/policyVersion.js';
+import { getCurrentVersion } from '../lib/legalVersion.js';
 import { issueAuthCode, verifyAuthCode } from '../services/otp.js';
 import { createLinkToken } from '../services/platformAuth.js';
 import { sendTelegramMessage } from '../lib/telegram.js';
@@ -27,10 +27,11 @@ async function buildAuthResponse(app: FastifyInstance, user: AuthUser) {
   return { token, user: { id: user.id, phone: user.phone }, business: business ?? null };
 }
 
-/** True if the user already consented to the current policy version. */
-async function hasCurrentConsent(userId: string): Promise<boolean> {
+/** True if the user already consented to the given (current) policy version.
+ *  The version is the live PRIVACY version from the DB, passed in by the caller. */
+async function hasCurrentConsent(userId: string, policyVersion: string): Promise<boolean> {
   const existing = await prisma.consentRecord.findFirst({
-    where: { userId, policyVersion: CURRENT_POLICY_VERSION },
+    where: { userId, policyVersion },
     select: { id: true },
   });
   return existing !== null;
@@ -154,6 +155,9 @@ export default async function authRoutes(app: FastifyInstance) {
       const phone = link.phone;
       const chatId = link.chatId;
 
+      // Live PRIVACY version from the DB — the version this enrollment consents to.
+      const privacyVersion = await getCurrentVersion('PRIVACY');
+
       // Create or bind the user, set the Telegram binding, record consent, and
       // consume the link token — all atomically.
       const user = await prisma.$transaction(async (tx) => {
@@ -164,7 +168,7 @@ export default async function authRoutes(app: FastifyInstance) {
         });
 
         const already = await tx.consentRecord.findFirst({
-          where: { userId: u.id, policyVersion: CURRENT_POLICY_VERSION },
+          where: { userId: u.id, policyVersion: privacyVersion },
           select: { id: true },
         });
         if (!already) {
@@ -173,7 +177,7 @@ export default async function authRoutes(app: FastifyInstance) {
               userId: u.id,
               generalConsent: true,
               crossBorderConsent: true,
-              policyVersion: CURRENT_POLICY_VERSION,
+              policyVersion: privacyVersion,
               ipAddress: request.ip,
               userAgent: request.headers['user-agent'] || null,
             },
@@ -302,15 +306,17 @@ export default async function authRoutes(app: FastifyInstance) {
         return sendError(reply, 401, 'Invalid code');
       }
 
-      // Consent gate: only if there is no consent for the current policy version.
-      if (!(await hasCurrentConsent(user.id))) {
+      // Consent gate: only if there is no consent for the current PRIVACY version
+      // (read live from the DB — an admin publish bumps it and re-gates on login).
+      const privacyVersion = await getCurrentVersion('PRIVACY');
+      if (!(await hasCurrentConsent(user.id, privacyVersion))) {
         if (generalConsent === true && crossBorderConsent === true) {
           await prisma.consentRecord.create({
             data: {
               userId: user.id,
               generalConsent: true,
               crossBorderConsent: true,
-              policyVersion: CURRENT_POLICY_VERSION,
+              policyVersion: privacyVersion,
               ipAddress: request.ip,
               userAgent: request.headers['user-agent'] || null,
             },
@@ -318,7 +324,7 @@ export default async function authRoutes(app: FastifyInstance) {
         } else {
           return reply.status(403).send({
             error: 'CONSENT_REQUIRED',
-            policyVersion: CURRENT_POLICY_VERSION,
+            policyVersion: privacyVersion,
           });
         }
       }

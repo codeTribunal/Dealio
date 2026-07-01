@@ -21,7 +21,15 @@ export default fp(async function (app: FastifyInstance) {
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Bot-Secret'],
-    exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining'],
+    // Expose the full rate-limit set so browser (web) clients can read backoff
+    // timing on a 429. Retry-After + X-RateLimit-Reset are already sent by
+    // @fastify/rate-limit's defaults but are invisible to fetch/XHR unless listed.
+    exposedHeaders: [
+      'X-RateLimit-Limit',
+      'X-RateLimit-Remaining',
+      'X-RateLimit-Reset',
+      'Retry-After',
+    ],
     maxAge: 86400,
   });
 });
