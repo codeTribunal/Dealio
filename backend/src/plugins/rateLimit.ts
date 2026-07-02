@@ -7,9 +7,9 @@ export default fp(async function (app: FastifyInstance) {
     global: true,
     max: 100,
     timeWindow: 60000,
-    keyGenerator: (request) => {
-      return (request.headers['x-forwarded-for'] as string) || request.ip;
-    },
+    // Key on request.ip (plugin default). With trustProxy:1 in the Fastify
+    // constructor, request.ip is the real client IP (rightmost XFF entry,
+    // appended by Railway) — not the client-supplied, spoofable XFF header.
     errorResponseBuilder: (_request, context) => {
       return {
         statusCode: 429,

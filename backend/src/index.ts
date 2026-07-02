@@ -47,7 +47,9 @@ const app = Fastify({
         : undefined,
   },
   bodyLimit: 1048576, // 1 MB max request body
-  trustProxy: true,   // trust Railway's proxy for real IP
+  // Exactly one trusted hop (Railway edge). request.ip = rightmost XFF entry,
+  // appended by Railway. Never use `true`: it would trust client-supplied XFF.
+  trustProxy: 1,
 });
 
 // Register hooks on the root instance BEFORE any plugin registration so they
