@@ -3,7 +3,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { sendError } from '../lib/errors.js';
-import { requireAdmin, requireSuperAdmin } from '../middleware/adminAuth.js';
+import { requireAdmin, requireSuperAdmin, ADMIN_SESSION_COOKIE } from '../middleware/adminAuth.js';
 import { writeAuditLog } from '../lib/audit.js';
 import { getCardPaymentsEnabled, setCardPaymentsEnabled } from '../lib/platformSettings.js';
 import { invalidateVersionCache, type LegalDocType } from '../lib/legalVersion.js';
@@ -160,16 +160,43 @@ export default async function adminRoutes(app: FastifyInstance) {
         { expiresIn: process.env.ADMIN_JWT_EXPIRES_IN ?? '8h' },
       );
 
+      // The session travels ONLY as an httpOnly cookie — never in the body —
+      // so panel JS (and any XSS payload running in it) cannot read the token.
+      // Path-scoped to the admin API; sameSite strict is the first CSRF wall,
+      // the x-requested-with guard (adminCsrfGuard) is the second.
+      reply.setCookie(ADMIN_SESSION_COOKIE, token, {
+        httpOnly: true,
+        sameSite: 'strict',
+        path: '/api/v1/admin',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 8 * 60 * 60, // seconds — matches the 8h JWT expiry
+      });
+
       return reply.send({
-        token,
-        admin: { id: admin.id, name: admin.name, email: admin.email, role: admin.role },
+        admin: { id: admin.id, name: admin.name, role: admin.role },
       });
     },
   );
 
-  // POST /admin/auth/logout
+  // POST /admin/auth/logout — clears the session cookie. The clearing cookie
+  // must carry the same path/flags as the one set at login or browsers keep
+  // the original.
   app.post('/admin/auth/logout', { preHandler: requireAdmin }, async (_request, reply) => {
-    return reply.send({ success: true });
+    reply.clearCookie(ADMIN_SESSION_COOKIE, {
+      httpOnly: true,
+      sameSite: 'strict',
+      path: '/api/v1/admin',
+      secure: process.env.NODE_ENV === 'production',
+    });
+    return reply.status(204).send();
+  });
+
+  // GET /admin/auth/me — identity of the authenticated admin. The panel uses
+  // this to gate UI by role (display only — privileged routes still enforce
+  // requireSuperAdmin server-side regardless).
+  app.get('/admin/auth/me', { preHandler: requireAdmin }, async (request, reply) => {
+    const admin = request.adminUser!;
+    return reply.send({ id: admin.id, name: admin.name, role: admin.role });
   });
 
   // ── Dashboard ─────────────────────────────────────────────────────────────

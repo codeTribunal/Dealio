@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import cookie from '@fastify/cookie';
 import corsPlugin from './plugins/cors.js';
 import jwtPlugin from './plugins/jwt.js';
 import adminJwtPlugin from './plugins/adminJwt.js';
@@ -32,6 +33,7 @@ import { calendarRoutes } from './routes/calendar.js';
 import { securityHeaders } from './middleware/security.js';
 import { detectMaliciousInput } from './middleware/inputSanitizer.js';
 import { impersonationGuard } from './middleware/impersonation.js';
+import { adminCsrfGuard } from './middleware/adminAuth.js';
 import { prisma } from './lib/prisma.js';
 import { validateEnv } from './lib/validateEnv.js';
 import { runOwnerReminders } from './jobs/ownerReminders.js';
@@ -56,6 +58,10 @@ app.addHook('preHandler', detectMaliciousInput);
 // token (see middleware/impersonation.ts). Self-verifies the token, so it is
 // inert for public/admin/non-impersonation requests.
 app.addHook('preHandler', impersonationGuard);
+// CSRF companion to the httpOnly admin_session cookie: every mutating
+// /admin/* request must carry x-requested-with: dealio-admin (see
+// middleware/adminAuth.ts). onRequest so it rejects before body parsing.
+app.addHook('onRequest', adminCsrfGuard);
 
 async function bootstrap() {
   // Fail-fast: refuse to boot if any signing/hashing secret is missing or a
@@ -63,6 +69,9 @@ async function bootstrap() {
   validateEnv();
 
   await app.register(helmetPlugin);
+  // Parses the httpOnly admin_session cookie (admin panel auth). No signing —
+  // the cookie VALUE is a self-verifying admin JWT.
+  await app.register(cookie);
   await app.register(corsPlugin);
   await app.register(jwtPlugin);
   await app.register(adminJwtPlugin);

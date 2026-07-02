@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Shield } from 'lucide-react'
-import { adminLogin, setAdminToken } from '@/lib/adminApi'
+import { adminLogin } from '@/lib/adminApi'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -19,8 +19,9 @@ export default function AdminLoginPage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await adminLogin(email, password)
-      setAdminToken(data.token)
+      // Success sets the httpOnly admin_session cookie server-side; the body
+      // carries only { admin } (no token for JS to store).
+      await adminLogin(email, password)
       router.replace('/admin')
     } catch {
       setError('Invalid credentials. Check your email and password.')

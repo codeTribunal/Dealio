@@ -1,52 +1,71 @@
 import axios from 'axios'
-import Cookies from 'js-cookie'
 
-const ADMIN_TOKEN_KEY = 'crm_admin_token'
-
-export function getAdminToken(): string | null {
-  return Cookies.get(ADMIN_TOKEN_KEY) || null
-}
-
-export function setAdminToken(token: string): void {
-  Cookies.set(ADMIN_TOKEN_KEY, token, {
-    expires: 0.33,
-    sameSite: 'strict',
-  })
-}
-
-export function clearAdminToken(): void {
-  Cookies.remove(ADMIN_TOKEN_KEY)
-}
-
-export function isAdminAuthenticated(): boolean {
-  return !!getAdminToken()
-}
-
+// Admin auth rides an httpOnly admin_session cookie set/cleared by the
+// backend (login/logout) — JS never sees the token, so there is no js-cookie
+// storage and no Bearer header here. withCredentials sends the cookie;
+// x-requested-with is the CSRF companion header the backend requires on every
+// mutating /admin/* request.
 const adminApi = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   timeout: 15000,
+  withCredentials: true,
+  headers: { 'x-requested-with': 'dealio-admin' },
 })
 
-adminApi.interceptors.request.use((config) => {
-  const token = getAdminToken()
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
+// Role cache for synchronous UI gating (display only — the server enforces
+// requireSuperAdmin regardless). Primed by adminLogin/fetchAdminMe; cleared
+// on logout and on any 401.
+let cachedAdminRole: 'SUPER_ADMIN' | 'SUPPORT' | null = null
+
+export function getAdminRole(): 'SUPER_ADMIN' | 'SUPPORT' | null {
+  return cachedAdminRole
+}
 
 adminApi.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      clearAdminToken()
-      if (typeof window !== 'undefined') {
+      cachedAdminRole = null
+      // Skip the redirect on the login page itself so a failed sign-in shows
+      // its error instead of reloading the page.
+      if (typeof window !== 'undefined' && window.location.pathname !== '/admin/login') {
         window.location.href = '/admin/login'
       }
     }
     return Promise.reject(error)
   }
 )
+
+export interface AdminMe {
+  id: string
+  name: string
+  role: 'SUPER_ADMIN' | 'SUPPORT'
+}
+
+export async function adminLogin(
+  email: string,
+  password: string
+): Promise<{ admin: AdminMe }> {
+  const res = await adminApi.post('/admin/auth/login', { email, password })
+  cachedAdminRole = res.data.admin.role
+  return res.data
+}
+
+// Identity from the session cookie; primes the getAdminRole() cache. A 401
+// here (missing/expired session) triggers the interceptor redirect to login.
+export async function fetchAdminMe(): Promise<AdminMe> {
+  const res = await adminApi.get('/admin/auth/me')
+  cachedAdminRole = res.data.role
+  return res.data
+}
+
+export async function adminLogout(): Promise<void> {
+  try {
+    await adminApi.post('/admin/auth/logout')
+  } finally {
+    cachedAdminRole = null
+  }
+}
 
 export interface AdminUser {
   id: string
@@ -107,14 +126,6 @@ export interface AuditEntry {
   ipAddress: string | null
   createdAt: string
   adminUser: { id: string; name: string; email: string }
-}
-
-export async function adminLogin(
-  email: string,
-  password: string
-): Promise<{ token: string; admin: AdminUser }> {
-  const res = await adminApi.post('/admin/auth/login', { email, password })
-  return res.data
 }
 
 export async function getDashboard(): Promise<DashboardMetrics> {
@@ -376,20 +387,6 @@ export async function restoreAdminRecord(
 }
 
 // ── Erasure (Phase C) — irreversible, super-admin only ────────────────────────
-
-// Read the current admin's role from the JWT (display-gating only; the server
-// enforces requireSuperAdmin regardless).
-export function getAdminRole(): 'SUPER_ADMIN' | 'SUPPORT' | null {
-  const token = getAdminToken()
-  if (!token) return null
-  try {
-    const seg = token.split('.')[1]
-    const obj = JSON.parse(atob(seg.replace(/-/g, '+').replace(/_/g, '/')))
-    return obj.role === 'SUPER_ADMIN' || obj.role === 'SUPPORT' ? obj.role : null
-  } catch {
-    return null
-  }
-}
 
 export async function anonymizeCustomer(
   id: string

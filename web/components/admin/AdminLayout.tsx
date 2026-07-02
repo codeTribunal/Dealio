@@ -15,7 +15,7 @@ import {
   Settings,
   FileText,
 } from 'lucide-react'
-import { isAdminAuthenticated, clearAdminToken, getAdminRole } from '@/lib/adminApi'
+import { fetchAdminMe, adminLogout, getAdminRole } from '@/lib/adminApi'
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -29,12 +29,20 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    if (!isAdminAuthenticated()) {
-      router.replace('/admin/login')
-    } else {
-      setChecked(true)
+    // The session is an httpOnly cookie JS cannot inspect, so ask the server.
+    // This also primes the getAdminRole() cache before children render. A 401
+    // redirects to /admin/login via the adminApi interceptor; on other errors
+    // (network) the guard stays closed rather than rendering unauthenticated.
+    let cancelled = false
+    fetchAdminMe()
+      .then(() => {
+        if (!cancelled) setChecked(true)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
     }
-  }, [router])
+  }, [])
 
   if (!checked) return null
 
@@ -54,8 +62,13 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
       : []),
   ]
 
-  const handleSignOut = () => {
-    clearAdminToken()
+  const handleSignOut = async () => {
+    try {
+      // Server clears the httpOnly cookie; adminLogout also drops the cached role.
+      await adminLogout()
+    } catch {
+      // Session may already be expired (401 → interceptor redirects anyway).
+    }
     router.replace('/admin/login')
   }
 
