@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../auth/auth_notifier.dart';
 import '../api/api_service.dart';
 import '../locale/locale_provider.dart';
+import 'route_observers.dart';
 import '../services/fcm_service.dart';
 import '../../features/auth/arrival_screen.dart';
 import '../../features/auth/login_screen.dart';
@@ -81,6 +82,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     refreshListenable: authNotifier,
+    // Root-navigator observer so the persistent shell can refresh the home
+    // dashboard when the owner returns to it from a pushed detail screen.
+    observers: [rootRouteObserver],
     redirect: (BuildContext context, GoRouterState state) {
       // Dev-only design reference screens are always reachable (not gated by
       // auth). Debug builds only — these routes don't exist in release.
