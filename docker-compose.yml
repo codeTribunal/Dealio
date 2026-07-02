@@ -1,0 +1,30 @@
+# Local dev infrastructure — one `docker compose up -d` starts everything.
+#   postgres → backend DATABASE_URL (postgresql://dealio:dealio@localhost:5433/dealio_dev)
+#   redis    → bot session store (bot/.env REDIS_URL=redis://localhost:6379)
+# Data persists in the named volumes below across container recreation.
+services:
+  postgres:
+    image: postgres:16
+    container_name: dealio-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dealio
+      POSTGRES_PASSWORD: dealio
+      POSTGRES_DB: dealio_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - dealio_pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: dealio-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - dealio_redisdata:/data
+
+volumes:
+  dealio_pgdata:
+  dealio_redisdata:
