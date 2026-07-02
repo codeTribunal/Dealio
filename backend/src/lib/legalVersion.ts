@@ -26,10 +26,26 @@ export async function getCurrentVersion(docType: LegalDocType): Promise<string> 
   const now = Date.now();
   if (hit && now - hit.at < TTL_MS) return hit.version;
 
-  const row = await prisma.legalDocument.findUnique({
-    where: { docType },
-    select: { version: true },
-  });
+  let row: { version: string } | null;
+  try {
+    row = await prisma.legalDocument.findUnique({
+      where: { docType },
+      select: { version: true },
+    });
+  } catch (err) {
+    // Fail SAFE on a DB read error (outage/timeout): return the baseline
+    // version WITHOUT caching it, so the very next call retries the DB rather
+    // than pinning the fallback for the TTL — a transient blip must not freeze
+    // the in-force version. (The null-row case below is a SUCCESSFUL query and
+    // is still cached as normal.)
+    console.error(
+      `[legalVersion] getCurrentVersion(${docType}) DB read failed, using fallback: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+    return FALLBACK_VERSION[docType];
+  }
+
   const version = row?.version ?? FALLBACK_VERSION[docType];
   cache.set(docType, { version, at: now });
   return version;
