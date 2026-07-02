@@ -44,6 +44,14 @@ model Business {
   suspendedAt     DateTime?
   suspendedReason String?
 
+  // Self-serve account deletion (owner-initiated, 30-day recoverable window).
+  // Requesting deletion ALSO sets suspendedAt (reusing the single suspension
+  // enforcement path), so PENDING_DELETION is blocked everywhere a suspended
+  // business is. The purge job keys off deletionState + deletionScheduledAt.
+  deletionState        DeletionState @default(ACTIVE)
+  deletionRequestedAt  DateTime?
+  deletionScheduledAt  DateTime?
+
   // Bot token — stored encrypted, never plain text in production
   botTokenEncrypted String?
   botTokenIv        String?
@@ -68,6 +76,8 @@ model Business {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([deletionState, deletionScheduledAt])
 }
 
 model SentReminder {
@@ -546,6 +556,15 @@ model UsageLog {
 enum AdminRole {
   SUPER_ADMIN
   SUPPORT
+}
+
+/// Owner account-deletion lifecycle. ACTIVE = normal. PENDING_DELETION = the
+/// owner requested deletion; the business is suspended immediately and hard-
+/// purged after the 30-day recovery window (deletionScheduledAt) unless the
+/// owner reactivates by logging back in.
+enum DeletionState {
+  ACTIVE
+  PENDING_DELETION
 }
 
 /// The two in-force legal documents. The document TEXT lives in the codebase
