@@ -487,8 +487,12 @@ export default async function businessRoutes(app: FastifyInstance) {
     const business = await getBusinessOrFail(request, reply);
     if (!business) return;
 
+    // A business with no bot connected yet (fresh signup / mid-onboarding) is
+    // VALID — return a well-formed empty payload, never a 404. A 404 here makes
+    // the client's getBotInfo throw and fails the whole Settings screen; the
+    // client already renders the "connect a bot" editor when botUsername is null.
     if (!business.botUsername) {
-      return sendError(reply, 404, 'Bot not configured yet. Set botUsername first.');
+      return reply.send({ botUsername: null, botLink: null });
     }
 
     return reply.send({
