@@ -37,6 +37,7 @@ import { adminCsrfGuard } from './middleware/adminAuth.js';
 import { prisma } from './lib/prisma.js';
 import { validateEnv } from './lib/validateEnv.js';
 import { runOwnerReminders } from './jobs/ownerReminders.js';
+import { runDeletionPurge } from './jobs/deletionPurge.js';
 
 const app = Fastify({
   logger: {
@@ -127,6 +128,17 @@ async function bootstrap() {
   setInterval(() => {
     runOwnerReminders().catch((err) => console.error('[reminders] Interval run failed:', err));
   }, REMINDER_INTERVAL_MS);
+
+  // Account-deletion purge — hard-deletes businesses past their 30-day window.
+  // GUARANTEED TRIGGER: runs once on boot (catches any schedule missed while the
+  // process was down) then every 24h. A superadmin can also trigger it manually
+  // (POST /admin/purge-deletions). This is the firing mechanism that makes the
+  // 30-day deletion actually irreversible rather than soft-delete-forever.
+  const PURGE_INTERVAL_MS = 24 * 60 * 60_000;
+  runDeletionPurge().catch((err) => console.error('[deletion-purge] Boot run failed:', err));
+  setInterval(() => {
+    runDeletionPurge().catch((err) => console.error('[deletion-purge] Interval run failed:', err));
+  }, PURGE_INTERVAL_MS);
 }
 
 bootstrap().catch((err) => {

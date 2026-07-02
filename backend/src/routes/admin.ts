@@ -7,6 +7,8 @@ import { requireAdmin, requireSuperAdmin, ADMIN_SESSION_COOKIE } from '../middle
 import { writeAuditLog } from '../lib/audit.js';
 import { getCardPaymentsEnabled, setCardPaymentsEnabled } from '../lib/platformSettings.js';
 import { invalidateVersionCache, type LegalDocType } from '../lib/legalVersion.js';
+import { startBusinessBot } from '../lib/botManager.js';
+import { runDeletionPurge } from '../jobs/deletionPurge.js';
 
 // Admin login lockout: after ADMIN_LOCK_THRESHOLD consecutive failures, lock the
 // ACCOUNT for ADMIN_LOCK_MINUTES. This is the PRIMARY brute-force defense (the
@@ -38,6 +40,11 @@ const SAFE_BUSINESS_SELECT = {
   planExpiresAt: true,
   suspendedAt: true,
   suspendedReason: true,
+  // Owner-requested account deletion — surfaced in the admin businesses list so
+  // an operator sees pending deletions + the scheduled purge date.
+  deletionState: true,
+  deletionRequestedAt: true,
+  deletionScheduledAt: true,
   createdAt: true,
   updatedAt: true,
   owner: {
@@ -713,4 +720,70 @@ export default async function adminRoutes(app: FastifyInstance) {
       });
     },
   );
+
+  // ── Account deletion (admin oversight) ────────────────────────────────────
+
+  // POST /admin/businesses/:id/cancel-deletion — superadmin cancels a pending
+  // owner deletion (before the purge fires), restoring the account like a
+  // reactivate. Clears the deletion + suspension and restarts the bot.
+  app.post(
+    '/admin/businesses/:id/cancel-deletion',
+    { preHandler: requireSuperAdmin },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      const existing = await prisma.business.findUnique({
+        where: { id },
+        select: { id: true, deletionState: true },
+      });
+      if (!existing) return sendError(reply, 404, 'Business not found');
+      if (existing.deletionState !== 'PENDING_DELETION') {
+        return sendError(reply, 400, 'Business is not pending deletion');
+      }
+
+      const updated = await prisma.business.update({
+        where: { id },
+        data: {
+          deletionState: 'ACTIVE',
+          deletionRequestedAt: null,
+          deletionScheduledAt: null,
+          suspendedAt: null,
+          suspendedReason: null,
+        },
+        select: SAFE_BUSINESS_SELECT,
+      });
+
+      startBusinessBot(id).catch((err) =>
+        request.log.error({ err, businessId: id }, '[admin] cancel-deletion start-bot failed'),
+      );
+
+      await writeAuditLog({
+        adminUserId: request.adminUser!.id,
+        action: 'CANCEL_BUSINESS_DELETION',
+        targetType: 'Business',
+        targetId: id,
+        ipAddress: request.ip,
+      });
+
+      return reply.send(updated);
+    },
+  );
+
+  // POST /admin/purge-deletions — superadmin manual trigger of the deletion
+  // purge sweep (the same job that runs on boot + every 24h). Safety net /
+  // expedite for overdue purges. Irreversible for anything past its window.
+  app.post('/admin/purge-deletions', { preHandler: requireSuperAdmin }, async (request, reply) => {
+    const result = await runDeletionPurge();
+
+    await writeAuditLog({
+      adminUserId: request.adminUser!.id,
+      action: 'PURGE_BUSINESS_DELETIONS',
+      targetType: 'System',
+      targetId: 'deletion-purge',
+      metadata: { purged: result.purged, failed: result.failed, overdue: result.overdue },
+      ipAddress: request.ip,
+    });
+
+    return reply.send(result);
+  });
 }

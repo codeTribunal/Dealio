@@ -8,6 +8,16 @@ import { encryptBotToken } from '../lib/crypto.js';
 import { generateCalendarToken } from '../lib/calendarToken.js';
 import { mergeReminderSettings } from '../lib/reminderDefaults.js';
 import { getCardPaymentsEnabled } from '../lib/platformSettings.js';
+import { stopBusinessBot, startBusinessBot } from '../lib/botManager.js';
+
+// Owner self-serve account deletion: 30-day recoverable window.
+const DELETION_WINDOW_DAYS = 30;
+
+// Confirmation the owner must type to arm the destructive action (the business
+// name OR the literal "DELETE"). Non-empty; matched case-insensitively/trimmed.
+const requestDeletionBody = z.object({
+  confirmation: z.string().min(1).max(200),
+});
 
 // Fields returned to the app owner — never includes any token fields
 const SAFE_BUSINESS_SELECT = {
@@ -29,6 +39,12 @@ const SAFE_BUSINESS_SELECT = {
   plan: true,
   planExpiresAt: true,
   suspendedAt: true,
+  // Self-serve deletion state — the client reads deletionState to show the
+  // "scheduled for deletion, reactivate?" screen (GET /business is readable even
+  // while suspended, so a PENDING_DELETION owner can still reach it).
+  deletionState: true,
+  deletionRequestedAt: true,
+  deletionScheduledAt: true,
   createdAt: true,
   updatedAt: true,
   // Owner email + newsletter-consent fields, flattened onto the payload by
@@ -222,6 +238,106 @@ export default async function businessRoutes(app: FastifyInstance) {
     // get it with their existing bootstrap fetch (no extra round-trip needed).
     const cardPaymentsEnabled = await getCardPaymentsEnabled();
     return reply.send(flattenOwner(business, cardPaymentsEnabled));
+  });
+
+  // POST /business/request-deletion — owner self-serve account deletion.
+  // Schedules an irreversible purge 30 days out and suspends the business NOW
+  // (reusing the suspension enforcement: sets suspendedAt, so the dashboard/API
+  // and all 17 bot routes immediately 403). Recoverable via /business/reactivate
+  // within the window. Looks the business up by ownerId directly (NOT
+  // getBusinessOrFail) so it stays reachable + idempotent once suspended.
+  app.post('/business/request-deletion', { preHandler: authenticate }, async (request, reply) => {
+    const parsed = requestDeletionBody.safeParse(request.body);
+    if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
+
+    const business = await prisma.business.findUnique({
+      where: { ownerId: request.user.userId },
+      select: { id: true, name: true, suspendedAt: true, deletionState: true, deletionScheduledAt: true },
+    });
+    if (!business) return sendError(reply, 404, 'Business not found. Complete onboarding first.');
+
+    // Idempotent: already pending — no-op, return the existing schedule.
+    if (business.deletionState === 'PENDING_DELETION') {
+      return reply.send({ pending: true, deletionScheduledAt: business.deletionScheduledAt });
+    }
+    // An admin suspension (not a deletion) takes precedence — can't self-delete.
+    if (business.suspendedAt) {
+      return reply.status(403).send({
+        error: 'ACCOUNT_SUSPENDED',
+        reason: 'Your account is suspended. Contact support.',
+      });
+    }
+
+    // Explicit confirmation gesture: the typed value must match the business name
+    // or the literal "DELETE" (mirrors the client's typed-confirmation input).
+    const typed = parsed.data.confirmation.trim();
+    const ok = typed.toLowerCase() === business.name.trim().toLowerCase() || typed === 'DELETE';
+    if (!ok) return sendError(reply, 400, 'Confirmation does not match. Type your business name or DELETE.');
+
+    const now = new Date();
+    const scheduledAt = new Date(now.getTime() + DELETION_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+    await prisma.business.update({
+      where: { id: business.id },
+      data: {
+        deletionState: 'PENDING_DELETION',
+        deletionRequestedAt: now,
+        deletionScheduledAt: scheduledAt,
+        // Reuse the single suspension enforcement path — blocks dashboard + bots.
+        suspendedAt: now,
+        suspendedReason: 'Account deletion requested by owner.',
+      },
+    });
+
+    // Stop the bot NOW (best-effort — even if this fails, the bot's backend calls
+    // already 403 ACCOUNT_SUSPENDED, so it is functionally down either way).
+    stopBusinessBot(business.id).catch((err) =>
+      request.log.error({ err, businessId: business.id }, '[deletion] stop-bot failed'),
+    );
+
+    request.log.info(
+      { businessId: business.id, deletionScheduledAt: scheduledAt.toISOString() },
+      '[deletion] account deletion requested by owner',
+    );
+
+    return reply.send({ pending: true, deletionScheduledAt: scheduledAt.toISOString() });
+  });
+
+  // POST /business/reactivate — cancel a pending deletion within the 30-day
+  // window and restore the account. Reachable while suspended (looks up by
+  // ownerId directly, not getBusinessOrFail). Idempotent for an already-active
+  // account. Only clears the deletion-caused suspension (guarded on state).
+  app.post('/business/reactivate', { preHandler: authenticate }, async (request, reply) => {
+    const business = await prisma.business.findUnique({
+      where: { ownerId: request.user.userId },
+      select: { id: true, deletionState: true },
+    });
+    if (!business) return sendError(reply, 404, 'Business not found. Complete onboarding first.');
+
+    if (business.deletionState !== 'PENDING_DELETION') {
+      // Already active (or never pending) — idempotent success.
+      return reply.send({ reactivated: true });
+    }
+
+    await prisma.business.update({
+      where: { id: business.id },
+      data: {
+        deletionState: 'ACTIVE',
+        deletionRequestedAt: null,
+        deletionScheduledAt: null,
+        suspendedAt: null,
+        suspendedReason: null,
+      },
+    });
+
+    // Restart the bot (best-effort — otherwise it comes up on the next restart).
+    startBusinessBot(business.id).catch((err) =>
+      request.log.error({ err, businessId: business.id }, '[deletion] reactivate start-bot failed'),
+    );
+
+    request.log.info({ businessId: business.id }, '[deletion] account reactivated by owner');
+
+    return reply.send({ reactivated: true });
   });
 
   // GET /platform-settings — global, superadmin-controlled flags any

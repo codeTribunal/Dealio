@@ -6,6 +6,7 @@ import { requireAdmin, requireSuperAdmin } from '../middleware/adminAuth.js';
 import { writeAuditLog } from '../lib/audit.js';
 import { softDelete, restore, type BusinessScopedSoftDeletable } from '../services/softDelete.js';
 import { anonymizeCustomer, ANONYMIZE_SCRUBBED_FIELDS } from '../services/anonymizeCustomer.js';
+import { eraseBusinessCascade } from '../services/eraseBusiness.js';
 
 /**
  * Admin tenant data-management (Phase B).
@@ -564,61 +565,15 @@ export default async function adminDataRoutes(app: FastifyInstance) {
   app.post('/admin/businesses/:id/erase', { preHandler: requireSuperAdmin }, async (request, reply) => {
     const { id: businessId } = request.params as { id: string };
 
-    const business = await prismaUnscoped.business.findUnique({
-      where: { id: businessId },
-      select: { id: true, owner: { select: { id: true, phone: true } } },
-    });
-    if (!business) return sendError(reply, 404, 'Business not found');
-
-    const ownerId = business.owner.id;
-    const ownerPhone = business.owner.phone;
-
-    let tableCounts: Record<string, number>;
+    // Shared, single-source cascade (also used by the scheduled deletion purge).
+    let result: Awaited<ReturnType<typeof eraseBusinessCascade>>;
     try {
-      tableCounts = await prismaUnscoped.$transaction(
-        async (tx) => {
-          const counts: Record<string, number> = {};
-          // ── children first (FK-safe), scoped to this business ──────────────
-          counts.orderItems = (await tx.orderItem.deleteMany({ where: { order: { businessId } } })).count;
-          counts.invoices = (await tx.invoice.deleteMany({ where: { project: { businessId } } })).count;
-          counts.milestones = (await tx.milestone.deleteMany({ where: { project: { businessId } } })).count;
-          counts.orders = (await tx.order.deleteMany({ where: { businessId } })).count;
-          counts.appointments = (await tx.appointment.deleteMany({ where: { businessId } })).count;
-          counts.projects = (await tx.project.deleteMany({ where: { businessId } })).count;
-          counts.staffServices = (await tx.staffService.deleteMany({ where: { staff: { businessId } } })).count;
-          counts.blockedSlots = (await tx.blockedSlot.deleteMany({ where: { businessId } })).count;
-          counts.customerFieldValues = (await tx.customerFieldValue.deleteMany({ where: { customer: { businessId } } })).count;
-          counts.customerTags = (await tx.customerTag.deleteMany({ where: { businessId } })).count;
-          counts.reminders = (await tx.reminder.deleteMany({ where: { businessId } })).count;
-          counts.sentReminders = (await tx.sentReminder.deleteMany({ where: { businessId } })).count;
-          counts.deviceTokens = (await tx.deviceToken.deleteMany({ where: { businessId } })).count;
-          counts.usageLogs = (await tx.usageLog.deleteMany({ where: { businessId } })).count;
-          counts.checkoutQuestions = (await tx.checkoutQuestion.deleteMany({ where: { businessId } })).count;
-          counts.businessCustomFields = (await tx.businessCustomField.deleteMany({ where: { businessId } })).count;
-          // Customer holds the FK to CustomerStage (currentStageId) → delete
-          // customers before stages.
-          counts.customers = (await tx.customer.deleteMany({ where: { businessId } })).count;
-          counts.customerStages = (await tx.customerStage.deleteMany({ where: { businessId } })).count;
-          counts.services = (await tx.service.deleteMany({ where: { businessId } })).count;
-          counts.staff = (await tx.staff.deleteMany({ where: { businessId } })).count;
-          counts.products = (await tx.product.deleteMany({ where: { businessId } })).count;
-          // ── the business itself (holds the FK to its owner User) ───────────
-          await tx.business.delete({ where: { id: businessId } });
-          counts.business = 1;
-          // ── owner User + its auth artifacts (ConsentRecord FK → User) ──────
-          counts.consentRecords = (await tx.consentRecord.deleteMany({ where: { userId: ownerId } })).count;
-          counts.otpCodes = (await tx.otpCode.deleteMany({ where: { phone: ownerPhone } })).count;
-          counts.linkTokens = (await tx.linkToken.deleteMany({ where: { phone: ownerPhone } })).count;
-          await tx.user.delete({ where: { id: ownerId } });
-          counts.user = 1;
-          return counts;
-        },
-        { timeout: 30000, maxWait: 10000 },
-      );
+      result = await eraseBusinessCascade(businessId);
     } catch (err) {
       request.log.error({ err }, 'ERASE_BUSINESS failed — transaction rolled back');
       return sendError(reply, 500, 'Erase failed and was rolled back; no data was deleted.');
     }
+    if (!result) return sendError(reply, 404, 'Business not found');
 
     await writeAuditLog({
       adminUserId: request.adminUser!.id,
@@ -627,11 +582,11 @@ export default async function adminDataRoutes(app: FastifyInstance) {
       targetId: businessId,
       // Proof of compliance without retaining the erased PII: last-4 of the
       // owner phone + per-table counts.
-      metadata: { ownerPhoneLast4: ownerPhone.slice(-4), tableCounts },
+      metadata: { ownerPhoneLast4: result.ownerPhoneLast4, tableCounts: result.tableCounts },
       ipAddress: request.ip,
     });
 
-    return reply.send({ id: businessId, erased: true, tableCounts });
+    return reply.send({ id: businessId, erased: true, tableCounts: result.tableCounts });
   });
 
   // ════════════════════════════════════════════════════════════════════════

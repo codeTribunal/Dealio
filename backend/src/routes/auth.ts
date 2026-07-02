@@ -21,7 +21,15 @@ interface AuthUser {
 async function buildAuthResponse(app: FastifyInstance, user: AuthUser) {
   const business = await prisma.business.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, name: true, mode: true },
+    // deletionState/scheduledAt let the client route a PENDING_DELETION owner to
+    // the reactivate screen right after login (login itself is not suspension-gated).
+    select: {
+      id: true,
+      name: true,
+      mode: true,
+      deletionState: true,
+      deletionScheduledAt: true,
+    },
   });
   const token = app.jwt.sign({ userId: user.id, phone: user.phone });
   return { token, user: { id: user.id, phone: user.phone }, business: business ?? null };
