@@ -1879,7 +1879,7 @@ abstract class AppLocalizations {
   /// No description provided for @orderPaidBadge.
   ///
   /// In en, this message translates to:
-  /// **'💰 Paid'**
+  /// **'Paid'**
   String get orderPaidBadge;
 
   /// No description provided for @ordersEmpty.

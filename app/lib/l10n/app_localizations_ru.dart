@@ -998,7 +998,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get orderPaidBadge => '💰 Оплачено';
+  String get orderPaidBadge => 'Оплачено';
 
   @override
   String get ordersEmpty => 'Заказов пока нет';

@@ -401,7 +401,7 @@
       }
     }
   },
-  "orderPaidBadge": "💰 Paid",
+  "orderPaidBadge": "Paid",
   "ordersEmpty": "No orders yet",
   "ordersEmptyFiltered": "No orders match your filter",
   "commonTotal": "Total",

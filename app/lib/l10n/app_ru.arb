@@ -387,7 +387,7 @@
       }
     }
   },
-  "orderPaidBadge": "💰 Оплачено",
+  "orderPaidBadge": "Оплачено",
   "ordersEmpty": "Заказов пока нет",
   "ordersEmptyFiltered": "Нет заказов по вашему фильтру",
   "commonTotal": "Итого",

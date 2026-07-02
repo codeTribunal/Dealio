@@ -1009,7 +1009,7 @@ class AppLocalizationsUz extends AppLocalizations {
   }
 
   @override
-  String get orderPaidBadge => '💰 To\'landi';
+  String get orderPaidBadge => 'To\'landi';
 
   @override
   String get ordersEmpty => 'Hali buyurtmalar yo\'q';

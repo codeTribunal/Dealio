@@ -996,7 +996,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get orderPaidBadge => '💰 Paid';
+  String get orderPaidBadge => 'Paid';
 
   @override
   String get ordersEmpty => 'No orders yet';

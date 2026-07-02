@@ -594,7 +594,7 @@
     "doneTitle": "You're all set!",
     "doneSubtitle": "Your CRM is ready. Share your bot link with customers.",
     "copyLink": "Copy link",
-    "copied": "✓ Copied",
+    "copied": "Copied",
     "goToDashboard": "Go to dashboard"
   },
   "services": {
