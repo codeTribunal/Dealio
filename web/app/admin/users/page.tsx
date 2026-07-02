@@ -20,13 +20,13 @@ export default function AdminUsersPage() {
       <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
         {loading && (
           <div className="px-5 py-8 text-center">
-            <p className="text-sm text-gray-500">Loading...</p>
+            <p className="text-base text-gray-500">Loading...</p>
           </div>
         )}
 
         {!loading && users.length === 0 && (
           <div className="px-5 py-8 text-center">
-            <p className="text-sm text-gray-600">No admin users</p>
+            <p className="text-base text-gray-600">No admin users</p>
           </div>
         )}
 
@@ -40,7 +40,7 @@ export default function AdminUsersPage() {
                 {getInitials(user.name)}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-white">{user.name}</p>
+                <p className="text-base font-semibold text-white">{user.name}</p>
                 <p className="text-xs text-gray-500">{user.email}</p>
               </div>
               <span

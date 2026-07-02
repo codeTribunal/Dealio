@@ -11,19 +11,23 @@ import { Spinner } from '@/components/ui/Spinner'
 import { getOrderDetail, updateOrderStatus, confirmOrderPayment, deleteOrder, getPaymentProofUrl } from '@/lib/api'
 import { formatUZS, formatDate, formatDateTime } from '@/lib/format'
 import { useI18n } from '@/lib/i18n/i18nContext'
+import { useToast } from '@/lib/toast'
 import type { Order } from '@/types'
 
 export default function OrderDetailPage() {
   const params = useParams()
   const id = params.id as string
   const { t } = useI18n()
+  const { showToast } = useToast()
   const router = useRouter()
 
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [confirmingPayment, setConfirmingPayment] = useState(false)
+  const [showPayConfirm, setShowPayConfirm] = useState(false)
+  const [payError, setPayError] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [proofSrc, setProofSrc] = useState<string | null>(null)
@@ -31,10 +35,10 @@ export default function OrderDetailPage() {
 
   function load() {
     setLoading(true)
-    setError(null)
+    setError(false)
     getOrderDetail(id)
       .then((data) => setOrder(data))
-      .catch(() => setError('Could not load order'))
+      .catch(() => setError(true))
       .finally(() => setLoading(false))
   }
 
@@ -68,19 +72,35 @@ export default function OrderDetailPage() {
   }, [order?.id, order?.hasPaymentProof])
 
   async function handleStatusChange(newStatus: string) {
-    if (!order) return
+    if (!order || updatingStatus) return
     setUpdatingStatus(true)
-    await updateOrderStatus(order.id, newStatus)
-    setOrder({ ...order, orderStatus: newStatus })
-    setUpdatingStatus(false)
+    try {
+      await updateOrderStatus(order.id, newStatus)
+      setOrder({ ...order, orderStatus: newStatus })
+    } catch {
+      showToast(t('orders.statusUpdateFailed'), 'error')
+    } finally {
+      setUpdatingStatus(false)
+    }
   }
 
+  // Money moment: only ever called from the confirm sheet, which restates the
+  // amount and customer. A failed request must never strand the button — the
+  // sheet stays open with an inline error so the owner can retry.
   async function handleConfirmPayment() {
-    if (!order) return
+    if (!order || confirmingPayment) return
     setConfirmingPayment(true)
-    await confirmOrderPayment(order.id)
-    setOrder({ ...order, paymentStatus: 'CONFIRMED' })
-    setConfirmingPayment(false)
+    setPayError(null)
+    try {
+      await confirmOrderPayment(order.id)
+      setOrder({ ...order, paymentStatus: 'CONFIRMED' })
+      setShowPayConfirm(false)
+      showToast(t('payment.confirmedToast', { amount: formatUZS(order.total) }), 'success')
+    } catch {
+      setPayError(t('payment.confirmFailed'))
+    } finally {
+      setConfirmingPayment(false)
+    }
   }
 
   async function handleDelete() {
@@ -96,16 +116,18 @@ export default function OrderDetailPage() {
   }
 
   return (
-    <AuthLayout title={order ? `Order #${order.orderNumber}` : 'Order'}>
+    <AuthLayout
+      title={order ? t('orders.orderNumber', { n: order.orderNumber }) : t('orders.orderTitle')}
+    >
       {loading ? (
         <div className="flex items-center justify-center py-16">
           <Spinner size={32} />
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-          <p className="text-base font-semibold text-error-strong">{error}</p>
+          <p className="text-base font-semibold text-error-strong">{t('orders.loadFailed')}</p>
           <Button variant="primary" onClick={load}>
-            Try again
+            {t('common.tryAgain')}
           </Button>
         </div>
       ) : order ? (
@@ -117,7 +139,7 @@ export default function OrderDetailPage() {
                 className="text-text-1"
                 style={{ fontSize: 'var(--fs-h2)', fontWeight: 'var(--fw-extra)', lineHeight: 1.1 }}
               >
-                Order #{order.orderNumber}
+                {t('orders.orderNumber', { n: order.orderNumber })}
               </h1>
               <p className="text-xs text-text-3 mt-1">{formatDateTime(order.createdAt)}</p>
             </div>
@@ -132,14 +154,14 @@ export default function OrderDetailPage() {
             <div className="w-full lg:w-80 lg:flex-shrink-0 space-y-4">
               {/* Customer */}
               <Card>
-                <CardHeader title="Customer" />
+                <CardHeader title={t('customers.colCustomer')} />
                 <Link
                   href={`/customers/${order.customer.id}`}
                   className="flex items-center gap-3 hover:opacity-80 transition-opacity"
                 >
                   <Avatar name={order.customer.name} size="md" />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-text-1 truncate">{order.customer.name}</p>
+                    <p className="text-base font-semibold text-text-1 truncate">{order.customer.name}</p>
                     <p className="text-xs text-text-2 truncate">
                       {order.customer.telegramUsername
                         ? `@${order.customer.telegramUsername}`
@@ -151,11 +173,11 @@ export default function OrderDetailPage() {
 
               {/* Details (delivery + dates) */}
               <Card>
-                <CardHeader title="Details" />
+                <CardHeader title={t('orders.detailsTitle')} />
                 <div>
                   <div className="flex justify-between items-center py-2.5 border-b border-border">
-                    <p className="text-sm text-text-2">{t('delivery.method')}</p>
-                    <p className="text-sm font-medium text-text-1">
+                    <p className="text-base text-text-2">{t('delivery.method')}</p>
+                    <p className="text-base font-medium text-text-1">
                       {order.deliveryMethod === 'PICKUP'
                         ? t('delivery.PICKUP')
                         : t('delivery.DELIVERY')}
@@ -163,14 +185,14 @@ export default function OrderDetailPage() {
                   </div>
                   {order.deliveryMethod === 'DELIVERY' && order.deliveryAddress !== null && (
                     <div className="flex justify-between items-start gap-3 py-2.5 border-b border-border">
-                      <p className="text-sm text-text-2 flex-shrink-0">{t('delivery.address')}</p>
-                      <p className="text-sm font-medium text-text-1 text-right">{order.deliveryAddress}</p>
+                      <p className="text-base text-text-2 flex-shrink-0">{t('delivery.address')}</p>
+                      <p className="text-base font-medium text-text-1 text-right">{order.deliveryAddress}</p>
                     </div>
                   )}
                   {order.deliveryDate !== null && (
                     <div className="flex justify-between items-center py-2.5 border-b border-border last:border-b-0">
-                      <p className="text-sm text-text-2">Requested date</p>
-                      <p className="text-sm font-medium text-text-1">
+                      <p className="text-base text-text-2">{t('orders.requestedDate')}</p>
+                      <p className="text-base font-medium text-text-1">
                         {formatDate(order.deliveryDate)}
                       </p>
                     </div>
@@ -182,23 +204,68 @@ export default function OrderDetailPage() {
               {(order.paymentStatus === 'PAYMENT_RECEIVED' ||
                 (order.orderStatus !== 'DELIVERED' && order.orderStatus !== 'CANCELLED')) && (
                 <Card>
-                  <CardHeader title="Actions" />
+                  <CardHeader title={t('orders.actionsTitle')} />
 
-                  {order.paymentStatus === 'PAYMENT_RECEIVED' && (
-                    <Button
-                      variant="primary"
-                      fullWidth
-                      loading={confirmingPayment}
-                      onClick={handleConfirmPayment}
-                      className="mb-3"
-                    >
-                      {confirmingPayment ? 'Confirming...' : 'Confirm payment'}
-                    </Button>
-                  )}
+                  {order.paymentStatus === 'PAYMENT_RECEIVED' &&
+                    (!showPayConfirm ? (
+                      <Button
+                        variant="primary"
+                        fullWidth
+                        onClick={() => {
+                          setPayError(null)
+                          setShowPayConfirm(true)
+                        }}
+                        className="mb-3"
+                      >
+                        {t('payment.confirmCta')}
+                      </Button>
+                    ) : (
+                      /* Confirm sheet — restates the exact amount and customer
+                         before the irreversible confirm (PRODUCT.md: "earn
+                         trust wherever money appears"). Same inline idiom as
+                         the delete confirm below. */
+                      <div className="mb-3 space-y-3">
+                        <p className="text-base font-semibold text-text-1">
+                          {t('payment.confirmTitle')}
+                        </p>
+                        <p className="text-base text-text-2">
+                          {t('payment.confirmBody', {
+                            amount: formatUZS(order.total),
+                            name: order.customer.name,
+                          })}
+                        </p>
+                        {payError && (
+                          <p className="text-sm font-medium text-error-strong" role="alert">
+                            {payError}
+                          </p>
+                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            variant="primary"
+                            fullWidth
+                            loading={confirmingPayment}
+                            onClick={handleConfirmPayment}
+                          >
+                            {t('payment.confirmAction')}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            fullWidth
+                            disabled={confirmingPayment}
+                            onClick={() => {
+                              setShowPayConfirm(false)
+                              setPayError(null)
+                            }}
+                          >
+                            {t('common.cancel')}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
 
                   {order.orderStatus !== 'DELIVERED' && order.orderStatus !== 'CANCELLED' && (
                     <div>
-                      <p className="text-xs uppercase tracking-wide text-text-2 mb-2">Update status</p>
+                      <p className="text-xs uppercase tracking-wide text-text-2 mb-2">{t('orders.updateStatus')}</p>
                       <div className="flex flex-col gap-2">
                         {order.orderStatus === 'NEW' && (
                           <Button
@@ -207,7 +274,7 @@ export default function OrderDetailPage() {
                             disabled={updatingStatus}
                             onClick={() => handleStatusChange('PREPARING')}
                           >
-                            Mark as Preparing
+                            {t('orders.actionMarkPreparing')}
                           </Button>
                         )}
                         {order.orderStatus === 'PREPARING' && (
@@ -217,7 +284,7 @@ export default function OrderDetailPage() {
                             disabled={updatingStatus}
                             onClick={() => handleStatusChange('READY')}
                           >
-                            Mark as Ready
+                            {t('orders.actionMarkReady')}
                           </Button>
                         )}
                         {order.orderStatus === 'READY' && (
@@ -227,7 +294,7 @@ export default function OrderDetailPage() {
                             disabled={updatingStatus}
                             onClick={() => handleStatusChange('DELIVERED')}
                           >
-                            Mark as Delivered
+                            {t('orders.actionMarkDelivered')}
                           </Button>
                         )}
                         <Button
@@ -236,7 +303,7 @@ export default function OrderDetailPage() {
                           disabled={updatingStatus}
                           onClick={() => handleStatusChange('CANCELLED')}
                         >
-                          Cancel order
+                          {t('orders.actionCancelOrder')}
                         </Button>
                       </div>
                     </div>
@@ -247,8 +314,8 @@ export default function OrderDetailPage() {
               {/* Internal notes */}
               {order.internalNotes && (
                 <Card>
-                  <CardHeader title="Internal notes" />
-                  <p className="text-sm text-text-1 leading-relaxed whitespace-pre-line">
+                  <CardHeader title={t('orders.internalNotes')} />
+                  <p className="text-base text-text-1 leading-relaxed whitespace-pre-line">
                     {order.internalNotes}
                   </p>
                 </Card>
@@ -257,8 +324,8 @@ export default function OrderDetailPage() {
               {/* Customer notes */}
               {order.notes && (
                 <Card>
-                  <CardHeader title="Customer notes" />
-                  <p className="text-sm text-text-1 leading-relaxed whitespace-pre-line">
+                  <CardHeader title={t('orders.customerNotes')} />
+                  <p className="text-base text-text-1 leading-relaxed whitespace-pre-line">
                     {order.notes}
                   </p>
                 </Card>
@@ -276,10 +343,10 @@ export default function OrderDetailPage() {
                   </Button>
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-sm font-semibold text-text-1">
+                    <p className="text-base font-semibold text-text-1">
                       {t('common.deleteOrderTitle')}
                     </p>
-                    <p className="text-sm text-text-2">{t('common.deleteOrderBody')}</p>
+                    <p className="text-base text-text-2">{t('common.deleteOrderBody')}</p>
                     <div className="flex gap-2">
                       <Button
                         variant="danger"
@@ -308,7 +375,7 @@ export default function OrderDetailPage() {
               {/* Line items */}
               <Card padded={false} className="overflow-hidden">
                 <div className="px-5 py-4 border-b border-border">
-                  <p className="text-sm font-semibold text-text-1">Items</p>
+                  <p className="text-lg font-semibold text-text-1">{t('orders.itemsTitle')}</p>
                 </div>
                 {order.items.map((item) => (
                   <div
@@ -316,7 +383,7 @@ export default function OrderDetailPage() {
                     className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-border last:border-b-0"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-text-1 truncate">{item.product.name}</p>
+                      <p className="text-base font-medium text-text-1 truncate">{item.product.name}</p>
                       {item.variant !== null && Object.keys(item.variant).length > 0 && (
                         <p className="text-xs text-text-2 mt-0.5">
                           {Object.entries(item.variant)
@@ -324,15 +391,15 @@ export default function OrderDetailPage() {
                             .join(', ')}
                         </p>
                       )}
-                      <p className="text-xs text-text-3 mt-0.5">Qty: {item.quantity}</p>
+                      <p className="text-xs text-text-3 mt-0.5">{t('orders.qty', { n: item.quantity })}</p>
                     </div>
-                    <p className="text-sm font-semibold text-text-1 tabular-nums flex-shrink-0">
+                    <p className="text-base font-semibold text-text-1 tabular-nums flex-shrink-0">
                       {formatUZS(item.price * item.quantity)}
                     </p>
                   </div>
                 ))}
                 <div className="flex justify-between items-center px-5 py-4 bg-surface-2">
-                  <p className="text-sm font-bold text-text-1">Total</p>
+                  <p className="text-base font-bold text-text-1">{t('common.total')}</p>
                   <p className="text-lg font-bold text-text-1 tabular-nums">{formatUZS(order.total)}</p>
                 </div>
               </Card>
@@ -341,13 +408,13 @@ export default function OrderDetailPage() {
               {order.hasPaymentProof && (
                 <Card padded={false} className="overflow-hidden">
                   <div className="px-5 py-4 border-b border-border">
-                    <p className="text-sm font-semibold text-text-1">
+                    <p className="text-lg font-semibold text-text-1">
                       {t('orders.paymentProof')}
                     </p>
                   </div>
                   <div className="p-5">
                     {proofError ? (
-                      <p className="text-sm text-text-2">
+                      <p className="text-base text-text-2">
                         {t('orders.proofUnavailable')}
                       </p>
                     ) : proofSrc ? (
@@ -376,19 +443,23 @@ export default function OrderDetailPage() {
               {/* Timeline */}
               <Card padded={false} className="overflow-hidden">
                 <div className="px-5 py-4 border-b border-border">
-                  <p className="text-sm font-semibold text-text-1">Timeline</p>
+                  <p className="text-lg font-semibold text-text-1">{t('orders.timelineTitle')}</p>
                 </div>
                 {order.timeline.length === 0 ? (
-                  <p className="text-sm text-text-2 px-5 py-4">No timeline events yet</p>
+                  <p className="text-base text-text-2 px-5 py-4">{t('orders.timelineEmpty')}</p>
                 ) : (
                   [...order.timeline].reverse().map((entry, index) => (
                     <div
                       key={index}
                       className="flex items-start gap-3 px-5 py-3.5 border-b border-border last:border-b-0"
                     >
-                      <span className="w-2 h-2 rounded-pill bg-accent mt-2 flex-shrink-0" />
+                      <span
+                        className={`w-2 h-2 rounded-pill mt-2 flex-shrink-0 ${
+                          entry.status === 'CANCELLED' ? 'bg-error' : 'bg-accent'
+                        }`}
+                      />
                       <div className="min-w-0">
-                        <p className="text-sm text-text-1">
+                        <p className="text-base text-text-1">
                           {t(`status.${entry.status}`) || entry.status}
                         </p>
                         <p className="text-xs text-text-3 mt-0.5">{formatDateTime(entry.at)}</p>

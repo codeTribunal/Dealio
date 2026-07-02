@@ -11,6 +11,7 @@ import '../../shared/widgets/app_avatar.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_empty_state.dart';
+import '../../shared/widgets/app_error_state.dart';
 import '../../shared/widgets/app_spinner.dart';
 import '../../shared/widgets/app_text_field.dart';
 import '../../shared/widgets/floating_tab_bar.dart';
@@ -119,8 +120,8 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
           Expanded(
             child: customersAsync.when(
               loading: () => const Center(child: AppSpinner(size: 32)),
-              error: (e, _) => _ErrorView(
-                message: e.toString(),
+              error: (e, _) => AppErrorState(
+                error: e,
                 onRetry: notifier.refresh,
               ),
               data: (_) {
@@ -531,36 +532,3 @@ class StagePill extends StatelessWidget {
 }
 
 // ── Error ────────────────────────────────────────────────────────────
-
-class _ErrorView extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorView({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.s5),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
-            const SizedBox(height: AppSpacing.s3),
-            Text(message,
-                textAlign: TextAlign.center, style: TextStyle(color: t.text2)),
-            const SizedBox(height: AppSpacing.s4),
-            AppButton(
-              label: l.buttonRetry,
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.sm,
-              onPressed: onRetry,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

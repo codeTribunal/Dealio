@@ -1,5 +1,6 @@
 'use client'
 import { useEffect } from 'react'
+import { DealioMark } from '@/components/icons/DealioMark'
 import { useRouter } from 'next/navigation'
 import { isAuthenticated } from '@/lib/auth'
 import { useI18n } from '@/lib/i18n/i18nContext'
@@ -29,9 +30,7 @@ export default function WelcomePage() {
 
       <Card padded={false} className="relative w-full max-w-md shadow-lg p-8 sm:p-10">
         <div className="flex items-center justify-between mb-8">
-          <div className="w-11 h-11 rounded-md bg-accent text-accent-on flex items-center justify-center font-extrabold text-lg shadow-accent">
-            C
-          </div>
+          <DealioMark size={44} className="flex-shrink-0" />
           <LanguageSwitcher />
         </div>
 
@@ -41,7 +40,7 @@ export default function WelcomePage() {
         >
           {t('welcome.title')}
         </h1>
-        <p className="text-sm text-text-2 mt-2 mb-8">{t('welcome.subtitle')}</p>
+        <p className="text-base text-text-2 mt-2 mb-8">{t('welcome.subtitle')}</p>
 
         <div className="space-y-3">
           <Button variant="primary" fullWidth onClick={() => router.push('/login')}>

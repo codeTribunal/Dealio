@@ -122,19 +122,19 @@ export default function CustomerDetailPage() {
               <CardHeader title="Overview" />
               <div>
                 <div className="flex justify-between items-center py-3 border-b border-border">
-                  <p className="text-sm text-text-2">Total orders</p>
+                  <p className="text-sm text-text-2">{t('customers.totalOrders')}</p>
                   <p className="text-sm font-semibold text-text-1 tabular-nums">
                     {customer.totalOrders}
                   </p>
                 </div>
                 <div className="flex justify-between items-center py-3 border-b border-border">
-                  <p className="text-sm text-text-2">Total spent</p>
+                  <p className="text-sm text-text-2">{t('customers.totalSpent')}</p>
                   <p className="text-sm font-semibold text-text-1 tabular-nums">
                     {formatUZS(customer.totalSpent)}
                   </p>
                 </div>
                 <div className="flex justify-between items-center py-3">
-                  <p className="text-sm text-text-2">Last active</p>
+                  <p className="text-sm text-text-2">{t('customers.lastActive')}</p>
                   <p className="text-sm font-semibold text-text-1">
                     {formatRelativeTime(customer.lastInteractionAt)}
                   </p>
@@ -174,7 +174,7 @@ export default function CustomerDetailPage() {
                       className="flex justify-between items-center py-2 border-b border-border last:border-b-0"
                     >
                       <p className="text-sm text-text-2">{fieldValue.field.name}</p>
-                      <p className="text-sm font-medium text-text-1">
+                      <p className="text-base font-medium text-text-1">
                         {fieldValue.value || '—'}
                       </p>
                     </div>
@@ -214,7 +214,7 @@ export default function CustomerDetailPage() {
                         <Icon name="bell" size={16} />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-sm text-text-1">{reminder.note}</p>
+                        <p className="text-base text-text-1">{reminder.note}</p>
                         <p className="text-xs text-text-3 mt-0.5">
                           Due {formatDate(reminder.dueDate)}
                         </p>
@@ -237,10 +237,10 @@ export default function CustomerDetailPage() {
                 </Button>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-sm font-semibold text-text-1">
+                  <p className="text-lg font-semibold text-text-1">
                     {t('common.deleteCustomerTitle')}
                   </p>
-                  <p className="text-sm text-text-2">{t('common.deleteCustomerBody')}</p>
+                  <p className="text-base text-text-2">{t('common.deleteCustomerBody')}</p>
                   <div className="flex gap-2">
                     <Button
                       variant="danger"
@@ -274,15 +274,15 @@ export default function CustomerDetailPage() {
                   {t('nav.orders')}
                 </h2>
                 {customer.orders.length === 0 ? (
-                  <div className="text-center py-12 text-sm text-text-2">
-                    No orders yet
+                  <div className="text-center py-12 text-base text-text-2">
+                    {t('customers.noOrdersYet')}
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {customer.orders.map((order) => (
                       <Card key={order.id}>
                         <div className="flex justify-between items-center">
-                          <p className="text-sm font-bold text-text-1">
+                          <p className="text-base font-bold text-text-1">
                             #{order.orderNumber}
                           </p>
                           <Badge status={order.orderStatus} type="order" />
@@ -291,7 +291,7 @@ export default function CustomerDetailPage() {
                           <p className="text-sm text-text-2">
                             {formatDate(order.createdAt)}
                           </p>
-                          <p className="text-sm text-text-1 font-medium tabular-nums">
+                          <p className="text-base text-text-1 font-medium tabular-nums">
                             {formatUZS(order.total)}
                           </p>
                         </div>
@@ -306,17 +306,17 @@ export default function CustomerDetailPage() {
                   {t('nav.projects')}
                 </h2>
                 {customer.projects.length === 0 ? (
-                  <div className="text-center py-12 text-sm text-text-2">No projects yet</div>
+                  <div className="text-center py-12 text-base text-text-2">{t('customers.noProjectsYet')}</div>
                 ) : (
                   <div className="space-y-3">
                     {customer.projects.map((project) => (
                       <Card key={project.id}>
                         <div className="flex justify-between items-center">
-                          <p className="text-sm font-bold text-text-1">{project.name}</p>
+                          <p className="text-base font-bold text-text-1">{project.name}</p>
                           <Badge status={project.status} type="project" />
                         </div>
                         <div className="flex items-center gap-4 mt-2">
-                          <p className="text-sm text-text-1 font-medium tabular-nums">
+                          <p className="text-base text-text-1 font-medium tabular-nums">
                             {formatUZS(project.totalPrice)}
                           </p>
                           {project.deadline && (
@@ -336,20 +336,20 @@ export default function CustomerDetailPage() {
                   {t('nav.appointments')}
                 </h2>
                 {customer.appointments.length === 0 ? (
-                  <div className="text-center py-12 text-sm text-text-2">
-                    No appointments yet
+                  <div className="text-center py-12 text-base text-text-2">
+                    {t('customers.noAppointmentsYet')}
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {customer.appointments.map((appt) => (
                       <Card key={appt.id}>
                         <div className="flex justify-between items-center">
-                          <p className="text-sm font-bold text-text-1">{appt.service.name}</p>
+                          <p className="text-base font-bold text-text-1">{appt.service.name}</p>
                           <Badge status={appt.status} type="appointment" />
                         </div>
                         <div className="flex items-center gap-4 mt-2">
                           <p className="text-sm text-text-2">{formatDateTime(appt.startTime)}</p>
-                          <p className="text-sm text-text-1 font-medium tabular-nums">
+                          <p className="text-base text-text-1 font-medium tabular-nums">
                             {formatUZS(appt.price)}
                           </p>
                         </div>

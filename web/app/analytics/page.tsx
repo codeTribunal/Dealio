@@ -1,28 +1,30 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import AuthLayout from '@/components/AuthLayout'
-import LoadingSpinner from '@/components/LoadingSpinner'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { StatCard } from '@/components/ui/StatCard'
 import { Avatar } from '@/components/ui/Avatar'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { Icon } from '@/components/icons/Icon'
 import { getAnalytics } from '@/lib/api'
-import { formatUZS } from '@/lib/format'
+import { formatUZS, formatMonthShort } from '@/lib/format'
 import { useBusiness } from '@/lib/businessContext'
+import { useI18n } from '@/lib/i18n/i18nContext'
 import { shouldShowEmailPrompt } from '@/lib/emailPrompt'
 import EmailCaptureCard from '@/components/EmailCaptureCard'
 import type { AnalyticsData } from '@/types'
 
-// 'YYYY-MM' → short English month label (web analytics is English-only).
+// 'YYYY-MM' → localized short month label.
 function monthLabel(ym: string): string {
-  const [y, m] = ym.split('-').map(Number)
-  if (!y || !m) return ''
-  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short' })
+  const [, m] = ym.split('-').map(Number)
+  if (!m) return ''
+  return formatMonthShort(m - 1)
 }
 
 export default function AnalyticsPage() {
   const { business } = useBusiness()
+  const { t } = useI18n()
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -42,21 +44,34 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <AuthLayout title="Analytics">
-        <LoadingSpinner />
+      <AuthLayout title={t('nav.analytics')}>
+        <div
+          className="max-w-2xl w-full space-y-4"
+          aria-busy="true"
+          aria-label={t('analytics.loading')}
+        >
+          <Skeleton className="h-40 rounded-xl" />
+          <div className="grid grid-cols-2 gap-4">
+            <Skeleton className="h-24 rounded-xl" />
+            <Skeleton className="h-24 rounded-xl" />
+          </div>
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-40 rounded-xl" />
+          <Skeleton className="h-56 rounded-xl" />
+        </div>
       </AuthLayout>
     )
   }
 
   if (error || !data) {
     return (
-      <AuthLayout title="Analytics">
+      <AuthLayout title={t('nav.analytics')}>
         <Card className="text-center">
           <p className="text-lg font-semibold text-text-1 mb-3">
-            Could not load analytics
+            {t('analytics.failedLoad')}
           </p>
           <Button variant="primary" onClick={fetchAnalytics}>
-            Try again
+            {t('common.tryAgain')}
           </Button>
         </Card>
       </AuthLayout>
@@ -94,17 +109,17 @@ export default function AnalyticsPage() {
 
   const heroSub =
     percentChange === null
-      ? 'No revenue last month to compare'
-      : `vs ${formatUZS(revenueLastMonth)} last month`
+      ? t('analytics.noLastMonth')
+      : t('analytics.vsLastMonth', { amount: formatUZS(revenueLastMonth) })
 
   return (
-    <AuthLayout title="Analytics">
+    <AuthLayout title={t('nav.analytics')}>
       <div className="max-w-2xl w-full space-y-4">
         {/* Dismissible email capture — never gates the analytics below. */}
         {shouldShowEmailPrompt(business) && <EmailCaptureCard />}
 
         {/* Premium revenue hero — accent fill, delta chip, 6-month sparkline. */}
-        <div className="relative overflow-hidden rounded-xl bg-accent text-accent-on p-5 shadow-accent">
+        <div className="relative overflow-hidden rounded-xl bg-accent-active dark:bg-accent text-accent-on p-5 shadow-accent">
           {/* Faint corner glow (inherits accent-on via currentColor). */}
           <div
             className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full"
@@ -112,14 +127,14 @@ export default function AnalyticsPage() {
           />
           <div className="relative">
             <div className="flex items-start justify-between gap-3">
-              <p className="text-xs uppercase tracking-wide opacity-80">
-                Revenue this month
+              <p className="text-xs uppercase tracking-wide">
+                {t('home.revenueLabel')}
               </p>
               {percentChange !== null && (
                 <span
                   className={`inline-flex items-center gap-1 rounded-pill px-2.5 py-1 text-xs font-bold ${
                     percentChange >= 0
-                      ? 'bg-accent-on text-accent'
+                      ? 'bg-accent-on text-accent-active'
                       : 'bg-error-soft text-error-strong'
                   }`}
                 >
@@ -130,11 +145,11 @@ export default function AnalyticsPage() {
             </div>
             <p
               className="tabular-nums font-extrabold mt-2"
-              style={{ fontSize: '34px', lineHeight: 1.05 }}
+              style={{ fontSize: 'var(--fs-h1)', lineHeight: 1.05 }}
             >
               {formatUZS(revenueThisMonth)}
             </p>
-            <p className="text-sm opacity-90 mt-1">{heroSub}</p>
+            <p className="text-sm mt-1">{heroSub}</p>
 
             {trend.length > 1 && (
               <div className="mt-5">
@@ -159,9 +174,9 @@ export default function AnalyticsPage() {
                     )
                   })}
                 </div>
-                <div className="flex items-center justify-between mt-2 text-[11px] opacity-70">
+                <div className="flex items-center justify-between mt-2 text-[11px]">
                   <span>{monthLabel(trend[0].month)}</span>
-                  <span>Last 6 months</span>
+                  <span>{t('analytics.lastSixMonths')}</span>
                   <span>{monthLabel(trend[trend.length - 1].month)}</span>
                 </div>
               </div>
@@ -173,19 +188,19 @@ export default function AnalyticsPage() {
         {isServices ? (
           <div className="grid grid-cols-2 gap-4">
             <StatCard
-              label="Completed this month"
+              label={t('analytics.completedThisMonth')}
               value={completedThisMonth.toString()}
               icon="paid"
             />
             <StatCard
-              label="Appointments this month"
+              label={t('analytics.appointmentsThisMonth')}
               value={appointmentsThisMonth.toString()}
               icon="calendar"
             />
           </div>
         ) : (
           <StatCard
-            label="Completed this month"
+            label={t('analytics.completedThisMonth')}
             value={completedThisMonth.toString()}
             icon="paid"
           />
@@ -204,7 +219,7 @@ export default function AnalyticsPage() {
               <Icon name="pending" size={20} />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-text-2">Pending payments</p>
+              <p className="text-xs text-text-2">{t('home.statPending')}</p>
               <p
                 className={`text-base font-bold tabular-nums ${
                   hasPending ? 'text-warning-strong' : 'text-text-3'
@@ -212,7 +227,7 @@ export default function AnalyticsPage() {
               >
                 {hasPending
                   ? formatUZS(pendingPaymentsTotal)
-                  : 'All payments received'}
+                  : t('analytics.allPaymentsReceived')}
               </p>
             </div>
           </div>
@@ -220,50 +235,64 @@ export default function AnalyticsPage() {
 
         {/* Revenue: this vs last month */}
         <Card>
-          <CardHeader title="Revenue: this month vs last" />
+          <CardHeader title={t('analytics.revenueComparison')} />
           <div className="space-y-3">
             <div>
               <div className="flex items-baseline justify-between mb-1">
-                <p className="text-xs font-medium text-text-2">This month</p>
+                <p className="text-xs font-medium text-text-2">
+                  {t('analytics.thisMonth')}
+                </p>
                 <p className="text-xs font-semibold text-text-1 tabular-nums">
                   {formatUZS(revenueThisMonth)}
                 </p>
               </div>
               <div className="h-2 w-full rounded-pill bg-surface-2 overflow-hidden">
                 <div
-                  className="h-full bg-accent rounded-pill transition-all"
-                  style={{ width: `${thisPct}%` }}
+                  className="h-full bg-accent rounded-pill"
+                  style={{
+                    transform: `scaleX(${thisPct / 100})`,
+                    transformOrigin: 'left',
+                    transition: 'transform var(--dur-base) var(--ease)',
+                  }}
                 />
               </div>
             </div>
             <div>
               <div className="flex items-baseline justify-between mb-1">
-                <p className="text-xs font-medium text-text-2">Last month</p>
+                <p className="text-xs font-medium text-text-2">
+                  {t('analytics.lastMonth')}
+                </p>
                 <p className="text-xs font-semibold text-text-1 tabular-nums">
                   {formatUZS(revenueLastMonth)}
                 </p>
               </div>
               <div className="h-2 w-full rounded-pill bg-surface-2 overflow-hidden">
                 <div
-                  className="h-full bg-border-strong rounded-pill transition-all"
-                  style={{ width: `${lastPct}%` }}
+                  className="h-full bg-border-strong rounded-pill"
+                  style={{
+                    transform: `scaleX(${lastPct / 100})`,
+                    transformOrigin: 'left',
+                    transition: 'transform var(--dur-base) var(--ease)',
+                  }}
                 />
               </div>
             </div>
             <p className="text-xs text-text-3 pt-1">
-              {completedThisMonth} completed this month
+              {t('home.revenueSubCompleted', { count: completedThisMonth })}
             </p>
           </div>
         </Card>
 
         {/* Top customers — ranked with spend bars */}
         <Card>
-          <CardHeader title="Top customers" />
-          <p className="text-xs text-text-3 mb-3">Last 90 days</p>
+          <CardHeader title={t('analytics.topCustomers')} />
+          <p className="text-xs text-text-3 mb-3">
+            {t('analytics.lastNinetyDays')}
+          </p>
 
           {topCustomers.length === 0 ? (
-            <p className="text-sm text-text-3 text-center py-8">
-              No confirmed revenue in the last 90 days
+            <p className="text-base text-text-3 text-center py-8">
+              {t('analytics.emptyTopCustomers')}
             </p>
           ) : (
             <div className="space-y-3.5">
@@ -285,28 +314,28 @@ export default function AnalyticsPage() {
                     <Avatar name={customer.name} size="sm" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline justify-between gap-2">
-                        <p className="text-sm font-semibold text-text-1 truncate">
+                        <p className="text-base font-semibold text-text-1 truncate">
                           {customer.name}
                         </p>
-                        <p className="text-sm font-semibold text-text-1 tabular-nums flex-shrink-0">
+                        <p className="text-base font-semibold text-text-1 tabular-nums flex-shrink-0">
                           {formatUZS(customer.totalSpent)}
                         </p>
                       </div>
                       <div className="mt-1.5 h-1.5 w-full rounded-pill bg-surface-2 overflow-hidden">
                         <div
-                          className="h-full rounded-pill transition-all"
+                          className={`h-full rounded-pill ${isTop ? 'bg-accent' : 'bg-border-strong'}`}
                           style={{
-                            width: `${pct}%`,
-                            backgroundColor: isTop
-                              ? 'var(--accent)'
-                              : 'var(--border-strong)',
+                            transform: `scaleX(${pct / 100})`,
+                            transformOrigin: 'left',
+                            transition: 'transform var(--dur-base) var(--ease)',
                           }}
                         />
                       </div>
                       {isServices && (
                         <p className="text-xs text-text-2 mt-1">
-                          {customer.appointmentCount} appointment
-                          {customer.appointmentCount === 1 ? '' : 's'}
+                          {t('analytics.appointmentCount', {
+                            n: customer.appointmentCount,
+                          })}
                         </p>
                       )}
                     </div>

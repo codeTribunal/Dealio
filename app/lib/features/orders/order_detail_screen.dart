@@ -15,6 +15,7 @@ import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_dialog.dart';
+import '../../shared/widgets/app_error_state.dart';
 import '../../shared/widgets/app_spinner.dart';
 import '../settings/customization_provider.dart';
 import 'order_detail_provider.dart';
@@ -82,8 +83,7 @@ class OrderDetailScreen extends ConsumerWidget {
       ),
       body: orderAsync.when(
         loading: () => const Center(child: AppSpinner(size: 32)),
-        error: (e, _) =>
-            _ErrorView(message: e.toString(), onRetry: notifier.refresh),
+        error: (e, _) => AppErrorState(error: e, onRetry: notifier.refresh),
         data: (order) => _OrderBody(order: order, notifier: notifier),
       ),
     );
@@ -164,8 +164,7 @@ class _HeaderBlock extends StatelessWidget {
             const Spacer(),
             Text(
               formatDateTime(order.createdAt),
-              style:
-                  TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
+              style: TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
             ),
           ],
         ),
@@ -232,8 +231,7 @@ class _ItemsCard extends StatelessWidget {
                       child: Text(item.productName,
                           style: TextStyle(color: t.text1)),
                     ),
-                    Text('×${item.quantity}',
-                        style: TextStyle(color: t.text2)),
+                    Text('×${item.quantity}', style: TextStyle(color: t.text2)),
                     const SizedBox(width: AppSpacing.s4),
                     Text(
                       formatUZS(item.subtotal),
@@ -320,7 +318,8 @@ class _PaymentProofCard extends ConsumerWidget {
     // the image loads fresh each view; the raw file_id is never exposed.
     final token = ref.read(authNotifierProvider).state?.token;
     final url = '${AppConfig.apiBaseUrl}/orders/$orderId/payment-proof';
-    final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
+    final headers =
+        token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
 
     Widget unavailable() => SizedBox(
           height: 220,
@@ -391,8 +390,8 @@ class _NotesCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppTokens.of(context);
     return AppCard(
-      header: AppCardHeader(
-          title: AppLocalizations.of(context)!.orderSectionNotes),
+      header:
+          AppCardHeader(title: AppLocalizations.of(context)!.orderSectionNotes),
       child: Text(notes, style: TextStyle(color: t.text1)),
     );
   }
@@ -464,8 +463,8 @@ class _TimelineCard extends StatelessWidget {
           title: AppLocalizations.of(context)!.orderSectionTimeline),
       child: Column(
         children: timeline.reversed
-            .map((entry) =>
-                _TimelineEntry(entry: entry as Map<String, dynamic>))
+            .map(
+                (entry) => _TimelineEntry(entry: entry as Map<String, dynamic>))
             .toList(),
       ),
     );
@@ -498,7 +497,9 @@ class _TimelineEntry extends StatelessWidget {
             margin: const EdgeInsets.only(top: 5, right: AppSpacing.s3),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: t.accent,
+              // Dot carries the event's meaning: a cancellation is never
+              // accent-colored (mirrors the web timeline).
+              color: status == 'CANCELLED' ? t.error : t.accent,
             ),
           ),
           Expanded(
@@ -631,9 +632,42 @@ class _ActionButtonsState extends State<_ActionButtons> {
   Future<void> _confirmPayment(BuildContext context) async {
     final l = AppLocalizations.of(context)!;
     final t = AppTokens.of(context);
+    final order = widget.order;
+    final amount = formatUZS(order.total);
+
+    // Money moment: restate the exact amount and customer before the
+    // irreversible confirm, and acknowledge success — never a silent flip
+    // (PRODUCT.md: "earn trust wherever money appears").
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AppDialog(
+        title: l.paymentConfirmTitle,
+        content: Text(l.paymentConfirmBody(amount, order.customer.name)),
+        actions: [
+          AppButton(
+            label: l.buttonCancel,
+            variant: AppButtonVariant.ghost,
+            onPressed: () => Navigator.of(ctx).pop(false),
+          ),
+          AppButton(
+            label: l.paymentConfirmAction,
+            onPressed: () => Navigator.of(ctx).pop(true),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
     await _guard('PAY', () async {
       try {
         await widget.notifier.confirmPayment();
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l.paymentConfirmedSnack(amount)),
+            backgroundColor: t.success,
+          ),
+        );
       } catch (e) {
         if (!context.mounted) return;
         final alreadyConfirmed = e.toString().contains('already confirmed');
@@ -698,37 +732,3 @@ class _ActionButtonsState extends State<_ActionButtons> {
 }
 
 // ── Error view ──────────────────────────────────────────────────────
-
-class _ErrorView extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorView({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.s5),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
-            const SizedBox(height: AppSpacing.s3),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: t.text2)),
-            const SizedBox(height: AppSpacing.s4),
-            AppButton(
-              label: l.buttonRetry,
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.sm,
-              onPressed: onRetry,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

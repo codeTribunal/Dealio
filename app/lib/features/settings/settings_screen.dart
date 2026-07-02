@@ -11,11 +11,13 @@ import '../../core/models/blocked_slot.dart';
 import '../../core/models/staff.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/utils/card_number.dart';
 import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_checkbox.dart';
 import '../../shared/widgets/app_dialog.dart';
+import '../../shared/widgets/app_error_state.dart';
 import '../../shared/widgets/app_spinner.dart';
 import '../../shared/widgets/app_switch.dart';
 import '../staff/staff_provider.dart';
@@ -42,8 +44,8 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(l.settingsTitle)),
       body: settingsAsync.when(
         loading: () => const Center(child: AppSpinner(size: 32)),
-        error: (e, _) => _ErrorView(
-          message: e.toString(),
+        error: (e, _) => AppErrorState(
+          error: e,
           onRetry: () => ref.read(settingsProvider.notifier).refresh(),
         ),
         data: (data) => RefreshIndicator(
@@ -187,6 +189,7 @@ InputDecoration _decoration(
   BuildContext context, {
   String? label,
   String? hint,
+  String? errorText,
 }) {
   final t = AppTokens.of(context);
   OutlineInputBorder border(Color color, [double width = 1]) =>
@@ -199,6 +202,10 @@ InputDecoration _decoration(
     labelStyle: TextStyle(color: t.text2),
     hintText: hint,
     hintStyle: TextStyle(color: t.text3),
+    errorText: errorText,
+    errorStyle: TextStyle(color: t.errorStrong),
+    errorBorder: border(t.error),
+    focusedErrorBorder: border(t.error, 2),
     isDense: true,
     filled: true,
     fillColor: t.surface,
@@ -266,7 +273,8 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
     final email = _emailCtrl.text.trim();
     if (email.isNotEmpty && !_emailRe.hasMatch(email)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.settingsEmailInvalid)),
+        SnackBar(
+            content: Text(AppLocalizations.of(context)!.settingsEmailInvalid)),
       );
       return;
     }
@@ -326,8 +334,8 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
                   controller: _nameCtrl,
                   autofocus: true,
                   style: TextStyle(color: t.text1),
-                  decoration:
-                      _decoration(context, label: l.onboardingBusinessNameLabel),
+                  decoration: _decoration(context,
+                      label: l.onboardingBusinessNameLabel),
                 ),
                 const SizedBox(height: AppSpacing.s3),
                 TextField(
@@ -348,8 +356,8 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
                 const SizedBox(height: AppSpacing.s1),
                 Text(
                   l.settingsAddressHelper,
-                  style: TextStyle(
-                      color: t.text3, fontSize: AppTextSizes.caption),
+                  style:
+                      TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
                 ),
                 const SizedBox(height: AppSpacing.s3),
                 TextField(
@@ -363,16 +371,18 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
                 ),
                 const SizedBox(height: AppSpacing.s2),
                 InkWell(
-                  onTap:
-                      _saving ? null : () => setState(() => _consent = !_consent),
+                  onTap: _saving
+                      ? null
+                      : () => setState(() => _consent = !_consent),
                   borderRadius: AppRadii.sm,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       AppCheckbox(
                         value: _consent,
-                        onChanged:
-                            _saving ? null : (v) => setState(() => _consent = v),
+                        onChanged: _saving
+                            ? null
+                            : (v) => setState(() => _consent = v),
                       ),
                       const SizedBox(width: AppSpacing.s2),
                       Expanded(
@@ -425,8 +435,7 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
                   const SizedBox(height: AppSpacing.s1),
                   Text(
                     widget.data.business.description!,
-                    style:
-                        TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
+                    style: TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
                   ),
                 ],
                 if (widget.data.business.address != null &&
@@ -434,8 +443,7 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
                   const SizedBox(height: AppSpacing.s1),
                   Text(
                     widget.data.business.address!,
-                    style:
-                        TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
+                    style: TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
                   ),
                 ],
                 if (widget.data.business.ownerEmail != null &&
@@ -443,8 +451,7 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
                   const SizedBox(height: AppSpacing.s1),
                   Text(
                     widget.data.business.ownerEmail!,
-                    style:
-                        TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
+                    style: TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
                   ),
                 ],
               ],
@@ -470,6 +477,7 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
   late final TextEditingController _cardCtrl;
   late final TextEditingController _holderCtrl;
   bool _saving = false;
+  String? _cardError;
 
   @override
   void initState() {
@@ -488,7 +496,21 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
   }
 
   Future<void> _save() async {
-    setState(() => _saving = true);
+    // Guard the money route: a mistyped card silently misroutes every future
+    // customer payment, so the number must be a full Uzcard/Humo card before
+    // it can be saved. Empty clears the card.
+    final validation = validateCardNumber(_cardCtrl.text);
+    if (validation != null) {
+      final l = AppLocalizations.of(context)!;
+      setState(() => _cardError = validation == CardValidationError.length
+          ? l.settingsCardInvalidLength
+          : l.settingsCardInvalidPrefix);
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _cardError = null;
+    });
     try {
       // An empty card number clears the card (no holder without a number).
       final number = _cardCtrl.text.trim();
@@ -524,11 +546,16 @@ class _PaymentSectionState extends ConsumerState<_PaymentSection> {
           TextField(
             controller: _cardCtrl,
             keyboardType: TextInputType.number,
+            inputFormatters: [CardNumberInputFormatter()],
+            onChanged: (_) {
+              if (_cardError != null) setState(() => _cardError = null);
+            },
             style: TextStyle(color: t.text1),
             decoration: _decoration(
               context,
               label: l.settingsCardNumberLabel,
               hint: '8600 1234 5678 9012',
+              errorText: _cardError,
             ),
           ),
           const SizedBox(height: AppSpacing.s3),
@@ -579,8 +606,8 @@ class _BusinessModeSection extends ConsumerWidget {
   // Single-select with a HARD WARNING: picking the other mode opens a
   // confirmation dialog. Only on confirm do we save the new scalar mode;
   // on cancel nothing changes (no API call). No data is deleted on switch.
-  Future<void> _select(BuildContext context, WidgetRef ref, String mode,
-      String current) async {
+  Future<void> _select(
+      BuildContext context, WidgetRef ref, String mode, String current) async {
     if (mode == current) return;
     final l = AppLocalizations.of(context)!;
 
@@ -681,7 +708,6 @@ class _BusinessModeSection extends ConsumerWidget {
   }
 }
 
-
 // ── Calendar sync section ────────────────────────────────────────────
 
 class _CalendarSection extends ConsumerStatefulWidget {
@@ -729,16 +755,14 @@ class _CalendarSectionState extends ConsumerState<_CalendarSection> {
     Clipboard.setData(ClipboardData(text: _calendarUrl));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content:
-            Text(AppLocalizations.of(context)!.settingsCalendarLinkCopied),
+        content: Text(AppLocalizations.of(context)!.settingsCalendarLinkCopied),
         duration: const Duration(seconds: 2),
       ),
     );
   }
 
   Future<void> _addToGoogleCalendar() async {
-    final googleUrl =
-        'https://calendar.google.com/calendar/r/settings/addbyurl'
+    final googleUrl = 'https://calendar.google.com/calendar/r/settings/addbyurl'
         '?url=${Uri.encodeComponent(_calendarUrl)}';
     final uri = Uri.parse(googleUrl);
     if (await canLaunchUrl(uri)) {
@@ -845,8 +869,8 @@ class _CalendarSectionState extends ConsumerState<_CalendarSection> {
                   ),
                   GestureDetector(
                     onTap: _copyCalendarUrl,
-                    child:
-                        AppIcon(name: AppIconName.add, size: 18, color: t.accent),
+                    child: AppIcon(
+                        name: AppIconName.add, size: 18, color: t.accent),
                   ),
                 ],
               ),
@@ -933,7 +957,8 @@ class _RemindersSection extends ConsumerWidget {
               padding: const EdgeInsets.only(top: AppSpacing.s1),
               child: Text(
                 l.settingsRemindersLoadFailed,
-                style: TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
+                style:
+                    TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
               ),
             ),
             data: (s) {
@@ -1153,7 +1178,9 @@ class _BotSectionState extends ConsumerState<_BotSection> {
               onPressed: () => setState(() => _editing = true),
               tooltip: l.settingsChangeBot,
             ),
-      child: editing ? _editor(context, l, t, hasBot) : _display(context, l, t, data),
+      child: editing
+          ? _editor(context, l, t, hasBot)
+          : _display(context, l, t, data),
     );
   }
 
@@ -1205,8 +1232,8 @@ class _BotSectionState extends ConsumerState<_BotSection> {
     );
   }
 
-  Widget _display(
-      BuildContext context, AppLocalizations l, AppTokens t, SettingsState data) {
+  Widget _display(BuildContext context, AppLocalizations l, AppTokens t,
+      SettingsState data) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1322,7 +1349,6 @@ class _LanguageSection extends ConsumerWidget {
   }
 }
 
-
 // ── Customer fields section ──────────────────────────────────────────
 
 class _CustomerFieldsSection extends ConsumerStatefulWidget {
@@ -1374,8 +1400,8 @@ class _CustomerFieldsSectionState
     return _SectionCard(
       icon: AppIconName.customers,
       title: l.settingsCustomerFields,
-      trailing: _AddButton(
-          onPressed: _addField, tooltip: l.settingsAddFieldTooltip),
+      trailing:
+          _AddButton(onPressed: _addField, tooltip: l.settingsAddFieldTooltip),
       child: fieldsAsync.when(
         loading: () => const Padding(
           padding: EdgeInsets.symmetric(vertical: AppSpacing.s2),
@@ -1587,9 +1613,16 @@ class _AddStageDialog extends StatefulWidget {
 
 class _AddStageDialogState extends State<_AddStageDialog> {
   static const _palette = [
-    '#6366F1', '#8B5CF6', '#EC4899', '#EF4444',
-    '#F97316', '#EAB308', '#22C55E', '#14B8A6',
-    '#3C83F6', '#6B7280',
+    '#6366F1',
+    '#8B5CF6',
+    '#EC4899',
+    '#EF4444',
+    '#F97316',
+    '#EAB308',
+    '#22C55E',
+    '#14B8A6',
+    '#3C83F6',
+    '#6B7280',
   ];
 
   final _nameCtrl = TextEditingController();
@@ -1616,8 +1649,7 @@ class _AddStageDialogState extends State<_AddStageDialog> {
             autofocus: true,
             style: TextStyle(color: t.text1),
             decoration: _decoration(context,
-                label: l.settingsStageNameLabel,
-                hint: l.settingsStageNameHint),
+                label: l.settingsStageNameLabel, hint: l.settingsStageNameHint),
           ),
           const SizedBox(height: AppSpacing.s4),
           Text(l.settingsColorLabel,
@@ -1627,8 +1659,8 @@ class _AddStageDialogState extends State<_AddStageDialog> {
             spacing: AppSpacing.s2,
             runSpacing: AppSpacing.s2,
             children: _palette.map((hex) {
-              final color = Color(
-                  int.parse('FF${hex.replaceFirst('#', '')}', radix: 16));
+              final color =
+                  Color(int.parse('FF${hex.replaceFirst('#', '')}', radix: 16));
               return GestureDetector(
                 onTap: () => setState(() => _selectedColor = hex),
                 child: Container(
@@ -1810,7 +1842,8 @@ class _AddQuestionDialogState extends State<_AddQuestionDialog> {
             children: [
               Expanded(
                 child: Text(l.commonRequired,
-                    style: TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
+                    style:
+                        TextStyle(fontSize: AppTextSizes.sm, color: t.text1)),
               ),
               AppSwitch(
                 value: _isRequired,
@@ -2337,7 +2370,8 @@ class _TimeDropdown extends StatelessWidget {
     final options =
         _options.contains(current) ? _options : [current, ..._options];
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s3, vertical: 2),
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.s3, vertical: 2),
       decoration: BoxDecoration(
         color: t.surface2,
         borderRadius: AppRadii.pill,
@@ -2357,8 +2391,7 @@ class _TimeDropdown extends StatelessWidget {
             color: t.text1,
           ),
           items: [
-            for (final o in options)
-              DropdownMenuItem(value: o, child: Text(o)),
+            for (final o in options) DropdownMenuItem(value: o, child: Text(o)),
           ],
           onChanged: (v) {
             if (v != null) onChanged(_parseHHMM(v, value));
@@ -2451,8 +2484,8 @@ class _BlockedTimeSection extends ConsumerWidget {
               child: LinearProgressIndicator(),
             ),
             error: (e, _) => Text(l.errorWithMessage(e.toString()),
-                style: TextStyle(
-                    color: t.errorStrong, fontSize: AppTextSizes.sm)),
+                style:
+                    TextStyle(color: t.errorStrong, fontSize: AppTextSizes.sm)),
             data: (slots) {
               if (slots.isEmpty) {
                 return Text(
@@ -2610,8 +2643,8 @@ class _AddBlockedDialogState extends ConsumerState<_AddBlockedDialog> {
                   borderRadius: AppRadii.sm,
                   border: Border.all(color: t.border),
                 ),
-                child: Text(formatDate(_date),
-                    style: TextStyle(color: t.text1)),
+                child:
+                    Text(formatDate(_date), style: TextStyle(color: t.text1)),
               ),
             ),
             const SizedBox(height: AppSpacing.s3),
@@ -2726,37 +2759,3 @@ class _AddBlockedDialogState extends ConsumerState<_AddBlockedDialog> {
 }
 
 // ── Error view ───────────────────────────────────────────────────────
-
-class _ErrorView extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorView({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.s5),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
-            const SizedBox(height: AppSpacing.s3),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: t.text2)),
-            const SizedBox(height: AppSpacing.s4),
-            AppButton(
-              label: l.buttonRetry,
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.sm,
-              onPressed: onRetry,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

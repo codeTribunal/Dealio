@@ -3897,6 +3897,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No payment card added yet.'**
   String get settingsCardNotSet;
+
+  /// No description provided for @paymentConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm payment received?'**
+  String get paymentConfirmTitle;
+
+  /// No description provided for @paymentConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm {amount} received from {name}? The customer will be notified.'**
+  String paymentConfirmBody(String amount, String name);
+
+  /// No description provided for @paymentConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, payment received'**
+  String get paymentConfirmAction;
+
+  /// No description provided for @paymentConfirmedSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment confirmed — {amount}'**
+  String paymentConfirmedSnack(String amount);
+
+  /// No description provided for @settingsCardInvalidLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Card number must be 16 digits'**
+  String get settingsCardInvalidLength;
+
+  /// No description provided for @settingsCardInvalidPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an Uzcard (8600) or Humo (9860) card number'**
+  String get settingsCardInvalidPrefix;
+
+  /// No description provided for @homeQueueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments to confirm'**
+  String get homeQueueTitle;
+
+  /// No description provided for @homeQueueOrderMeta.
+  ///
+  /// In en, this message translates to:
+  /// **'Order #{n}'**
+  String homeQueueOrderMeta(int n);
+
+  /// No description provided for @homeQueueViewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View all {n}'**
+  String homeQueueViewAll(int n);
+
+  /// No description provided for @errorNoConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection. Check your internet and try again.'**
+  String get errorNoConnection;
+
+  /// No description provided for @errorServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong on our side. Try again in a moment.'**
+  String get errorServer;
+
+  /// No description provided for @customerHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get customerHistoryTitle;
+
+  /// No description provided for @customerHistoryEmptyOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'No orders yet'**
+  String get customerHistoryEmptyOrders;
+
+  /// No description provided for @customerHistoryEmptyAppointments.
+  ///
+  /// In en, this message translates to:
+  /// **'No appointments yet'**
+  String get customerHistoryEmptyAppointments;
+
+  /// No description provided for @customerHistoryEmptyProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects yet'**
+  String get customerHistoryEmptyProjects;
+
+  /// No description provided for @customerHistoryMore.
+  ///
+  /// In en, this message translates to:
+  /// **'And {n} more'**
+  String customerHistoryMore(int n);
 }
 
 class _AppLocalizationsDelegate

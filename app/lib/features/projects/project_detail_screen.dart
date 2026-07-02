@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/api/api_service.dart';
+import '../../core/config/app_config.dart';
 import '../../core/icons/app_icon.dart';
 import '../../core/models/project.dart';
 import '../../core/theme/app_tokens.dart';
@@ -184,13 +184,13 @@ class _HeaderCard extends StatelessWidget {
             _InfoRow(
               icon: AppIconName.calendar,
               label: l.projectStart,
-              value: DateFormat('d MMM yyyy').format(project.startDate!),
+              value: formatDate(project.startDate!),
             ),
           if (project.deadline != null)
             _InfoRow(
               icon: AppIconName.calendar,
               label: l.projectDeadline,
-              value: DateFormat('d MMM yyyy').format(project.deadline!),
+              value: formatDate(project.deadline!),
             ),
           if (project.description != null &&
               project.description!.isNotEmpty) ...[
@@ -289,9 +289,9 @@ class _ShareProposalButton extends StatelessWidget {
       leftIcon: AppIconName.inbox,
       fullWidth: true,
       onPressed: () {
-        // In production this would be the deployed backend URL
-        const baseUrl = 'http://localhost:3000/api/v1/proposals';
-        final link = '$baseUrl/${project.id}';
+        // Built from the configured backend so the copied link works for
+        // clients (never a hardcoded localhost).
+        final link = '${AppConfig.apiBaseUrl}/proposals/${project.id}';
         Clipboard.setData(ClipboardData(text: link));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l.projectProposalCopied)),
@@ -400,7 +400,7 @@ class _MilestoneRow extends ConsumerWidget {
                   const SizedBox(width: AppSpacing.s2),
                   Text(
                     l.projectDuePrefix(
-                        DateFormat('d MMM').format(milestone.dueDate!)),
+                        formatDayMonthShort(milestone.dueDate!)),
                     style: TextStyle(
                         fontSize: AppTextSizes.caption, color: t.text3),
                   ),
@@ -674,7 +674,7 @@ class _InvoiceRowState extends ConsumerState<_InvoiceRow> {
           if (invoice.dueDate != null)
             Text(
               l.projectDuePrefix(
-                  DateFormat('d MMM yyyy').format(invoice.dueDate!)),
+                  formatDate(invoice.dueDate!)),
               style:
                   TextStyle(fontSize: AppTextSizes.caption, color: t.text3),
             ),
@@ -687,8 +687,7 @@ class _InvoiceRowState extends ConsumerState<_InvoiceRow> {
                 size: AppButtonSize.sm,
                 leftIcon: AppIconName.inbox,
                 onPressed: () {
-                  const baseUrl = 'http://localhost:3000/api/v1/invoices';
-                  final link = '$baseUrl/${invoice.id}';
+                  final link = '${AppConfig.apiBaseUrl}/invoices/${invoice.id}';
                   Clipboard.setData(ClipboardData(text: link));
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(l.projectInvoiceCopied)),

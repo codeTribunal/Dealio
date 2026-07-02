@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { Icon } from '@/components/icons/Icon'
+import { SlideOver } from '@/components/ui/SlideOver'
 import { useI18n } from '@/lib/i18n/i18nContext'
 import { formatUZS, currencyWord } from '@/lib/format'
 import {
@@ -47,7 +48,7 @@ export default function CatalogPage() {
     setError(null)
     getProducts()
       .then((data) => setProducts(data))
-      .catch(() => setError('Failed to load products'))
+      .catch(() => setError(t('catalog.failedLoad')))
       .finally(() => setLoading(false))
   }
 
@@ -100,11 +101,11 @@ export default function CatalogPage() {
 
   const handleSave = async () => {
     if (!formName.trim()) {
-      setFormError('Product name is required')
+      setFormError(t('catalog.nameRequired'))
       return
     }
     if (!formPrice || isNaN(Number(formPrice)) || Number(formPrice) <= 0) {
-      setFormError('Enter a valid price')
+      setFormError(t('catalog.priceInvalid'))
       return
     }
     setSaving(true)
@@ -126,15 +127,15 @@ export default function CatalogPage() {
         const updated = await updateProduct(editingProduct.id, payload)
         setProducts(prev => prev.map(p =>
           p.id === editingProduct.id ? updated : p))
-        showSaved('Product updated')
+        showSaved(t('catalog.productUpdated'))
       } else {
         const created = await createProduct(payload)
         setProducts(prev => [...prev, created])
-        showSaved('Product created')
+        showSaved(t('catalog.productCreated'))
       }
       handleClose()
     } catch {
-      setFormError('Failed to save. Please try again.')
+      setFormError(t('scheduling.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -147,9 +148,9 @@ export default function CatalogPage() {
       await deleteProduct(editingProduct.id)
       setProducts(prev => prev.filter(p => p.id !== editingProduct.id))
       handleClose()
-      showSaved('Product deleted')
+      showSaved(t('catalog.productDeleted'))
     } catch {
-      setFormError('Failed to delete. Please try again.')
+      setFormError(t('scheduling.deleteFailed'))
     } finally {
       setDeleting(false)
     }
@@ -163,6 +164,21 @@ export default function CatalogPage() {
     p.name.toLowerCase().includes(search.toLowerCase())
   )
 
+  // prepTime is stored as an English token pair ("2 hours") — parse it so the
+  // displayed unit follows the dashboard language. Unknown formats fall back
+  // to the raw stored value.
+  const prepTimeKeyByUnit: Record<string, string> = {
+    minutes: 'catalog.prepTimeMinutes',
+    hours: 'catalog.prepTimeHours',
+    days: 'catalog.prepTimeDays',
+    weeks: 'catalog.prepTimeWeeks',
+  }
+  const formatPrepTime = (prepTime: string): string => {
+    const match = prepTime.match(/(\d+)\s*(\w+)/)
+    const key = match ? prepTimeKeyByUnit[match[2]] : undefined
+    return match && key ? t(key, { n: match[1] }) : prepTime
+  }
+
   const title = t('nav.catalog')
 
   if (!guardReady) return null
@@ -174,7 +190,7 @@ export default function CatalogPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-text-1">{title}</h1>
           <p className="text-sm text-text-2 mt-1">
-            {products.length} product{products.length === 1 ? '' : 's'}
+            {t('catalog.productCount', { count: products.length })}
           </p>
         </div>
         {/* One add-affordance by state: search + this button show only when the
@@ -186,7 +202,7 @@ export default function CatalogPage() {
               <Input
                 leftIcon="search"
                 type="text"
-                placeholder="Search products..."
+                placeholder={t('catalog.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -197,7 +213,7 @@ export default function CatalogPage() {
               onClick={handleNew}
               className="whitespace-nowrap"
             >
-              New product
+              {t('catalog.newProduct')}
             </Button>
           </div>
         )}
@@ -208,13 +224,13 @@ export default function CatalogPage() {
         <LoadingSpinner />
       ) : error ? (
         <Card>
-          <p className="text-sm text-error-strong">
+          <p className="text-base text-error-strong">
             {error}
             <button
-              className="ml-2 text-sm font-semibold text-accent hover:text-accent-hover"
+              className="ml-2 text-base font-semibold text-accent hover:text-accent-hover"
               onClick={() => loadProducts()}
             >
-              Try again
+              {t('common.tryAgain')}
             </button>
           </p>
         </Card>
@@ -236,7 +252,7 @@ export default function CatalogPage() {
         </Card>
       ) : filtered.length === 0 ? (
         <Card>
-          <p className="text-sm text-text-2 text-center py-10">
+          <p className="text-base text-text-2 text-center py-10">
             {t('catalog.noMatch')}
           </p>
         </Card>
@@ -262,7 +278,7 @@ export default function CatalogPage() {
 
                   {/* Name + price + stock + prep */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-text-1 truncate">
+                    <p className="text-base font-semibold text-text-1 truncate">
                       {product.name}
                     </p>
                     {product.description && (
@@ -271,7 +287,7 @@ export default function CatalogPage() {
                       </p>
                     )}
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-sm font-bold text-text-1 tabular-nums">
+                      <span className="text-base font-bold text-text-1 tabular-nums">
                         {formatUZS(product.price)}
                       </span>
                       <span
@@ -282,13 +298,15 @@ export default function CatalogPage() {
                         }`}
                       >
                         {product.unlimited
-                          ? 'Made to order'
-                          : `${product.stockQty ?? 0} in stock`}
+                          ? t('catalog.madeToOrder')
+                          : t('catalog.inStock', {
+                              count: product.stockQty ?? 0,
+                            })}
                       </span>
                     </div>
                     {product.prepTime && (
                       <p className="text-xs text-text-3 mt-1">
-                        {product.prepTime} prep time
+                        {formatPrepTime(product.prepTime)}
                       </p>
                     )}
                   </div>
@@ -301,7 +319,7 @@ export default function CatalogPage() {
                         : 'bg-warning-soft text-warning-strong'
                     }`}
                   >
-                    {product.active ? 'Active' : 'Paused'}
+                    {product.active ? t('common.active') : t('common.paused')}
                   </span>
                 </div>
               </Card>
@@ -311,236 +329,222 @@ export default function CatalogPage() {
       )}
 
       {/* ── Product form slide-over ──────────────────────────────── */}
-      {showForm && (
-        <div className="fixed inset-0 z-40 flex justify-end">
-          <div
-            className="absolute inset-0 bg-text-1/30"
-            onClick={handleClose}
-          />
-          <div className="relative z-50 w-full max-w-lg bg-surface border-l border-border shadow-lg flex flex-col h-full">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
-              <p className="text-lg font-bold text-text-1">
-                {editingProduct ? 'Edit product' : 'New product'}
-              </p>
+      <SlideOver
+        open={showForm}
+        onClose={handleClose}
+        title={
+          editingProduct ? t('catalog.editProduct') : t('catalog.newProduct')
+        }
+        closeLabel={t('common.close')}
+      >
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          {/* Product name */}
+          <div>
+            <label className="block text-base font-medium text-text-1 mb-1.5">
+              {t('catalog.nameLabel')} *
+            </label>
+            <Input
+              type="text"
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              placeholder={t('catalog.nameLabel')}
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-base font-medium text-text-1 mb-1.5">
+              {t('settings.description')}
+            </label>
+            <Textarea
+              rows={3}
+              value={formDescription}
+              onChange={(e) => setFormDescription(e.target.value)}
+              placeholder={t('catalog.descriptionPlaceholder')}
+            />
+          </div>
+
+          {/* Price */}
+          <div>
+            <label className="block text-base font-medium text-text-1 mb-1.5">
+              {t('catalog.priceLabel')} ({currencyWord()}) *
+            </label>
+            <Input
+              type="number"
+              value={formPrice}
+              onChange={(e) => setFormPrice(e.target.value)}
+              min="0"
+              placeholder="150000"
+              className="tabular-nums"
+            />
+          </div>
+
+          {/* Stock mode */}
+          <div>
+            <label className="block text-base font-medium text-text-1 mb-1.5">
+              {t('catalog.stockLabel')}
+            </label>
+            <div className="flex gap-2">
               <button
                 type="button"
-                onClick={handleClose}
-                aria-label="Close"
-                className="text-text-3 hover:text-text-1 transition-colors"
+                onClick={() => setFormUnlimited(true)}
+                className={`px-4 py-2 rounded-md text-base font-semibold transition-colors ${
+                  formUnlimited
+                    ? 'bg-accent text-accent-on'
+                    : 'border border-border bg-surface text-text-1 hover:bg-surface-2'
+                }`}
               >
-                <Icon name="close" size={20} />
+                {t('catalog.madeToOrder')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormUnlimited(false)}
+                className={`px-4 py-2 rounded-md text-base font-semibold transition-colors ${
+                  !formUnlimited
+                    ? 'bg-accent text-accent-on'
+                    : 'border border-border bg-surface text-text-1 hover:bg-surface-2'
+                }`}
+              >
+                {t('catalog.limitedStock')}
               </button>
             </div>
+          </div>
 
-            {/* Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-5">
-              {/* Product name */}
-              <div>
-                <label className="block text-sm font-medium text-text-1 mb-1.5">
-                  Product name *
-                </label>
-                <Input
-                  type="text"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Product name"
-                />
-              </div>
+          {!formUnlimited && (
+            <div>
+              <label className="block text-base font-medium text-text-1 mb-1.5">
+                {t('catalog.stockQtyLabel')}
+              </label>
+              <Input
+                type="number"
+                value={formStockQty}
+                onChange={(e) => setFormStockQty(e.target.value)}
+                min="0"
+                className="tabular-nums"
+              />
+            </div>
+          )}
 
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-text-1 mb-1.5">
-                  Description
-                </label>
-                <Textarea
-                  rows={3}
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="What is this product?"
-                />
-              </div>
-
-              {/* Price */}
-              <div>
-                <label className="block text-sm font-medium text-text-1 mb-1.5">
-                  Price ({currencyWord()}) *
-                </label>
+          {/* Preparation time — number + unit dropdown (logic preserved) */}
+          <div>
+            <label className="block text-base font-medium text-text-1 mb-1.5">
+              {t('catalog.prepTimeLabel')}
+            </label>
+            <div className="flex gap-2">
+              <div className="w-24">
                 <Input
                   type="number"
-                  value={formPrice}
-                  onChange={(e) => setFormPrice(e.target.value)}
-                  min="0"
-                  placeholder="150000"
+                  value={formPrepTimeValue}
+                  onChange={(e) => setFormPrepTimeValue(e.target.value)}
+                  placeholder="2"
+                  min="1"
                   className="tabular-nums"
                 />
               </div>
-
-              {/* Stock mode */}
-              <div>
-                <label className="block text-sm font-medium text-text-1 mb-1.5">
-                  Stock
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFormUnlimited(true)}
-                    className={`px-4 py-2 rounded-md text-sm font-semibold transition-colors ${
-                      formUnlimited
-                        ? 'bg-accent text-accent-on'
-                        : 'border border-border bg-surface text-text-1 hover:bg-surface-2'
-                    }`}
-                  >
-                    Made to order
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormUnlimited(false)}
-                    className={`px-4 py-2 rounded-md text-sm font-semibold transition-colors ${
-                      !formUnlimited
-                        ? 'bg-accent text-accent-on'
-                        : 'border border-border bg-surface text-text-1 hover:bg-surface-2'
-                    }`}
-                  >
-                    Limited stock
-                  </button>
-                </div>
-              </div>
-
-              {!formUnlimited && (
-                <div>
-                  <label className="block text-sm font-medium text-text-1 mb-1.5">
-                    Stock quantity
-                  </label>
-                  <Input
-                    type="number"
-                    value={formStockQty}
-                    onChange={(e) => setFormStockQty(e.target.value)}
-                    min="0"
-                    className="tabular-nums"
-                  />
-                </div>
-              )}
-
-              {/* Preparation time — number + unit dropdown (logic preserved) */}
-              <div>
-                <label className="block text-sm font-medium text-text-1 mb-1.5">
-                  Preparation time
-                </label>
-                <div className="flex gap-2">
-                  <div className="w-24">
-                    <Input
-                      type="number"
-                      value={formPrepTimeValue}
-                      onChange={(e) => setFormPrepTimeValue(e.target.value)}
-                      placeholder="2"
-                      min="1"
-                      className="tabular-nums"
-                    />
-                  </div>
-                  <select
-                    value={formPrepTimeUnit}
-                    onChange={(e) => setFormPrepTimeUnit(e.target.value)}
-                    className="flex-1 bg-surface border border-border rounded-md py-2.5 px-3.5 text-sm text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors"
-                  >
-                    <option value="minutes">Minutes</option>
-                    <option value="hours">Hours</option>
-                    <option value="days">Days</option>
-                    <option value="weeks">Weeks</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Active status */}
-              <div className="flex items-center justify-between p-4 bg-surface-2 rounded-md border border-border">
-                <div>
-                  <p className="text-sm font-semibold text-text-1">Active</p>
-                  <p className="text-xs text-text-2">
-                    Visible to customers in the bot
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  aria-pressed={formActive}
-                  onClick={() => setFormActive(!formActive)}
-                  className={`w-10 h-5 rounded-pill relative cursor-pointer transition-colors flex-shrink-0 ${
-                    formActive ? 'bg-accent' : 'bg-border-strong'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 w-4 h-4 bg-surface rounded-pill shadow-sm transition-transform ${
-                      formActive ? 'right-0.5' : 'left-0.5'
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-6 border-t border-border flex-shrink-0 space-y-3">
-              {formError && (
-                <div className="p-3 bg-error-soft border border-error-strong rounded-md">
-                  <p className="text-sm text-error-strong">{formError}</p>
-                </div>
-              )}
-
-              <Button
-                variant="primary"
-                fullWidth
-                loading={saving}
-                onClick={handleSave}
+              <select
+                value={formPrepTimeUnit}
+                onChange={(e) => setFormPrepTimeUnit(e.target.value)}
+                className="flex-1 bg-surface border border-border rounded-md py-2.5 px-3.5 text-base text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors"
               >
-                {saving
-                  ? 'Saving...'
-                  : editingProduct
-                  ? 'Save changes'
-                  : 'Create product'}
-              </Button>
+                <option value="minutes">{t('catalog.unitMinutes')}</option>
+                <option value="hours">{t('catalog.unitHours')}</option>
+                <option value="days">{t('catalog.unitDays')}</option>
+                <option value="weeks">{t('catalog.unitWeeks')}</option>
+              </select>
+            </div>
+          </div>
 
-              {editingProduct && !showDeleteConfirm && (
+          {/* Active status */}
+          <div className="flex items-center justify-between p-4 bg-surface-2 rounded-md border border-border">
+            <div>
+              <p className="text-base font-semibold text-text-1">
+                {t('common.active')}
+              </p>
+              <p className="text-xs text-text-2">
+                {t('catalog.activeHint')}
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-pressed={formActive}
+              onClick={() => setFormActive(!formActive)}
+              className={`w-10 h-5 rounded-pill relative cursor-pointer transition-colors flex-shrink-0 ${
+                formActive ? 'bg-accent' : 'bg-border-strong'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 w-4 h-4 bg-surface rounded-pill shadow-sm transition-transform ${
+                  formActive ? 'right-0.5' : 'left-0.5'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-border flex-shrink-0 space-y-3">
+          {formError && (
+            <div className="p-3 bg-error-soft border border-error-strong rounded-md">
+              <p className="text-base text-error-strong">{formError}</p>
+            </div>
+          )}
+
+          <Button
+            variant="primary"
+            fullWidth
+            loading={saving}
+            onClick={handleSave}
+          >
+            {saving
+              ? t('catalog.saving')
+              : editingProduct
+              ? t('common.saveChanges')
+              : t('catalog.createProduct')}
+          </Button>
+
+          {editingProduct && !showDeleteConfirm && (
+            <Button
+              variant="danger"
+              fullWidth
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              {t('common.delete')}
+            </Button>
+          )}
+          {editingProduct && showDeleteConfirm && (
+            <div className="p-4 bg-error-soft border border-error-strong rounded-md">
+              <p className="text-base font-semibold text-error-strong mb-1">
+                {t('catalog.deleteTitle')}
+              </p>
+              <p className="text-xs text-error-strong mb-3">
+                {t('catalog.deleteBody')}
+              </p>
+              <div className="flex gap-2">
                 <Button
                   variant="danger"
                   fullWidth
-                  onClick={() => setShowDeleteConfirm(true)}
+                  loading={deleting}
+                  onClick={handleDelete}
                 >
-                  Delete
+                  {deleting ? t('catalog.deleting') : t('common.yesDelete')}
                 </Button>
-              )}
-              {editingProduct && showDeleteConfirm && (
-                <div className="p-4 bg-error-soft border border-error-strong rounded-md">
-                  <p className="text-sm font-semibold text-error-strong mb-1">
-                    Delete this item?
-                  </p>
-                  <p className="text-xs text-error-strong mb-3">
-                    This cannot be undone.
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="danger"
-                      fullWidth
-                      loading={deleting}
-                      onClick={handleDelete}
-                    >
-                      {deleting ? 'Deleting...' : 'Yes, delete'}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      fullWidth
-                      onClick={() => setShowDeleteConfirm(false)}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  onClick={() => setShowDeleteConfirm(false)}
+                >
+                  {t('common.cancel')}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </SlideOver>
 
       {/* Success toast */}
       {savedMessage && (
-        <div className="fixed bottom-6 right-6 bg-text-1 text-surface px-4 py-3 rounded-md text-sm font-medium shadow-md z-50 flex items-center gap-2">
+        <div className="fixed bottom-6 right-6 bg-text-1 text-surface px-4 py-3 rounded-md text-base font-medium shadow-md z-50 flex items-center gap-2">
           <span className="text-success-soft">
             <Icon name="paid" size={16} />
           </span>

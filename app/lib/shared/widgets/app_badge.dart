@@ -30,6 +30,7 @@ class AppBadge extends StatelessWidget {
       _Tone.success => (t.successSoft, t.successStrong),
       _Tone.warning => (t.warningSoft, t.warningStrong),
       _Tone.error => (t.errorSoft, t.errorStrong),
+      _Tone.neutral => (t.surface2, t.text2),
     };
 
     return Container(
@@ -37,7 +38,11 @@ class AppBadge extends StatelessWidget {
         horizontal: AppSpacing.s3,
         vertical: AppSpacing.s1,
       ),
-      decoration: BoxDecoration(color: bg, borderRadius: AppRadii.pill),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: AppRadii.pill,
+        border: tone == _Tone.neutral ? Border.all(color: t.border) : null,
+      ),
       child: Text(
         label,
         style: TextStyle(
@@ -59,7 +64,11 @@ class AppBadge extends StatelessWidget {
       };
 
   /// Buckets every status into a semantic tone. Terminal-positive → success,
-  /// in-flight/awaiting → warning, cancelled/failed → error.
+  /// owner-action-needed / in-flight → warning, cancelled/failed → error,
+  /// healthy resting state → neutral. NEW and payment-PENDING are neutral so
+  /// a fresh order never shows two amber pills — caution is reserved for
+  /// states that actually ask for attention (PAYMENT_RECEIVED above all).
+  /// Mirrors the web Badge component.
   _Tone _tone(String s) {
     switch (s) {
       case 'READY':
@@ -72,12 +81,15 @@ class AppBadge extends StatelessWidget {
       case 'CANCELLED':
       case 'NO_SHOW':
         return _Tone.error;
+      case 'NEW':
+      case 'PENDING':
+        return _Tone.neutral;
       default:
-        // NEW, PREPARING, PENDING, PAYMENT_RECEIVED, REQUESTED, PROPOSAL_SENT,
+        // PREPARING, PAYMENT_RECEIVED, REQUESTED, PROPOSAL_SENT,
         // IN_PROGRESS, REVIEW, SUBMITTED_FOR_REVIEW, UNPAID, …
         return _Tone.warning;
     }
   }
 }
 
-enum _Tone { success, warning, error }
+enum _Tone { success, warning, error, neutral }

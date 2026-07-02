@@ -57,18 +57,18 @@ export default function ProfilePage() {
         <Card>
           <div className="space-y-3">
             <div className="flex justify-between items-center py-2 border-b border-border">
-              <p className="text-sm text-text-2">{t('profile.phone')}</p>
-              <p className="text-sm font-medium text-text-1">{phone ?? '—'}</p>
+              <p className="text-base text-text-2">{t('profile.phone')}</p>
+              <p className="text-base font-medium text-text-1">{phone ?? '—'}</p>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-border">
-              <p className="text-sm text-text-2">{t('profile.plan')}</p>
-              <p className="text-sm font-medium text-text-1">
+              <p className="text-base text-text-2">{t('profile.plan')}</p>
+              <p className="text-base font-medium text-text-1">
                 {business.plan ?? 'FREE'}
               </p>
             </div>
             <div className="flex justify-between items-center py-2">
-              <p className="text-sm text-text-2">{t('settings.telegramBot')}</p>
-              <p className="text-sm font-medium text-text-1">
+              <p className="text-base text-text-2">{t('settings.telegramBot')}</p>
+              <p className="text-base font-medium text-text-1">
                 {business.botUsername ? `@${business.botUsername}` : '—'}
               </p>
             </div>
@@ -79,7 +79,7 @@ export default function ProfilePage() {
         <Link href="/settings" className="block">
           <Card className="flex items-center gap-3 hover:bg-surface-2 transition-colors cursor-pointer">
             <Icon name="settings" size={20} className="text-text-2" />
-            <span className="flex-1 text-sm font-medium text-text-1">
+            <span className="flex-1 text-base font-medium text-text-1">
               {t('profile.businessSettings')}
             </span>
             <Icon name="menu" size={18} className="text-text-3" />

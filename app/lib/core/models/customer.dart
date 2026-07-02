@@ -201,6 +201,60 @@ class Customer {
 
 // ── Detail model ──────────────────────────────────────────────────────
 
+/// A customer's past appointment — history row on Customer Detail.
+class CustomerAppointment {
+  final String id;
+  final String serviceName;
+  final DateTime startTime;
+  final String status;
+  final int price;
+
+  const CustomerAppointment({
+    required this.id,
+    required this.serviceName,
+    required this.startTime,
+    required this.status,
+    required this.price,
+  });
+
+  factory CustomerAppointment.fromJson(Map<String, dynamic> json) =>
+      CustomerAppointment(
+        id: json['id'] as String,
+        serviceName:
+            (json['service'] as Map<String, dynamic>?)?['name'] as String? ??
+                '',
+        startTime: DateTime.parse(json['startTime'] as String),
+        status: json['status'] as String,
+        price: (json['price'] as num).toInt(),
+      );
+}
+
+/// A customer's project — history row on Customer Detail.
+class CustomerProject {
+  final String id;
+  final String name;
+  final int totalPrice;
+  final String status;
+  final DateTime createdAt;
+
+  const CustomerProject({
+    required this.id,
+    required this.name,
+    required this.totalPrice,
+    required this.status,
+    required this.createdAt,
+  });
+
+  factory CustomerProject.fromJson(Map<String, dynamic> json) =>
+      CustomerProject(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        totalPrice: (json['totalPrice'] as num).toInt(),
+        status: json['status'] as String,
+        createdAt: DateTime.parse(json['createdAt'] as String),
+      );
+}
+
 class CustomerDetail {
   final String id;
   final String name;
@@ -215,6 +269,8 @@ class CustomerDetail {
   final List<CustomerTag> tags;
   final List<Reminder> reminders;
   final List<Order> orders;
+  final List<CustomerAppointment> appointments;
+  final List<CustomerProject> projects;
   final DateTime lastInteractionAt;
   final DateTime createdAt;
 
@@ -232,6 +288,8 @@ class CustomerDetail {
     required this.tags,
     required this.reminders,
     required this.orders,
+    this.appointments = const [],
+    this.projects = const [],
     required this.lastInteractionAt,
     required this.createdAt,
   });
@@ -271,6 +329,8 @@ class CustomerDetail {
         tags: tags ?? this.tags,
         reminders: reminders ?? this.reminders,
         orders: orders,
+        appointments: appointments,
+        projects: projects,
         lastInteractionAt: lastInteractionAt,
         createdAt: createdAt,
       );
@@ -309,6 +369,12 @@ class CustomerDetail {
           .toList(),
       orders: (json['orders'] as List? ?? [])
           .map((e) => Order.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      appointments: (json['appointments'] as List? ?? [])
+          .map((e) => CustomerAppointment.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      projects: (json['projects'] as List? ?? [])
+          .map((e) => CustomerProject.fromJson(e as Map<String, dynamic>))
           .toList(),
       lastInteractionAt:
           DateTime.parse(json['lastInteractionAt'] as String),
@@ -385,6 +451,7 @@ class PendingPayment {
   final int total;
   final String customerId;
   final String customerName;
+  final DateTime updatedAt;
 
   const PendingPayment({
     required this.id,
@@ -392,6 +459,7 @@ class PendingPayment {
     required this.total,
     required this.customerId,
     required this.customerName,
+    required this.updatedAt,
   });
 
   factory PendingPayment.fromJson(Map<String, dynamic> json) {
@@ -402,6 +470,43 @@ class PendingPayment {
       total: (json['total'] as num).toInt(),
       customerId: customer['id'] as String,
       customerName: customer['name'] as String,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
+}
+
+/// In-advance appointment awaiting payment confirmation — merged with
+/// [PendingPayment] into the home payment queue.
+class PendingApptPayment {
+  final String id;
+  final String serviceName;
+  final int price;
+  final String customerId;
+  final String customerName;
+  final DateTime updatedAt;
+
+  const PendingApptPayment({
+    required this.id,
+    required this.serviceName,
+    required this.price,
+    required this.customerId,
+    required this.customerName,
+    required this.updatedAt,
+  });
+
+  factory PendingApptPayment.fromJson(Map<String, dynamic> json) {
+    final customer = json['customer'] as Map<String, dynamic>;
+    return PendingApptPayment(
+      id: json['id'] as String,
+      serviceName: json['serviceName'] as String,
+      price: (json['price'] as num).toInt(),
+      customerId: customer['id'] as String,
+      customerName: customer['name'] as String,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 }
@@ -535,6 +640,7 @@ class HomeData {
   final List<DormantCustomer> dormantCustomers;
   final List<Order> todayOrders;
   final List<PendingPayment> pendingPayments;
+  final List<PendingApptPayment> pendingAppointmentPayments;
   final List<SimpleCustomer> newCustomers;
   final List<HomeAppointment> todayAppointments;
   final List<HomeAppointment> recentCancellations;
@@ -547,6 +653,7 @@ class HomeData {
     required this.dormantCustomers,
     required this.todayOrders,
     required this.pendingPayments,
+    required this.pendingAppointmentPayments,
     required this.newCustomers,
     required this.todayAppointments,
     required this.recentCancellations,

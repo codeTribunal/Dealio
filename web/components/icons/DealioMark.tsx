@@ -35,9 +35,12 @@ export function DealioMark({
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* filled lower-right quarter */}
+      {/* filled lower-right quarter — inset to the stroke's INNER edge (r=25,
+          not the r=30 centerline) so the dark ring keeps its full 10u weight
+          on every quadrant. Decided in the logo critique; the master geometry
+          lives in app/assets/branding/mark.svg — keep in sync. */}
       <path
-        d="M65 55H95C95 62.9565 91.8393 70.5871 86.2132 76.2132C80.5871 81.8393 72.9565 85 65 85V55Z"
+        d="M65 55H90C90 61.6304 87.3661 67.9893 82.6777 72.6777C77.9893 77.3661 71.6304 80 65 80V55Z"
         fill="#3C83F6"
       />
       {/* accent dot */}

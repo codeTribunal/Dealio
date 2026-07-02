@@ -110,7 +110,7 @@ export default function CustomersPage() {
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
-            <p className="text-sm text-error-strong">{error}</p>
+            <p className="text-base text-error-strong">{error}</p>
             <Button
               variant="ghost"
               size="sm"
@@ -126,7 +126,7 @@ export default function CustomersPage() {
         ) : (customers ?? []).length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
             <Icon name="customers" size={40} className="text-text-3" />
-            <p className="text-sm text-text-2">
+            <p className="text-base text-text-2">
               {search ? t('customers.emptyFiltered') : t('customers.empty')}
             </p>
           </div>
@@ -139,7 +139,7 @@ export default function CustomersPage() {
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-text-1 truncate">{customer.name}</p>
+                    <p className="text-base font-semibold text-text-1 truncate">{customer.name}</p>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-pill text-xs font-semibold bg-error-soft text-error-strong">
                       {t('common.deletedBadge')}
                     </span>

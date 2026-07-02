@@ -3,13 +3,16 @@ import { useState, useEffect } from 'react'
 import { Users, Plus, X, Send, Pencil, CheckCircle, AlertCircle } from 'lucide-react'
 import AuthLayout from '@/components/AuthLayout'
 import LoadingSpinner from '@/components/LoadingSpinner'
+import { SlideOver } from '@/components/ui/SlideOver'
 import { getStaff, createStaff, updateStaff, deleteStaff, getServices } from '@/lib/api'
 import { getInitials, formatUZS, formatDate } from '@/lib/format'
+import { useI18n } from '@/lib/i18n/i18nContext'
 import type { StaffMember, Service } from '@/types'
 
 export default function StaffPage() {
   // Staff is available in all modes (no useModeGuard) — Orders & Projects
   // businesses have staff too. The page renders behind its own loading state.
+  const { t } = useI18n()
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
@@ -36,7 +39,7 @@ export default function StaffPage() {
         setStaff(staffData)
         setServices(servicesData)
       })
-      .catch(() => setError('Failed to load staff'))
+      .catch(() => setError(t('staff.failedLoad')))
       .finally(() => setLoading(false))
   }
 
@@ -89,11 +92,11 @@ export default function StaffPage() {
 
   const handleSave = async () => {
     if (!formName.trim()) {
-      setFormError('Name is required')
+      setFormError(t('staff.nameRequired'))
       return
     }
     if (formServiceIds.length === 0) {
-      setFormError('Select at least one service')
+      setFormError(t('staff.serviceRequired'))
       return
     }
     setSaving(true)
@@ -114,7 +117,7 @@ export default function StaffPage() {
       }
       handleClose()
     } catch {
-      setFormError('Failed to save. Please try again.')
+      setFormError(t('scheduling.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -128,7 +131,7 @@ export default function StaffPage() {
       setStaff((prev) => prev.filter((s) => s.id !== editingStaff.id))
       handleClose()
     } catch {
-      setFormError('Failed to delete. Please try again.')
+      setFormError(t('scheduling.deleteFailed'))
     } finally {
       setDeleting(false)
     }
@@ -141,21 +144,21 @@ export default function StaffPage() {
   }
 
   return (
-    <AuthLayout title="Staff">
+    <AuthLayout title={t('nav.staff')}>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-text-1">Staff</h1>
+          <h1 className="text-2xl font-bold text-text-1">{t('nav.staff')}</h1>
           <p className="text-sm text-text-2 mt-1">
-            {staff.length} team member{staff.length === 1 ? '' : 's'}
+            {t('staff.memberCount', { count: staff.length })}
           </p>
         </div>
         {staff.length > 0 && (
           <button
             onClick={handleNew}
-            className="flex items-center gap-2 px-4 py-2.5 bg-accent text-accent-on rounded-xl text-sm font-semibold hover:bg-accent-hover transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-accent text-accent-on rounded-xl text-base font-semibold hover:bg-accent-hover transition-colors"
           >
             <Plus size={16} />
-            Add staff member
+            {t('staff.addMember')}
           </button>
         )}
       </div>
@@ -164,27 +167,27 @@ export default function StaffPage() {
         <LoadingSpinner />
       ) : error ? (
         <div className="text-center py-16">
-          <p className="text-sm text-error-strong mb-3">{error}</p>
+          <p className="text-base text-error-strong mb-3">{error}</p>
           <button
             onClick={() => { setError(null); fetchData() }}
-            className="text-sm text-accent hover:underline"
+            className="text-base text-accent hover:underline"
           >
-            Try again
+            {t('common.tryAgain')}
           </button>
         </div>
       ) : staff.length === 0 ? (
         <div className="text-center py-16">
           <Users className="w-12 h-12 text-text-3 mx-auto mb-4" />
-          <p className="text-text-2 text-sm mb-2">No staff members yet</p>
+          <p className="text-text-2 text-base mb-2">{t('staff.empty')}</p>
           <p className="text-xs text-text-3 mb-6">
-            Add your first team member to start assigning appointments
+            {t('staff.emptyHint')}
           </p>
           <button
             onClick={handleNew}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent text-accent-on rounded-xl text-sm font-semibold hover:bg-accent-hover transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-accent text-accent-on rounded-xl text-base font-semibold hover:bg-accent-hover transition-colors"
           >
             <Plus size={16} />
-            Add staff member
+            {t('staff.addMember')}
           </button>
         </div>
       ) : (
@@ -208,7 +211,7 @@ export default function StaffPage() {
                         <p className="text-xs text-accent">@{member.telegramHandle}</p>
                       </div>
                     ) : (
-                      <p className="text-xs text-text-3 mt-0.5">No Telegram handle</p>
+                      <p className="text-xs text-text-3 mt-0.5">{t('staff.noTelegramHandle')}</p>
                     )}
                   </div>
                 </div>
@@ -218,10 +221,10 @@ export default function StaffPage() {
               </div>
 
               <p className="text-xs font-medium text-text-2 uppercase tracking-wider mb-2">
-                Services
+                {t('nav.services')}
               </p>
               {member.staffServices.length === 0 ? (
-                <p className="text-xs text-text-3">No services assigned</p>
+                <p className="text-xs text-text-3">{t('staff.noServicesAssigned')}</p>
               ) : (
                 <>
                   <div className="flex flex-wrap gap-1.5">
@@ -235,7 +238,7 @@ export default function StaffPage() {
                     ))}
                   </div>
                   <p className="text-xs text-text-3 mt-2">
-                    {member.staffServices.length} service{member.staffServices.length === 1 ? '' : 's'}
+                    {t('staff.serviceCount', { count: member.staffServices.length })}
                   </p>
                 </>
               )}
@@ -244,72 +247,62 @@ export default function StaffPage() {
         </div>
       )}
 
-      {showForm && (
-        <div className="fixed inset-0 z-40 flex justify-end">
-          <div className="absolute inset-0 bg-black/20" onClick={handleClose} />
-          <div className="relative z-50 w-full md:max-w-md bg-white shadow-2xl flex flex-col h-full">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
-              <p className="text-lg font-bold text-text-1">
-                {editingStaff ? 'Edit staff member' : 'New staff member'}
-              </p>
-              <button
-                onClick={handleClose}
-                className="p-2 rounded-lg hover:bg-surface-2 transition-colors"
-              >
-                <X size={20} className="text-text-2" />
-              </button>
-            </div>
-
+      <SlideOver
+        open={showForm}
+        onClose={handleClose}
+        title={editingStaff ? t('staff.editMember') : t('staff.newMember')}
+        closeLabel={t('common.close')}
+        maxWidth="md:max-w-md"
+      >
             {/* Body */}
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Full name *
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('staff.fullName')} *
                 </label>
                 <input
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="e.g. Aziz Karimov"
-                  className="w-full px-4 py-2.5 border border-border rounded-xl text-sm text-text-1 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                  placeholder={t('staff.namePlaceholder')}
+                  className="w-full px-4 py-2.5 border border-border rounded-xl text-base text-text-1 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                 />
               </div>
 
               {/* Telegram handle */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Telegram handle
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('staff.telegramHandle')}
                 </label>
                 <p className="text-xs text-text-3 mb-1.5">
-                  Optional — for sending schedule notifications
+                  {t('staff.telegramHint')}
                 </p>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-3 text-sm font-medium">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-3 text-base font-medium">
                     @
                   </span>
                   <input
                     type="text"
                     value={formTelegramHandle}
                     onChange={(e) => setFormTelegramHandle(e.target.value.replace('@', ''))}
-                    placeholder="username"
-                    className="w-full pl-8 pr-4 py-2.5 border border-border rounded-xl text-sm text-text-1 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                    placeholder={t('staff.usernamePlaceholder')}
+                    className="w-full pl-8 pr-4 py-2.5 border border-border rounded-xl text-base text-text-1 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                   />
                 </div>
               </div>
 
               {/* Services */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Services performed *
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('staff.servicesPerformed')} *
                 </label>
                 <p className="text-xs text-text-3 mb-3">
-                  Select at least one service this staff member can perform
+                  {t('staff.servicesHint')}
                 </p>
                 {services.length === 0 ? (
-                  <p className="text-sm text-text-3 py-4 text-center">
-                    No services defined. Add services in Settings first.
+                  <p className="text-base text-text-3 py-4 text-center">
+                    {t('staff.noServicesDefined')}
                   </p>
                 ) : (
                   <div className="space-y-2">
@@ -327,9 +320,9 @@ export default function StaffPage() {
                           }`}
                         >
                           <div>
-                            <p className="text-sm font-semibold text-text-1">{service.name}</p>
+                            <p className="text-base font-semibold text-text-1">{service.name}</p>
                             <p className="text-xs text-text-2 mt-0.5">
-                              {service.durationMinutes} min • {formatUZS(service.price)}
+                              {t('staff.durationMin', { n: service.durationMinutes })} • {formatUZS(service.price)}
                             </p>
                           </div>
                           {selected ? (
@@ -346,11 +339,11 @@ export default function StaffPage() {
 
               {/* Days off */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Days off
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('staff.daysOff')}
                 </label>
                 <p className="text-xs text-text-3 mb-3">
-                  Specific dates this staff member is unavailable
+                  {t('staff.daysOffHint')}
                 </p>
                 <div className="flex items-center gap-2">
                   <input
@@ -358,16 +351,16 @@ export default function StaffPage() {
                     value={dayOffInput}
                     min={new Date().toISOString().split('T')[0]}
                     onChange={(e) => setDayOffInput(e.target.value)}
-                    className="flex-1 px-4 py-2.5 border border-border rounded-xl text-sm text-text-1 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                    className="flex-1 px-4 py-2.5 border border-border rounded-xl text-base text-text-1 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                   />
                   <button
                     type="button"
                     onClick={addDayOff}
                     disabled={!dayOffInput}
-                    className="flex items-center gap-1.5 px-4 py-2.5 bg-accent text-accent-on rounded-xl text-sm font-semibold hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-accent text-accent-on rounded-xl text-base font-semibold hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <Plus size={16} />
-                    Add
+                    {t('common.add')}
                   </button>
                 </div>
                 {formDaysOff.length > 0 && (
@@ -381,7 +374,7 @@ export default function StaffPage() {
                         <button
                           type="button"
                           onClick={() => removeDayOff(date)}
-                          aria-label={`Remove ${date}`}
+                          aria-label={t('staff.removeDate', { date: formatDate(date + 'T00:00:00') })}
                           className="text-text-3 hover:text-error-strong transition-colors"
                         >
                           <X size={14} />
@@ -396,7 +389,7 @@ export default function StaffPage() {
               {formError && (
                 <div className="flex items-center gap-2 p-3 bg-error-soft border border-error-soft rounded-xl">
                   <AlertCircle size={16} className="text-error-strong flex-shrink-0" />
-                  <p className="text-sm text-error-strong">{formError}</p>
+                  <p className="text-base text-error-strong">{formError}</p>
                 </div>
               )}
             </div>
@@ -406,9 +399,9 @@ export default function StaffPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="w-full py-3 bg-accent text-accent-on rounded-xl text-sm font-semibold hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full py-3 bg-accent text-accent-on rounded-xl text-base font-semibold hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {saving ? 'Saving...' : editingStaff ? 'Save changes' : 'Add staff member'}
+                {saving ? t('staff.saving') : editingStaff ? t('common.saveChanges') : t('staff.addMember')}
               </button>
 
               {editingStaff && (
@@ -416,31 +409,31 @@ export default function StaffPage() {
                   {!showDeleteConfirm ? (
                     <button
                       onClick={() => setShowDeleteConfirm(true)}
-                      className="w-full py-3 border border-error-soft text-error-strong rounded-xl text-sm font-semibold hover:bg-error-soft transition-colors"
+                      className="w-full py-3 border border-error-soft text-error-strong rounded-xl text-base font-semibold hover:bg-error-soft transition-colors"
                     >
-                      Remove staff member
+                      {t('staff.removeMember')}
                     </button>
                   ) : (
                     <div className="p-4 bg-error-soft border border-error-soft rounded-xl">
-                      <p className="text-sm font-semibold text-error-strong mb-1">
-                        Remove {editingStaff.name}?
+                      <p className="text-base font-semibold text-error-strong mb-1">
+                        {t('staff.removeConfirmTitle', { name: editingStaff.name })}
                       </p>
                       <p className="text-xs text-error-strong mb-3">
-                        This will unassign them from all future appointments.
+                        {t('staff.removeConfirmBody')}
                       </p>
                       <div className="flex gap-2">
                         <button
                           onClick={handleDelete}
                           disabled={deleting}
-                          className="flex-1 py-2.5 border border-error-soft text-error-strong rounded-xl text-sm font-medium hover:bg-error-soft disabled:opacity-50 transition-colors"
+                          className="flex-1 py-2.5 border border-error-soft text-error-strong rounded-xl text-base font-medium hover:bg-error-soft disabled:opacity-50 transition-colors"
                         >
-                          {deleting ? 'Removing...' : 'Yes, remove'}
+                          {deleting ? t('staff.removing') : t('common.yesDelete')}
                         </button>
                         <button
                           onClick={() => setShowDeleteConfirm(false)}
-                          className="flex-1 py-2.5 border border-border text-text-2 rounded-xl text-sm font-medium hover:bg-surface-2 transition-colors"
+                          className="flex-1 py-2.5 border border-border text-text-2 rounded-xl text-base font-medium hover:bg-surface-2 transition-colors"
                         >
-                          Cancel
+                          {t('common.cancel')}
                         </button>
                       </div>
                     </div>
@@ -448,9 +441,7 @@ export default function StaffPage() {
                 </>
               )}
             </div>
-          </div>
-        </div>
-      )}
+      </SlideOver>
     </AuthLayout>
   )
 }

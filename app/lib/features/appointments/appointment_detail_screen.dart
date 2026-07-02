@@ -160,12 +160,46 @@ class _AppointmentDetailState extends ConsumerState<_AppointmentDetail> {
   }
 
   Future<void> _confirmPayment() async {
+    final l = AppLocalizations.of(context)!;
+    final amount = formatUZS(_appt.price);
+
+    // Money moment: restate the exact amount and customer before the
+    // irreversible confirm, and acknowledge success — never a silent flip
+    // (PRODUCT.md: "earn trust wherever money appears").
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AppDialog(
+        title: l.paymentConfirmTitle,
+        content: Text(l.paymentConfirmBody(amount, _appt.customer.name)),
+        actions: [
+          AppButton(
+            label: l.buttonCancel,
+            variant: AppButtonVariant.ghost,
+            onPressed: () => Navigator.of(ctx).pop(false),
+          ),
+          AppButton(
+            label: l.paymentConfirmAction,
+            onPressed: () => Navigator.of(ctx).pop(true),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
     setState(() => _updatingPayment = true);
     try {
       final updated = await ref
           .read(appointmentsProvider.notifier)
           .confirmPayment(_appt.id);
-      if (mounted) setState(() => _appt = updated);
+      if (mounted) {
+        setState(() => _appt = updated);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l.paymentConfirmedSnack(amount)),
+            backgroundColor: AppTokens.of(context).success,
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

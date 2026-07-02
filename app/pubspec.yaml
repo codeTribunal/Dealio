@@ -67,18 +67,24 @@ flutter:
   assets:
     - assets/branding/
 
-# Dealio launcher icon — Android only (launch is Android-only).
-# Source: assets/branding/icon_padded.png — paper (#FAFAF8) square with the D mark
-# at ~60% (20% padding each side), so the OS adaptive mask can't clip it. inset:0
-# avoids double-padding since the source already carries the safe-zone padding.
-# Adaptive background = same paper so the masked bleed zone reads as continuous.
+# Dealio launcher icon — Android only (launch is Android-only). All rasters are
+# generated from the canonical flat geometry in assets/branding/mark.svg:
+#  - icon_padded.png     legacy full-bleed paper (#FAFAF8) square, mark at 60% width
+#  - icon_foreground.png TRANSPARENT adaptive foreground, mark sized so its
+#                        diagonal fits the 66/108 safe-zone circle (no baked
+#                        plate — the background layer below supplies the paper,
+#                        so the OS mask/parallax work as designed)
+#  - icon_monochrome.png white mark, same layout — Android 13+ themed icons
+#  - play_store_512.png  Play listing icon (uploaded manually, not consumed here)
+# inset:0 because the safe-zone padding is baked into the foreground raster.
 flutter_launcher_icons:
   android: true
   ios: false
   image_path: "assets/branding/icon_padded.png"
   adaptive_icon_background: "#FAFAF8"
-  adaptive_icon_foreground: "assets/branding/icon_padded.png"
+  adaptive_icon_foreground: "assets/branding/icon_foreground.png"
   adaptive_icon_foreground_inset: 0
+  adaptive_icon_monochrome: "assets/branding/icon_monochrome.png"
   remove_alpha_ios: false
   min_sdk_android: 21
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
+import '../../core/auth/auth_notifier.dart';
 import '../../core/icons/app_icon.dart';
 import '../../core/models/customer.dart';
 import '../../core/theme/app_tokens.dart';
@@ -10,6 +10,7 @@ import '../../features/settings/customization_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_avatar.dart';
+import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_dialog.dart';
@@ -148,6 +149,11 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                 const SizedBox(height: AppSpacing.s3),
                 _StatsRow(customer: customer),
                 const SizedBox(height: AppSpacing.s3),
+                // The core CRM question — "what did this person buy last
+                // time?" — answered on the screen where it's asked. Mirrors
+                // the web customer detail's mode-relevant history column.
+                _HistoryCard(customer: customer),
+                const SizedBox(height: AppSpacing.s3),
                 _RemindersCard(customer: customer, notifier: notifier),
                 const SizedBox(height: AppSpacing.s3),
                 _NotesCard(
@@ -169,6 +175,177 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+// ── History card ──────────────────────────────────────────────────────
+
+/// Mode-relevant purchase history: PRODUCTS → orders, SERVICES →
+/// appointments, FREELANCE → projects (mirrors the web customer detail's
+/// history column). Shows the 5 most recent with status + amount and
+/// tap-through to the existing detail screens.
+class _HistoryCard extends ConsumerWidget {
+  final CustomerDetail customer;
+  const _HistoryCard({required this.customer});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    final mode =
+        ref.watch(authNotifierProvider).state?.business?.mode ?? 'SERVICES';
+
+    final List<_HistoryEntry> rows;
+    final String emptyLabel;
+    if (mode == 'PRODUCTS') {
+      emptyLabel = l.customerHistoryEmptyOrders;
+      rows = [
+        for (final o in customer.orders)
+          _HistoryEntry(
+            route: '/orders/${o.id}',
+            title: l.orderNumberLabel(o.orderNumber),
+            at: o.createdAt,
+            status: o.orderStatus,
+            badgeType: AppBadgeType.order,
+            amount: o.total,
+          ),
+      ];
+    } else if (mode == 'FREELANCE') {
+      emptyLabel = l.customerHistoryEmptyProjects;
+      rows = [
+        for (final p in customer.projects)
+          _HistoryEntry(
+            route: '/projects/${p.id}',
+            title: p.name,
+            at: p.createdAt,
+            status: p.status,
+            badgeType: AppBadgeType.project,
+            amount: p.totalPrice,
+          ),
+      ];
+    } else {
+      emptyLabel = l.customerHistoryEmptyAppointments;
+      rows = [
+        for (final a in customer.appointments)
+          _HistoryEntry(
+            route: '/appointments/${a.id}',
+            title: a.serviceName,
+            at: a.startTime,
+            status: a.status,
+            badgeType: AppBadgeType.appointment,
+            amount: a.price,
+          ),
+      ];
+    }
+
+    final visible = rows.take(5).toList();
+
+    return AppCard(
+      header: AppCardHeader(title: l.customerHistoryTitle),
+      child: rows.isEmpty
+          ? Text(
+              emptyLabel,
+              style: TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < visible.length; i++) ...[
+                  if (i > 0)
+                    Divider(
+                      height: AppSpacing.s4,
+                      thickness: 1,
+                      color: t.border,
+                    ),
+                  _HistoryRow(entry: visible[i]),
+                ],
+                if (rows.length > 5) ...[
+                  const SizedBox(height: AppSpacing.s3),
+                  Text(
+                    l.customerHistoryMore(rows.length - 5),
+                    style: TextStyle(
+                      color: t.text2,
+                      fontSize: AppTextSizes.caption,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+    );
+  }
+}
+
+class _HistoryEntry {
+  final String route;
+  final String title;
+  final DateTime at;
+  final String status;
+  final AppBadgeType badgeType;
+  final int amount;
+
+  const _HistoryEntry({
+    required this.route,
+    required this.title,
+    required this.at,
+    required this.status,
+    required this.badgeType,
+    required this.amount,
+  });
+}
+
+class _HistoryRow extends StatelessWidget {
+  final _HistoryEntry entry;
+  const _HistoryRow({required this.entry});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => context.push(entry.route),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: AppFontWeights.semibold,
+                      color: t.text1,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    formatDate(entry.at),
+                    style: TextStyle(
+                      color: t.text2,
+                      fontSize: AppTextSizes.caption,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.s2),
+            AppBadge(status: entry.status, type: entry.badgeType),
+            const SizedBox(width: AppSpacing.s3),
+            Text(
+              formatUZS(entry.amount),
+              style: TextStyle(
+                fontWeight: AppFontWeights.bold,
+                color: t.text1,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -393,7 +570,7 @@ class _HeaderCard extends ConsumerWidget {
                     if (customer.birthday != null)
                       _InfoRow(
                         icon: AppIconName.calendar,
-                        text: DateFormat('d MMMM').format(customer.birthday!),
+                        text: formatDayMonth(customer.birthday!),
                       ),
                     _InfoRow(
                       icon: AppIconName.calendar,
@@ -742,7 +919,7 @@ class _RemindersCard extends StatelessWidget {
                       AppIcon(
                           name: AppIconName.calendar, size: 16, color: t.text2),
                       const SizedBox(width: AppSpacing.s2),
-                      Text(DateFormat('d MMM yyyy').format(pickedDate),
+                      Text(formatDate(pickedDate),
                           style: TextStyle(color: t.text1)),
                     ],
                   ),
@@ -862,7 +1039,7 @@ class _ReminderRow extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  DateFormat('d MMM yyyy').format(reminder.dueDate),
+                  formatDate(reminder.dueDate),
                   style: TextStyle(
                     fontSize: AppTextSizes.caption,
                     color: dateColor,
@@ -1131,7 +1308,7 @@ class _FieldValueEditor extends StatelessWidget {
       final displayDate = value.isNotEmpty
           ? () {
               try {
-                return DateFormat('d MMM yyyy').format(DateTime.parse(value));
+                return formatDate(DateTime.parse(value));
               } catch (_) {
                 return value;
               }

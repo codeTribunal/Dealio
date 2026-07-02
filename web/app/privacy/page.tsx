@@ -100,7 +100,7 @@ export default function PrivacyPage() {
         </div>
 
         {/* Footer: link to the OTHER document using a relative path. */}
-        <footer className="mt-16 border-t border-border pt-6 text-sm">
+        <footer className="mt-16 border-t border-border pt-6 text-base">
           <Link
             href="/offer"
             className="text-accent underline underline-offset-4"

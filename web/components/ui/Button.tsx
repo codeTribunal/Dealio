@@ -55,6 +55,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       disabled={isDisabled}
       className={[
+        // Keyboard focus visibility comes from the global :focus-visible
+        // outline in globals.css (one indicator, no double ring).
         'inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-colors',
         VARIANT_CLASSES[variant],
         SIZE_CLASSES[size],

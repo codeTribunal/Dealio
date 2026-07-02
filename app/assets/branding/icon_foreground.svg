@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <title>Dealio adaptive icon — foreground layer</title>
+  <!-- Adaptive-icon FOREGROUND composition (transparent; the launcher supplies
+       the #FAFAF8 background layer). Canvas 1024 = the 108dp adaptive canvas;
+       the launcher shows the center 72/108 (683px) and masks it.
+       Geometry: mark_small.svg (the enlarged-dot cut — a 48dp launcher tile
+       renders the mark at ~27dp; the standard r=5 dot would be a ~2px dead
+       pixel).
+       Proportioning: ~10% past the Material wide-rect keyline by choice —
+       ink 446×357px (47×38dp equiv. vs the 52×36 keyline), D letterform 49%
+       of the visible viewport, ink diagonal 572px inside the 626px (66/108)
+       safe-zone circle with ~27px clearance, ≥118px optical margins.
+       Transform: scale 5.1, translate = 512 − ink bbox center (56.25, 55)·5.1. -->
+  <g transform="translate(225.125 231.5) scale(5.1)">
+    <path d="M40 25V85H65C72.9565 85 80.5871 81.8393 86.2132 76.2132C91.8393 70.5871 95 62.9565 95 55C95 47.0435 91.8393 39.4129 86.2132 33.7868C80.5871 28.1607 72.9565 25 65 25H40Z" stroke="#0F1729" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M65 55H90C90 61.6304 87.3661 67.9893 82.6777 72.6777C77.9893 77.3661 71.6304 80 65 80V55Z" fill="#3C83F6"/>
+    <circle cx="20" cy="55" r="7.5" fill="#3C83F6"/>
+  </g>
+</svg>

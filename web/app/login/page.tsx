@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { DealioMark } from '@/components/icons/DealioMark'
 import { loginRequest, loginVerify } from '@/lib/api'
 import { setToken } from '@/lib/auth'
 import { useI18n } from '@/lib/i18n/i18nContext'
@@ -66,9 +67,7 @@ export default function LoginPage() {
 
       <Card padded={false} className="relative w-full max-w-md shadow-lg p-8 sm:p-10">
         <div className="flex items-center justify-between mb-6">
-          <div className="w-11 h-11 rounded-md bg-accent text-accent-on flex items-center justify-center font-extrabold text-lg shadow-accent">
-            C
-          </div>
+          <DealioMark size={44} className="flex-shrink-0" />
           <LanguageSwitcher />
         </div>
 
@@ -83,7 +82,7 @@ export default function LoginPage() {
           <>
             <p className="text-sm text-text-2 mt-2 mb-6">{t('login.telegramSubtitle')}</p>
 
-            <label className="block text-sm font-medium text-text-2 mb-1.5">
+            <label className="block text-base font-medium text-text-2 mb-1.5">
               {t('login.phoneLabel')}
             </label>
             <Input
@@ -94,7 +93,7 @@ export default function LoginPage() {
               onKeyDown={(e) => e.key === 'Enter' && !loading && handleSendCode()}
             />
 
-            {error && <p className="text-sm text-error-strong mt-2">{error}</p>}
+            {error && <p className="text-base text-error-strong mt-2">{error}</p>}
 
             <div className="mt-5">
               <Button
@@ -112,7 +111,7 @@ export default function LoginPage() {
           <>
             <p className="text-sm text-text-2 mt-2 mb-6">{t('login.codeSent')}</p>
 
-            <label className="block text-sm font-medium text-text-2 mb-1.5">
+            <label className="block text-base font-medium text-text-2 mb-1.5">
               {t('login.verificationCode')}
             </label>
             <Input
@@ -125,7 +124,7 @@ export default function LoginPage() {
               onKeyDown={(e) => e.key === 'Enter' && !loading && handleVerify()}
             />
 
-            {error && <p className="text-sm text-error-strong mt-2">{error}</p>}
+            {error && <p className="text-base text-error-strong mt-2">{error}</p>}
 
             <div className="mt-5 space-y-2">
               <Button

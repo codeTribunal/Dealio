@@ -91,7 +91,7 @@ export default function DesignComponentsPage() {
             </Card>
             <Card padded={false}>
               <div className="px-5 py-4 border-b border-border">
-                <p className="text-sm font-semibold text-text-1">Card padded=false</p>
+                <p className="text-lg font-semibold text-text-1">Card padded=false</p>
               </div>
               <div className="px-5 py-4">
                 <p className="text-sm text-text-2">Section can manage its own padding.</p>
@@ -156,7 +156,7 @@ export default function DesignComponentsPage() {
 
         {/* QuickActions — the ONE neumorphic block */}
         <Section title="QuickActions — the only neumorphic surface">
-          <p className="text-sm text-text-2 mb-3">
+          <p className="text-base text-text-2 mb-3">
             Press a tile to see <code className="font-mono text-text-1">shadow-neu-inset</code>.
           </p>
           <QuickActions

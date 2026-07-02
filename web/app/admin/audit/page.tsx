@@ -48,13 +48,13 @@ export default function AdminAuditPage() {
 
         {loading && (
           <div className="px-5 py-8 text-center">
-            <p className="text-sm text-gray-500">Loading...</p>
+            <p className="text-base text-gray-500">Loading...</p>
           </div>
         )}
 
         {!loading && entries.length === 0 && (
           <div className="px-5 py-8 text-center">
-            <p className="text-sm text-gray-600">No audit entries</p>
+            <p className="text-base text-gray-600">No audit entries</p>
           </div>
         )}
 

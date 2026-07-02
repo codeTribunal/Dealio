@@ -2,7 +2,11 @@
   "@@locale": "en",
   "emptySearchTitle": "No results for \"{query}\"",
   "@emptySearchTitle": {
-    "placeholders": { "query": { "type": "String" } }
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
   },
   "emptyClearSearch": "Clear search",
   "emptyClearFilter": "Clear filter",
@@ -853,7 +857,60 @@
   "orderCreateError": "Couldn't create the order. Please try again.",
   "settingsPaymentCard": "PAYMENT CARD",
   "settingsPaymentHint": "Customers transfer to this card when they pay. It's shown in your Telegram bot at checkout.",
-  "settingsCardNumberLabel": "Card number",
   "settingsCardHolderLabel": "Cardholder name",
-  "settingsCardNotSet": "No payment card added yet."
+  "settingsCardNotSet": "No payment card added yet.",
+  "paymentConfirmTitle": "Confirm payment received?",
+  "paymentConfirmBody": "Confirm {amount} received from {name}? The customer will be notified.",
+  "@paymentConfirmBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentConfirmAction": "Yes, payment received",
+  "paymentConfirmedSnack": "Payment confirmed — {amount}",
+  "@paymentConfirmedSnack": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsCardInvalidLength": "Card number must be 16 digits",
+  "settingsCardInvalidPrefix": "Enter an Uzcard (8600) or Humo (9860) card number",
+  "homeQueueTitle": "Payments to confirm",
+  "homeQueueOrderMeta": "Order #{n}",
+  "@homeQueueOrderMeta": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "homeQueueViewAll": "View all {n}",
+  "@homeQueueViewAll": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "errorNoConnection": "No connection. Check your internet and try again.",
+  "errorServer": "Something went wrong on our side. Try again in a moment.",
+  "customerHistoryTitle": "History",
+  "customerHistoryEmptyOrders": "No orders yet",
+  "customerHistoryEmptyAppointments": "No appointments yet",
+  "customerHistoryEmptyProjects": "No projects yet",
+  "customerHistoryMore": "And {n} more",
+  "@customerHistoryMore": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  }
 }

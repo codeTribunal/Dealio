@@ -14,11 +14,10 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_avatar.dart';
 import '../../shared/widgets/app_badge.dart';
-import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/app_error_state.dart';
 import '../../shared/widgets/app_spinner.dart';
 import '../../shared/widgets/app_stat_card.dart';
-import '../../shared/widgets/hero_card.dart';
 import '../../shared/widgets/quick_actions.dart';
 import 'home_provider.dart';
 
@@ -34,7 +33,7 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(auth.state?.business?.name ?? 'CRM'),
+        title: Text(auth.state?.business?.name ?? 'Dealio'),
         actions: [
           IconButton(
             icon: AppIcon(name: AppIconName.analytics, color: t.text1),
@@ -51,7 +50,7 @@ class HomeScreen extends ConsumerWidget {
               child: GestureDetector(
                 onTap: () => context.push('/profile'),
                 child: AppAvatar(
-                  name: auth.state?.business?.name ?? 'CRM',
+                  name: auth.state?.business?.name ?? 'Dealio',
                   size: AppAvatarSize.sm,
                 ),
               ),
@@ -64,8 +63,8 @@ class HomeScreen extends ConsumerWidget {
         behavior: HitTestBehavior.translucent,
         child: homeAsync.when(
           loading: () => const Center(child: AppSpinner(size: 32)),
-          error: (e, _) => _ErrorView(
-            message: e.toString(),
+          error: (e, _) => AppErrorState(
+            error: e,
             onRetry: () => ref.read(homeProvider.notifier).refresh(),
           ),
           data: (data) {
@@ -93,27 +92,36 @@ class HomeScreen extends ConsumerWidget {
             ];
             activityItems.sort((a, b) => b.time.compareTo(a.time));
 
-            // Headline metric follows the business mode: appointments for a
+            // The "today" metric follows the business mode: appointments for a
             // services business, projects for freelance, orders for products.
             final mode = auth.state?.business?.mode ?? 'SERVICES';
-            final String heroLabel;
-            final int heroCount;
+            final String todayLabel;
+            final int todayCount;
+            final String todayRoute;
             if (mode == 'FREELANCE') {
-              heroLabel = l.homeHeroTodayProjects;
-              heroCount = data.todayProjects.length;
+              todayLabel = l.homeHeroTodayProjects;
+              todayCount = data.todayProjects.length;
+              todayRoute = '/projects';
             } else if (mode == 'PRODUCTS') {
-              heroLabel = l.homeHeroTodayOrders;
-              heroCount = data.todayOrders.length;
+              todayLabel = l.homeHeroTodayOrders;
+              todayCount = data.todayOrders.length;
+              todayRoute = '/orders';
             } else {
-              heroLabel = l.homeHeroTodayAppointments;
-              heroCount = data.todayAppointments.length;
+              todayLabel = l.homeHeroTodayAppointments;
+              todayCount = data.todayAppointments.length;
+              todayRoute = '/appointments';
             }
+
+            final hasQueue = data.pendingPayments.isNotEmpty ||
+                data.pendingAppointmentPayments.isNotEmpty;
 
             return RefreshIndicator(
               color: t.accent,
               onRefresh: () => ref.read(homeProvider.notifier).refresh(),
               child: ListView(
-                padding: EdgeInsets.fromLTRB(AppSpacing.s4, AppSpacing.s4,
+                padding: EdgeInsets.fromLTRB(
+                    AppSpacing.s4,
+                    AppSpacing.s4,
                     AppSpacing.s4,
                     AppSpacing.s6 + MediaQuery.of(context).padding.bottom),
                 children: [
@@ -125,16 +133,22 @@ class HomeScreen extends ConsumerWidget {
                   const _SearchBar(),
                   const SizedBox(height: AppSpacing.s5),
 
-                  // Headline metric — mode-aware (appointments / projects / orders)
-                  HeroCard(
-                    label: heroLabel,
-                    value: '$heroCount',
-                    sub: l.homePendingPaymentsCount(data.pendingPayments.length),
-                  ),
-                  const SizedBox(height: AppSpacing.s4),
+                  // Payment queue — the one thing the owner must act on.
+                  // Hidden when empty: the queue vanishing after the last
+                  // confirm IS the feedback, and home stays calm instead of
+                  // celebrating nothing.
+                  if (hasQueue) ...[
+                    _PaymentQueue(data: data),
+                    const SizedBox(height: AppSpacing.s4),
+                  ],
 
-                  // Summary stats
-                  _StatRow(data: data),
+                  // Summary stats — the old hero metric, demoted to a card
+                  _StatRow(
+                    data: data,
+                    todayLabel: todayLabel,
+                    todayCount: todayCount,
+                    todayRoute: todayRoute,
+                  ),
                   const SizedBox(height: AppSpacing.s5),
 
                   // Quick actions — secondary tools that aren't in the bottom nav
@@ -216,17 +230,217 @@ class _Greeting extends StatelessWidget {
   }
 }
 
-// ── Summary stats ────────────────────────────────────────────────────
+// ── Payment queue ────────────────────────────────────────────────────
 
-class _StatRow extends StatelessWidget {
+/// Customers who tapped "I have paid" and are waiting for the owner to
+/// confirm — orders and in-advance appointments, newest claim first. Rows
+/// navigate to the detail screen (payment proof + confirm sheet); the queue
+/// never confirms blind from home. Mirrors the web home queue card.
+class _PaymentQueue extends StatelessWidget {
   final HomeData data;
-  const _StatRow({required this.data});
+  const _PaymentQueue({required this.data});
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final pendingTotal =
-        data.pendingPayments.fold<int>(0, (sum, p) => sum + p.total);
+    final t = AppTokens.of(context);
+
+    final entries = <({
+      String route,
+      String name,
+      String meta,
+      int amount,
+      DateTime at,
+    })>[
+      for (final p in data.pendingPayments)
+        (
+          route: '/orders/${p.id}',
+          name: p.customerName,
+          meta: l.homeQueueOrderMeta(p.orderNumber),
+          amount: p.total,
+          at: p.updatedAt,
+        ),
+      for (final a in data.pendingAppointmentPayments)
+        (
+          route: '/appointments/${a.id}',
+          name: a.customerName,
+          meta: a.serviceName,
+          amount: a.price,
+          at: a.updatedAt,
+        ),
+    ]..sort((x, y) => y.at.compareTo(x.at));
+
+    final visible = entries.take(5).toList();
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: t.surface,
+        borderRadius: AppRadii.xl,
+        border: Border.all(color: t.border),
+        boxShadow: t.shadowSm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: t.accentSoft,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s4,
+              vertical: AppSpacing.s3,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l.homeQueueTitle,
+                    style: TextStyle(
+                      fontSize: AppTextSizes.base,
+                      fontWeight: AppFontWeights.bold,
+                      color: t.text1,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s2),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s2,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: t.accent,
+                    borderRadius: AppRadii.pill,
+                  ),
+                  child: Text(
+                    '${entries.length}',
+                    style: TextStyle(
+                      fontSize: AppTextSizes.sm,
+                      fontWeight: AppFontWeights.bold,
+                      color: t.accentOn,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          for (final e in visible) _QueueRow(entry: e),
+          if (entries.length > 5)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => context.go(
+                data.pendingPayments.isNotEmpty ? '/orders' : '/appointments',
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s4,
+                  vertical: AppSpacing.s3,
+                ),
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: t.border)),
+                ),
+                child: Text(
+                  l.homeQueueViewAll(entries.length),
+                  style: TextStyle(
+                    fontSize: AppTextSizes.sm,
+                    fontWeight: AppFontWeights.semibold,
+                    color: t.accent,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QueueRow extends StatelessWidget {
+  final ({
+    String route,
+    String name,
+    String meta,
+    int amount,
+    DateTime at
+  }) entry;
+  const _QueueRow({required this.entry});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTokens.of(context);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push(entry.route),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s4,
+          vertical: AppSpacing.s3,
+        ),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: t.border)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: AppTextSizes.base,
+                      fontWeight: AppFontWeights.semibold,
+                      color: t.text1,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    entry.meta,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: AppTextSizes.caption,
+                      color: t.text2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.s3),
+            Text(
+              formatUZS(entry.amount),
+              style: TextStyle(
+                fontSize: AppTextSizes.base,
+                fontWeight: AppFontWeights.bold,
+                color: t.text1,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Summary stats ────────────────────────────────────────────────────
+
+class _StatRow extends StatelessWidget {
+  final HomeData data;
+  final String todayLabel;
+  final int todayCount;
+  final String todayRoute;
+  const _StatRow({
+    required this.data,
+    required this.todayLabel,
+    required this.todayCount,
+    required this.todayRoute,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     // IntrinsicHeight + stretch keeps both cards the same height even when one
     // label wraps to two lines and the other doesn't.
     return IntrinsicHeight(
@@ -234,12 +448,10 @@ class _StatRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            // Product-seller mode disabled — the Orders route is unreachable,
-            // so this metric is shown but no longer links there.
             child: AppStatCard(
-              label: l.homeStatPending,
-              value: formatUZS(pendingTotal),
-              money: pendingTotal > 0,
+              label: todayLabel,
+              value: '$todayCount',
+              onTap: () => context.go(todayRoute),
             ),
           ),
           const SizedBox(width: AppSpacing.s3),
@@ -363,13 +575,12 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
             style: TextStyle(fontSize: AppTextSizes.base, color: t.text1),
             decoration: InputDecoration(
               hintText: l.homeSearchHint,
-              hintStyle:
-                  TextStyle(fontSize: AppTextSizes.base, color: t.text3),
+              hintStyle: TextStyle(fontSize: AppTextSizes.base, color: t.text3),
               prefixIcon: Padding(
                 padding: const EdgeInsets.only(
                     left: AppSpacing.s4, right: AppSpacing.s2),
-                child: AppIcon(
-                    name: AppIconName.search, size: 20, color: t.text2),
+                child:
+                    AppIcon(name: AppIconName.search, size: 20, color: t.text2),
               ),
               prefixIconConstraints:
                   const BoxConstraints(minWidth: 0, minHeight: 0),
@@ -439,12 +650,14 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
                             subtitle: Text(
                               subtitle,
                               style: TextStyle(
-                                  color: t.text2, fontSize: AppTextSizes.caption),
+                                  color: t.text2,
+                                  fontSize: AppTextSizes.caption),
                             ),
                             trailing: Text(
                               l.homeOrdersCount(result.orderCount),
                               style: TextStyle(
-                                  color: t.text2, fontSize: AppTextSizes.caption),
+                                  color: t.text2,
+                                  fontSize: AppTextSizes.caption),
                             ),
                             onTap: () {
                               _clearSearch();
@@ -840,42 +1053,6 @@ class _EmptyActivity extends StatelessWidget {
             style: TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorView({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.s5),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
-            const SizedBox(height: AppSpacing.s3),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: t.text2),
-            ),
-            const SizedBox(height: AppSpacing.s4),
-            AppButton(
-              label: l.buttonRetry,
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.sm,
-              onPressed: onRetry,
-            ),
-          ],
-        ),
       ),
     );
   }

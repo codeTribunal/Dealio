@@ -14,7 +14,7 @@ const manrope = Manrope({
 })
 
 export const metadata: Metadata = {
-  title: 'CRM Dashboard',
+  title: 'Dealio',
   description: 'Business management platform',
   // Static fallback only: /favicon.ico is the LIGHT (slate D) version, served
   // from public/favicon.ico. The faviconThemeScript below overrides this at
@@ -34,6 +34,11 @@ export const metadata: Metadata = {
 // prevent a light→dark flash. Falls back silently to light if anything fails.
 const noFlashScript = `(function(){try{var m=document.cookie.match(/(?:^|;\\s*)crm_theme=(light|dark)/);if(m&&m[1]==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`
 
+// Runs before paint — sets <html lang> from the locale cookie so screen
+// readers pronounce Uzbek/Russian text correctly from the first render.
+// I18nProvider keeps it in sync after client-side locale switches.
+const langScript = `(function(){try{var m=document.cookie.match(/(?:^|;\\s*)crm_locale=(en|uz|ru)/);if(m){document.documentElement.lang=m[1];}}catch(e){}})();`
+
 // Swaps the favicon to match the BROWSER/OS color scheme (not the app theme).
 // prefers-color-scheme media on <link> is unreliable for raster favicons and
 // Next's metadata API can't express it, so we drive it from matchMedia here.
@@ -49,9 +54,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={manrope.variable}>
+    <html lang="uz" className={manrope.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: noFlashScript }} />
+        <script dangerouslySetInnerHTML={{ __html: langScript }} />
         <script dangerouslySetInnerHTML={{ __html: faviconThemeScript }} />
       </head>
       <body>

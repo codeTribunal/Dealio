@@ -2095,4 +2095,66 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get settingsCardNotSet => 'Hali to\'lov kartasi qo\'shilmagan.';
+
+  @override
+  String get paymentConfirmTitle => 'To\'lov olinganini tasdiqlaysizmi?';
+
+  @override
+  String paymentConfirmBody(String amount, String name) {
+    return '$name yuborgan $amount olinganini tasdiqlaysizmi? Mijozga xabar yuboriladi.';
+  }
+
+  @override
+  String get paymentConfirmAction => 'Ha, to\'lov olindi';
+
+  @override
+  String paymentConfirmedSnack(String amount) {
+    return 'To\'lov tasdiqlandi — $amount';
+  }
+
+  @override
+  String get settingsCardInvalidLength =>
+      'Karta raqami 16 ta raqamdan iborat bo\'lishi kerak';
+
+  @override
+  String get settingsCardInvalidPrefix =>
+      'Uzcard (8600) yoki Humo (9860) karta raqamini kiriting';
+
+  @override
+  String get homeQueueTitle => 'To\'lovlar tasdiqlashni kutmoqda';
+
+  @override
+  String homeQueueOrderMeta(int n) {
+    return 'Buyurtma #$n';
+  }
+
+  @override
+  String homeQueueViewAll(int n) {
+    return 'Hammasini ko\'rish ($n)';
+  }
+
+  @override
+  String get errorNoConnection =>
+      'Aloqa yo\'q. Internetni tekshirib, qayta urinib ko\'ring.';
+
+  @override
+  String get errorServer =>
+      'Bizda xatolik yuz berdi. Birozdan so\'ng qayta urinib ko\'ring.';
+
+  @override
+  String get customerHistoryTitle => 'Tarix';
+
+  @override
+  String get customerHistoryEmptyOrders => 'Hali buyurtmalar yo\'q';
+
+  @override
+  String get customerHistoryEmptyAppointments => 'Hali navbatlar yo\'q';
+
+  @override
+  String get customerHistoryEmptyProjects => 'Hali loyihalar yo\'q';
+
+  @override
+  String customerHistoryMore(int n) {
+    return 'Yana $n ta';
+  }
 }

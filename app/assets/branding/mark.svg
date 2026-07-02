@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="110" height="110" viewBox="0 0 110 110" fill="none">
+  <title>Dealio</title>
+  <!-- Dealio master mark — the CANONICAL source geometry. Flat, no filters,
+       no background plate; renderers/pipelines add plates where needed
+       (launcher). Colors: ink #0F1729 (brand navy — matches the splash
+       wordmark), accent #3C83F6 (the --accent token's hex). Theme-aware
+       surfaces (web DealioMark.tsx) swap the ink for var(--text-1)/text1;
+       geometry must stay identical to this file. -->
+  <path d="M40 25V85H65C72.9565 85 80.5871 81.8393 86.2132 76.2132C91.8393 70.5871 95 62.9565 95 55C95 47.0435 91.8393 39.4129 86.2132 33.7868C80.5871 28.1607 72.9565 25 65 25H40Z" stroke="#0F1729" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Quarter inset to the stroke's INNER edge (r=25, not the r=30
+       centerline) so the dark ring keeps its full 10u weight everywhere. -->
+  <path d="M65 55H90C90 61.6304 87.3661 67.9893 82.6777 72.6777C77.9893 77.3661 71.6304 80 65 80V55Z" fill="#3C83F6"/>
+  <circle cx="25" cy="55" r="5" fill="#3C83F6"/>
+</svg>

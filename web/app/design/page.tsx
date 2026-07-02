@@ -15,7 +15,7 @@ function Swatch({ label, className }: SwatchProps) {
     <div className="flex items-center gap-3">
       <div className={`w-16 h-16 rounded-lg border border-border ${className}`} />
       <div>
-        <p className="text-sm font-semibold text-text-1">{label}</p>
+        <p className="text-base font-semibold text-text-1">{label}</p>
         <p className="text-xs text-text-3 font-mono">{className}</p>
       </div>
     </div>
@@ -119,7 +119,7 @@ export default function DesignTokensPage() {
                 Aa
               </div>
               <div>
-                <p className="text-sm font-semibold text-text-1">accent-on</p>
+                <p className="text-base font-semibold text-text-1">accent-on</p>
                 <p className="text-xs text-text-3 font-mono">text-accent-on</p>
               </div>
             </div>
@@ -130,7 +130,7 @@ export default function DesignTokensPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {STATUS_GROUPS.map((g) => (
               <div key={g.name} className="space-y-3">
-                <p className="text-sm font-semibold text-text-1 uppercase tracking-wider">
+                <p className="text-lg font-semibold text-text-1 uppercase tracking-wider">
                   {g.name}
                 </p>
                 {g.swatches.map((s) => (
@@ -194,7 +194,7 @@ export default function DesignTokensPage() {
             <div className="flex flex-col items-center gap-2">
               <button
                 type="button"
-                className="px-5 py-3 rounded-lg bg-bg text-text-1 text-sm font-semibold shadow-neu active:shadow-neu-inset transition-shadow"
+                className="px-5 py-3 rounded-lg bg-bg text-text-1 text-base font-semibold shadow-neu active:shadow-neu-inset transition-shadow"
                 style={{
                   transitionDuration: 'var(--dur-fast)',
                   transitionTimingFunction: 'var(--ease)',

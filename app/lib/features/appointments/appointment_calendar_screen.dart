@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/icons/app_icon.dart';
 import '../../core/models/appointment.dart';
@@ -12,6 +11,7 @@ import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_empty_state.dart';
+import '../../shared/widgets/app_error_state.dart';
 import '../../shared/widgets/app_spinner.dart';
 import '../../shared/widgets/floating_tab_bar.dart';
 import 'appointments_provider.dart';
@@ -74,8 +74,7 @@ class AppointmentCalendarScreen extends ConsumerWidget {
                         initialDate: selectedDay,
                         firstDate:
                             DateTime.now().subtract(const Duration(days: 365)),
-                        lastDate:
-                            DateTime.now().add(const Duration(days: 365)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
                       );
                       if (picked != null) notifier.selectDate(picked);
                     },
@@ -91,7 +90,7 @@ class AppointmentCalendarScreen extends ConsumerWidget {
                           textAlign: TextAlign.center,
                         ),
                         Text(
-                          DateFormat('EEEE, d MMMM yyyy').format(selectedDay),
+                          formatWeekdayDate(selectedDay),
                           style: TextStyle(
                               fontSize: AppTextSizes.caption, color: t.text3),
                           textAlign: TextAlign.center,
@@ -115,8 +114,8 @@ class AppointmentCalendarScreen extends ConsumerWidget {
           Expanded(
             child: apptAsync.when(
               loading: () => const Center(child: AppSpinner(size: 32)),
-              error: (e, _) => _ErrorView(
-                message: e.toString(),
+              error: (e, _) => AppErrorState(
+                error: e,
                 onRetry: notifier.refresh,
               ),
               data: (appointments) {
@@ -134,7 +133,9 @@ class AppointmentCalendarScreen extends ConsumerWidget {
                   color: t.accent,
                   onRefresh: notifier.refresh,
                   child: ListView.separated(
-                    padding: EdgeInsets.fromLTRB(AppSpacing.s4, AppSpacing.s3,
+                    padding: EdgeInsets.fromLTRB(
+                        AppSpacing.s4,
+                        AppSpacing.s3,
                         AppSpacing.s4,
                         AppSpacing.s8 + MediaQuery.of(context).padding.bottom),
                     itemCount: appointments.length,
@@ -188,7 +189,7 @@ class AppointmentCalendarScreen extends ConsumerWidget {
     if (_isSameDay(d, today.subtract(const Duration(days: 1)))) {
       return l.commonYesterday;
     }
-    return DateFormat('EEEE').format(d);
+    return formatWeekday(d);
   }
 
   bool _isSameDay(DateTime a, DateTime b) =>
@@ -232,16 +233,6 @@ class _AppointmentTile extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(width: AppSpacing.s2),
-          // Accent stripe
-          Container(
-            width: 4,
-            height: 52,
-            decoration: BoxDecoration(
-              color: t.accent,
-              borderRadius: AppRadii.sm,
-            ),
-          ),
           const SizedBox(width: AppSpacing.s3),
           // Info
           Expanded(
@@ -261,8 +252,8 @@ class _AppointmentTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${appointment.customer.name}$staffLabel',
-                  style: TextStyle(
-                      color: t.text2, fontSize: AppTextSizes.caption),
+                  style:
+                      TextStyle(color: t.text2, fontSize: AppTextSizes.caption),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -290,8 +281,7 @@ class _AppointmentTile extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.s1),
               AppBadge(
-                  status: appointment.status,
-                  type: AppBadgeType.appointment),
+                  status: appointment.status, type: AppBadgeType.appointment),
             ],
           ),
         ],
@@ -361,8 +351,8 @@ class _DeletedAppointmentTile extends StatelessWidget {
                     '${formatTime(appointment.startTime.toLocal())} · ${appointment.customer.name}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style:
-                        TextStyle(color: t.text2, fontSize: AppTextSizes.caption),
+                    style: TextStyle(
+                        color: t.text2, fontSize: AppTextSizes.caption),
                   ),
                 ],
               ),
@@ -373,40 +363,6 @@ class _DeletedAppointmentTile extends StatelessWidget {
               variant: AppButtonVariant.secondary,
               size: AppButtonSize.sm,
               onPressed: onRestore,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorView({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.s5),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
-            const SizedBox(height: AppSpacing.s3),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: t.text2)),
-            const SizedBox(height: AppSpacing.s4),
-            AppButton(
-              label: l.buttonRetry,
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.sm,
-              onPressed: onRetry,
             ),
           ],
         ),

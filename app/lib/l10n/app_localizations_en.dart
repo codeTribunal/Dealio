@@ -2069,4 +2069,65 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsCardNotSet => 'No payment card added yet.';
+
+  @override
+  String get paymentConfirmTitle => 'Confirm payment received?';
+
+  @override
+  String paymentConfirmBody(String amount, String name) {
+    return 'Confirm $amount received from $name? The customer will be notified.';
+  }
+
+  @override
+  String get paymentConfirmAction => 'Yes, payment received';
+
+  @override
+  String paymentConfirmedSnack(String amount) {
+    return 'Payment confirmed — $amount';
+  }
+
+  @override
+  String get settingsCardInvalidLength => 'Card number must be 16 digits';
+
+  @override
+  String get settingsCardInvalidPrefix =>
+      'Enter an Uzcard (8600) or Humo (9860) card number';
+
+  @override
+  String get homeQueueTitle => 'Payments to confirm';
+
+  @override
+  String homeQueueOrderMeta(int n) {
+    return 'Order #$n';
+  }
+
+  @override
+  String homeQueueViewAll(int n) {
+    return 'View all $n';
+  }
+
+  @override
+  String get errorNoConnection =>
+      'No connection. Check your internet and try again.';
+
+  @override
+  String get errorServer =>
+      'Something went wrong on our side. Try again in a moment.';
+
+  @override
+  String get customerHistoryTitle => 'History';
+
+  @override
+  String get customerHistoryEmptyOrders => 'No orders yet';
+
+  @override
+  String get customerHistoryEmptyAppointments => 'No appointments yet';
+
+  @override
+  String get customerHistoryEmptyProjects => 'No projects yet';
+
+  @override
+  String customerHistoryMore(int n) {
+    return 'And $n more';
+  }
 }

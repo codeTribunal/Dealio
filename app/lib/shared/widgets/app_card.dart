@@ -70,12 +70,17 @@ class _AppCardState extends State<AppCard> {
 
     if (!tappable) return container;
 
-    return GestureDetector(
-      onTapDown: (_) => _set(true),
-      onTapUp: (_) => _set(false),
-      onTapCancel: () => _set(false),
-      onTap: widget.onTap,
-      child: container,
+    // Semantics: a tappable card is a button to TalkBack/VoiceOver; its
+    // content (title, amounts) provides the announced label.
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        onTapDown: (_) => _set(true),
+        onTapUp: (_) => _set(false),
+        onTapCancel: () => _set(false),
+        onTap: widget.onTap,
+        child: container,
+      ),
     );
   }
 }

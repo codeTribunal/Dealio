@@ -3,7 +3,6 @@ import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import AuthLayout from '@/components/AuthLayout'
-import { HeroCard } from '@/components/ui/HeroCard'
 import { StatCard } from '@/components/ui/StatCard'
 import { QuickActions, type QuickActionItem } from '@/components/ui/QuickActions'
 import { Card, CardHeader } from '@/components/ui/Card'
@@ -24,6 +23,48 @@ interface ActivityRow {
   meta: string
   amount?: number
   at: string
+}
+
+interface QueueRow {
+  id: string
+  href: string
+  name: string
+  meta: string
+  amount: number
+  at: string
+}
+
+// The payment queue: customers who tapped "I have paid" and are waiting for
+// the owner to confirm. Orders and in-advance appointments, newest claim
+// first. Rows navigate to the detail screen (payment proof + confirm sheet) —
+// never confirm blind from home.
+function buildQueue(
+  home: HomeData,
+  t: ReturnType<typeof useI18n>['t'],
+): QueueRow[] {
+  const rows: QueueRow[] = []
+  for (const p of home.pendingPayments) {
+    rows.push({
+      id: `order-${p.id}`,
+      href: `/orders/${p.id}`,
+      name: p.customer.name,
+      meta: t('home.queueOrderMeta', { n: p.orderNumber }),
+      amount: p.total,
+      at: p.updatedAt,
+    })
+  }
+  for (const a of home.pendingAppointmentPayments ?? []) {
+    rows.push({
+      id: `appt-${a.id}`,
+      href: '/appointments',
+      name: a.customer.name,
+      meta: a.serviceName,
+      amount: a.price,
+      at: a.updatedAt,
+    })
+  }
+  rows.sort((x, y) => new Date(y.at).getTime() - new Date(x.at).getTime())
+  return rows
 }
 
 function buildQuickActions(
@@ -134,6 +175,7 @@ export default function HomePage() {
   )
 
   const activity = useMemo(() => (home ? buildActivity(home, t) : []), [home, t])
+  const queue = useMemo(() => (home ? buildQueue(home, t) : []), [home, t])
 
   // Mode-aware home cards. business.mode is a single value, so it selects the
   // one "today" activity metric that matters (orders / appointments / projects);
@@ -166,24 +208,48 @@ export default function HomePage() {
             </h1>
           )}
 
-          {/* HeroCard */}
-          <HeroCard
-            label={t('home.revenueLabel')}
-            value={formatUZS(analytics.revenueThisMonth)}
-            sub={
-              // Mode-aware: SERVICES references appointments; PRODUCTS/FREELANCE
-              // use the neutral completed count (backend exposes no orders count).
-              (business?.mode ?? 'SERVICES') === 'SERVICES'
-                ? t('home.revenueSub', { count: analytics.appointmentsThisMonth })
-                : t('home.revenueSubCompleted', {
-                    count: analytics.completedThisMonth,
-                  })
-            }
-          />
+          {/* Payment queue — the one thing the owner must act on. Hidden when
+              empty: the queue vanishing after the last confirm IS the feedback,
+              and home stays calm instead of celebrating nothing. */}
+          {queue.length > 0 && (
+            <Card padded={false} className="overflow-hidden">
+              <div className="flex items-center justify-between gap-3 px-5 py-4 bg-accent-soft">
+                <p className="text-lg font-bold text-text-1">{t('home.queueTitle')}</p>
+                <span className="min-w-7 h-7 px-2 rounded-pill bg-accent text-accent-on text-sm font-bold inline-flex items-center justify-center flex-shrink-0">
+                  {queue.length}
+                </span>
+              </div>
+              {queue.slice(0, 5).map((row) => (
+                <Link
+                  key={row.id}
+                  href={row.href}
+                  className="flex items-center gap-4 px-5 py-3.5 border-t border-border hover:bg-surface-2 transition-colors"
+                  style={{ transitionDuration: 'var(--dur-base)' }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-base font-semibold text-text-1 truncate">{row.name}</p>
+                    <p className="text-xs text-text-2 truncate">{row.meta}</p>
+                  </div>
+                  <p className="text-base font-bold text-text-1 tabular-nums flex-shrink-0">
+                    {formatUZS(row.amount)}
+                  </p>
+                </Link>
+              ))}
+              {queue.length > 5 && (
+                <Link
+                  href={home.pendingPayments.length > 0 ? '/orders' : '/appointments'}
+                  className="block px-5 py-3 border-t border-border text-base font-semibold text-accent hover:text-accent-hover"
+                >
+                  {t('home.queueViewAll', { n: queue.length })}
+                </Link>
+              )}
+            </Card>
+          )}
 
-          {/* StatCard bento row — mode-aware. The "today" activity card follows
-              business.mode (orders / appointments / projects); Pending payments
-              is universal. A products business never sees "Today's appointments". */}
+          {/* StatCard bento row — mode-aware "today" activity card
+              (orders / appointments / projects) + realised revenue. Revenue is
+              deliberately a secondary card, not a hero: the actionable queue
+              above owns the top of the page. */}
           <div className="grid grid-cols-2 gap-4">
             <StatCard
               label={
@@ -202,9 +268,9 @@ export default function HomePage() {
               )}
             />
             <StatCard
-              label={t('home.statPending')}
-              value={formatUZS(analytics.pendingPaymentsTotal)}
-              money={analytics.pendingPaymentsTotal > 0}
+              label={t('home.revenueLabel')}
+              value={formatUZS(analytics.revenueThisMonth)}
+              money={analytics.revenueThisMonth > 0}
             />
           </div>
 
@@ -221,8 +287,17 @@ export default function HomePage() {
                 right={
                   activity.length > 0 ? (
                     <Link
-                      href="/customers"
-                      className="text-sm font-semibold text-accent hover:text-accent-hover"
+                      // Mode-relevant target: the feed is mostly orders for a
+                      // seller and milestones for a freelancer — "view all"
+                      // should land where those live.
+                      href={
+                        mode === 'PRODUCTS'
+                          ? '/orders'
+                          : mode === 'FREELANCE'
+                            ? '/projects'
+                            : '/customers'
+                      }
+                      className="text-base font-semibold text-accent hover:text-accent-hover"
                     >
                       {t('home.activityViewAll')}
                     </Link>
@@ -232,7 +307,7 @@ export default function HomePage() {
             </div>
 
             {activity.length === 0 ? (
-              <div className="text-center py-12 text-sm text-text-2">
+              <div className="text-center py-12 text-base text-text-2">
                 {t('home.activityEmpty')}
               </div>
             ) : (
@@ -248,13 +323,13 @@ export default function HomePage() {
                       <Icon name={row.icon} size={18} />
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-text-1 truncate">{row.text}</p>
+                      <p className="text-base font-semibold text-text-1 truncate">{row.text}</p>
                       <p className="text-xs text-text-2 truncate">
                         {row.meta} · {formatRelativeTime(row.at, t)}
                       </p>
                     </div>
                     {row.amount !== undefined && (
-                      <p className="text-sm font-semibold text-text-1 tabular-nums flex-shrink-0">
+                      <p className="text-base font-semibold text-text-1 tabular-nums flex-shrink-0">
                         {formatUZS(row.amount)}
                       </p>
                     )}

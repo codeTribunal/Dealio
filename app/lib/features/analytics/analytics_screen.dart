@@ -14,6 +14,7 @@ import '../../shared/widgets/app_avatar.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_checkbox.dart';
+import '../../shared/widgets/app_error_state.dart';
 import '../../shared/widgets/app_spinner.dart';
 import '../../shared/widgets/app_stat_card.dart';
 import '../settings/email_consent_actions.dart';
@@ -39,8 +40,8 @@ class AnalyticsScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(l.analyticsTitle)),
       body: analyticsAsync.when(
         loading: () => const Center(child: AppSpinner(size: 32)),
-        error: (e, _) => _ErrorView(
-          message: e.toString(),
+        error: (e, _) => AppErrorState(
+          error: e,
           onRetry: () => ref.read(analyticsProvider.notifier).refresh(),
         ),
         data: (data) => Stack(
@@ -254,7 +255,8 @@ class _EmailCaptureModalState extends ConsumerState<_EmailCaptureModal> {
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       l.emailPromptConsent,
-                      style: TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
+                      style:
+                          TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
                     ),
                   ),
                 ),
@@ -436,7 +438,8 @@ class _DeltaChip extends StatelessWidget {
     final bg = up ? t.accentOn : t.errorSoft;
     final fg = up ? t.accent : t.errorStrong;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s2, vertical: 3),
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.s2, vertical: 3),
       decoration: BoxDecoration(color: bg, borderRadius: AppRadii.pill),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -524,8 +527,8 @@ class _ComparisonBar extends StatelessWidget {
             Flexible(
               child: Text(
                 label.trim().isEmpty ? '—' : label,
-                style: TextStyle(
-                    fontSize: AppTextSizes.caption, color: t.text2),
+                style:
+                    TextStyle(fontSize: AppTextSizes.caption, color: t.text2),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -630,8 +633,8 @@ class _PendingPaymentsCard extends StatelessWidget {
               children: [
                 Text(
                   l.analyticsPendingPayments,
-                  style: TextStyle(
-                      color: t.text2, fontSize: AppTextSizes.caption),
+                  style:
+                      TextStyle(color: t.text2, fontSize: AppTextSizes.caption),
                 ),
                 const SizedBox(height: 2),
                 FittedBox(
@@ -819,37 +822,3 @@ class _TopCustomerRow extends StatelessWidget {
 }
 
 // ── Error view ───────────────────────────────────────────────────────
-
-class _ErrorView extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorView({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.s5),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
-            const SizedBox(height: AppSpacing.s3),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: t.text2)),
-            const SizedBox(height: AppSpacing.s4),
-            AppButton(
-              label: l.buttonRetry,
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.sm,
-              onPressed: onRetry,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

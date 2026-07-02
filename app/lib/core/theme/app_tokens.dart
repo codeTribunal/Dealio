@@ -149,9 +149,12 @@ class AppTokens {
     border: _hsl(221.7, 69.7, 93.5),
     borderStrong: _hsl(219, 43, 88),
 
+    // L values chosen for WCAG AA on white/near-white surfaces (mirrors
+    // tokens.css): text2 ≈5.1:1, text3 ≈4.6:1 — meta text renders small, so
+    // it needs the full 4.5:1, not the large-text 3:1.
     text1: _hsl(223, 42, 18),
-    text2: _hsl(222, 20, 52),
-    text3: _hsl(220.5, 21.6, 66.5),
+    text2: _hsl(222, 20, 47),
+    text3: _hsl(220.5, 21.6, 50),
 
     // --shadow-sm: 0 1px 2px hsla(223 42% 18% / .05),
     //             0 4px 12px -8px hsla(223 42% 18% / .12)
@@ -244,9 +247,11 @@ class AppTokens {
     border: _hsl(218, 39, 22),
     borderStrong: _hsl(218, 35, 27),
 
+    // text3 lifted to L58% for ≥4.5:1 on the dark surface (was ~3.6:1);
+    // mirrors tokens.css.
     text1: _hsl(217, 62, 96),
     text2: _hsl(218, 29, 65),
-    text3: _hsl(219, 24, 48),
+    text3: _hsl(219, 24, 58),
 
     // --shadow-sm: 0 1px 2px hsla(0 0% 0% / .3), 0 6px 16px -10px hsla(0 0% 0% / .5)
     shadowSm: [

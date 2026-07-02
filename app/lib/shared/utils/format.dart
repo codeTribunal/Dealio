@@ -1,40 +1,131 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-// Localized lowercase currency word, following the app language:
-// "so'm" (uz, straight apostrophe U+0027), "сум" (ru), "soum" (en).
-// Updated from main.dart whenever the locale changes. Defaults to "soum".
-String _currencySuffix = 'soum';
+// Active app language code ('uz' / 'ru' / 'en'), driving both the currency
+// word and localized month/weekday names below. Updated from main.dart
+// whenever the locale changes (setCurrencyLocale). Defaults to English.
+String _localeCode = 'en';
 
 void setCurrencyLocale(String code) {
-  switch (code) {
-    case 'uz':
-      _currencySuffix = "so'm";
-      break;
-    case 'ru':
-      _currencySuffix = 'сум';
-      break;
-    default:
-      _currencySuffix = 'soum';
-  }
+  _localeCode = (code == 'uz' || code == 'ru') ? code : 'en';
 }
 
 /// The current localized currency word (e.g. "soum" / "so'm" / "сум"), for use
 /// as a static suffix/label where the amount formatter isn't applied.
-String currencyWord() => _currencySuffix;
+/// uz uses the straight apostrophe U+0027.
+String currencyWord() {
+  switch (_localeCode) {
+    case 'uz':
+      return "so'm";
+    case 'ru':
+      return 'сум';
+    default:
+      return 'soum';
+  }
+}
 
 String formatUZS(int amount) {
   final formatted = NumberFormat('#,##0', 'en_US')
       .format(amount)
       .replaceAll(',', ' ');
-  return '$formatted $_currencySuffix';
+  return '$formatted ${currencyWord()}';
 }
 
-String formatDate(DateTime dt) =>
-    DateFormat('d MMM yyyy').format(dt.toLocal());
+// ── Localized dates ──────────────────────────────────────────────────────────
+// Spec (CLAUDE.md): "15 yanvar 2026" (uz) / "15 января 2026" (ru). intl date
+// symbols for uz are never initialized (and ru needs the genitive month for
+// this format), so month/weekday names are explicit tables driven by the same
+// locale mechanism as the currency word. Kept in sync with web/lib/format.ts.
+const Map<String, List<String>> _months = {
+  'en': [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ],
+  'uz': [
+    'yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun',
+    'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr',
+  ],
+  'ru': [
+    'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
+  ],
+};
 
-String formatDateTime(DateTime dt) =>
-    DateFormat('d MMM, HH:mm').format(dt.toLocal());
+const Map<String, List<String>> _monthsShort = {
+  'en': [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ],
+  'uz': [
+    'yan', 'fev', 'mar', 'apr', 'may', 'iyn',
+    'iyl', 'avg', 'sen', 'okt', 'noy', 'dek',
+  ],
+  'ru': [
+    'янв', 'фев', 'мар', 'апр', 'май', 'июн',
+    'июл', 'авг', 'сен', 'окт', 'ноя', 'дек',
+  ],
+};
+
+// Index 0 = Sunday (matching web's Date.getDay()); Dart's DateTime.weekday is
+// Mon=1..Sun=7, mapped via `weekday % 7`.
+const Map<String, List<String>> _weekdays = {
+  'en': [
+    'Sunday', 'Monday', 'Tuesday', 'Wednesday',
+    'Thursday', 'Friday', 'Saturday',
+  ],
+  'uz': [
+    'yakshanba', 'dushanba', 'seshanba', 'chorshanba',
+    'payshanba', 'juma', 'shanba',
+  ],
+  'ru': [
+    'воскресенье', 'понедельник', 'вторник', 'среда',
+    'четверг', 'пятница', 'суббота',
+  ],
+};
+
+List<String> _table(Map<String, List<String>> tables) =>
+    tables[_localeCode] ?? tables['en']!;
+
+String _composeDate(int day, int month, int year) =>
+    '$day ${_table(_months)[month - 1]} $year';
+
+/// Localized full date, e.g. "15 yanvar 2026" / "15 января 2026".
+String formatDate(DateTime dt) {
+  final d = dt.toLocal();
+  return _composeDate(d.day, d.month, d.year);
+}
+
+/// Localized full date + 24h time, e.g. "15 yanvar 2026, 14:30".
+String formatDateTime(DateTime dt) {
+  final d = dt.toLocal();
+  return '${_composeDate(d.day, d.month, d.year)}, ${formatTime(d)}';
+}
+
+/// Localized weekday name, e.g. "dushanba" / "понедельник" / "Monday".
+String formatWeekday(DateTime dt) {
+  final d = dt.toLocal();
+  return _table(_weekdays)[d.weekday % 7];
+}
+
+/// Localized "weekday, full date" header, e.g. "dushanba, 15 yanvar 2026".
+String formatWeekdayDate(DateTime dt) =>
+    '${formatWeekday(dt)}, ${formatDate(dt)}';
+
+/// Localized short month name for [month] 1..12 (DateTime.month), e.g. "yan".
+String formatMonthShort(int month) =>
+    _table(_monthsShort)[(month - 1) % 12];
+
+/// Localized day + full month without year, e.g. "15 yanvar" (birthdays).
+String formatDayMonth(DateTime dt) {
+  final d = dt.toLocal();
+  return '${d.day} ${_table(_months)[d.month - 1]}';
+}
+
+/// Localized day + short month without year, e.g. "15 yan" (compact chips).
+String formatDayMonthShort(DateTime dt) {
+  final d = dt.toLocal();
+  return '${d.day} ${formatMonthShort(d.month)}';
+}
 
 /// 24-hour time (HH:mm) from a DateTime. Pass a local DateTime.
 String formatTime(DateTime dateTime) {
@@ -73,9 +164,12 @@ String tashkentWallClockToIso(DateTime date, TimeOfDay time) {
 DateTime _toTashkent(String iso) =>
     DateTime.parse(iso).toUtc().add(_kTashkentOffset);
 
-/// Tashkent calendar date of an instant, e.g. "15 Jun 2026".
-String formatTashkentDate(String iso) =>
-    DateFormat('d MMM yyyy').format(_toTashkent(iso));
+/// Tashkent calendar date of an instant, localized, e.g. "15 iyun 2026".
+/// Composes from the shifted fields directly — no toLocal().
+String formatTashkentDate(String iso) {
+  final d = _toTashkent(iso);
+  return _composeDate(d.day, d.month, d.year);
+}
 
 /// Tashkent 24h time of an instant, e.g. "09:00".
 String formatTashkentTime(String iso) {

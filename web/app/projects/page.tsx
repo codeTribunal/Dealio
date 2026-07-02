@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
+import { SlideOver } from '@/components/ui/SlideOver'
 import { Icon } from '@/components/icons/Icon'
 import {
   getProjects,
@@ -20,25 +21,28 @@ import {
   markInvoicePaid,
 } from '@/lib/api'
 import { formatUZS, formatDate, currencyWord } from '@/lib/format'
+import { useI18n } from '@/lib/i18n/i18nContext'
+import { useToast } from '@/lib/toast'
 import type { Project, ProjectMilestone, ProjectInvoice, Customer } from '@/types'
 
 const LIMIT = 30
 
+// Labels are resolved at render time via t('common.all') / t('status.' + value).
 const STATUS_FILTERS = [
-  { label: 'All', value: 'ALL' },
-  { label: 'Proposal', value: 'PROPOSAL_SENT' },
-  { label: 'In progress', value: 'IN_PROGRESS' },
-  { label: 'Review', value: 'REVIEW' },
-  { label: 'Completed', value: 'COMPLETED' },
-  { label: 'Cancelled', value: 'CANCELLED' },
+  'ALL',
+  'PROPOSAL_SENT',
+  'IN_PROGRESS',
+  'REVIEW',
+  'COMPLETED',
+  'CANCELLED',
 ]
 
 const STATUS_OPTIONS = [
-  { label: 'Proposal sent', value: 'PROPOSAL_SENT' },
-  { label: 'In progress', value: 'IN_PROGRESS' },
-  { label: 'In review', value: 'REVIEW' },
-  { label: 'Completed', value: 'COMPLETED' },
-  { label: 'Cancelled', value: 'CANCELLED' },
+  'PROPOSAL_SENT',
+  'IN_PROGRESS',
+  'REVIEW',
+  'COMPLETED',
+  'CANCELLED',
 ]
 
 // Milestone status tone — token-driven inline pill (Badge primitive doesn't
@@ -58,16 +62,6 @@ function milestoneTone(status: string): string {
   }
 }
 
-function getMilestoneStatusLabel(status: string): string {
-  const map: Record<string, string> = {
-    PENDING: 'Pending',
-    SUBMITTED_FOR_REVIEW: 'In review',
-    APPROVED: 'Approved',
-    PAYMENT_RECEIVED: 'Paid',
-  }
-  return map[status] || status
-}
-
 function completedMilestoneCount(milestones: ProjectMilestone[]): number {
   return milestones.filter(
     (m) => m.status === 'APPROVED' || m.status === 'PAYMENT_RECEIVED'
@@ -75,10 +69,12 @@ function completedMilestoneCount(milestones: ProjectMilestone[]): number {
 }
 
 const SELECT_CLASS =
-  'w-full bg-surface border border-border rounded-md py-2.5 px-3.5 text-sm text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors'
+  'w-full bg-surface border border-border rounded-md py-2.5 px-3.5 text-base text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors'
 
 export default function ProjectsPage() {
   const guardReady = useModeGuard('FREELANCE')
+  const { t } = useI18n()
+  const { showToast } = useToast()
   const [projects, setProjects] = useState<Project[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -135,7 +131,7 @@ export default function ProjectsPage() {
         setProjects(Array.isArray(data.projects) ? data.projects : [])
         setTotal(data.total ?? 0)
       })
-      .catch(() => setError('Failed to load projects'))
+      .catch(() => setError('projects.failedLoad'))
       .finally(() => setLoading(false))
   }
 
@@ -150,8 +146,9 @@ export default function ProjectsPage() {
       .catch(() => {})
   }, [])
 
-  function showSaved(message: string) {
-    setSavedMessage(message)
+  // Stores an i18n key; rendered through t() so it stays locale-reactive.
+  function showSaved(messageKey: string) {
+    setSavedMessage(messageKey)
     setTimeout(() => setSavedMessage(null), 3000)
   }
 
@@ -206,12 +203,17 @@ export default function ProjectsPage() {
   const [payingMilestoneId, setPayingMilestoneId] = useState<string | null>(null)
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null)
 
+  // Money moments: a failure must speak (error toast) and a success must be
+  // acknowledged with the amount restated — never a silent state flip.
   async function handleMilestonePayment(milestone: ProjectMilestone) {
     if (!selectedProject || payingMilestoneId) return
     setPayingMilestoneId(milestone.id)
     try {
       await updateMilestoneStatus(selectedProject.id, milestone.id, 'PAYMENT_RECEIVED')
       updateProjectMilestone(selectedProject.id, milestone.id, 'PAYMENT_RECEIVED')
+      showToast(t('payment.recordedToast', { amount: formatUZS(milestone.amount) }), 'success')
+    } catch {
+      showToast(t('payment.recordFailed'), 'error')
     } finally {
       setPayingMilestoneId(null)
     }
@@ -223,6 +225,9 @@ export default function ProjectsPage() {
     try {
       await markInvoicePaid(selectedProject.id, invoice.id)
       updateProjectInvoice(selectedProject.id, invoice.id, 'PAID')
+      showToast(t('payment.recordedToast', { amount: formatUZS(invoice.total) }), 'success')
+    } catch {
+      showToast(t('payment.recordFailed'), 'error')
     } finally {
       setPayingInvoiceId(null)
     }
@@ -238,19 +243,19 @@ export default function ProjectsPage() {
 
   const handleCreateProject = async () => {
     if (!createName.trim()) {
-      setCreateError('Project name is required')
+      setCreateError('projects.errNameRequired')
       return
     }
     if (createCustomerMode === 'select' && !createCustomerId) {
-      setCreateError('Select a client')
+      setCreateError('projects.selectClient')
       return
     }
     if (createCustomerMode === 'manual' && !createManualCustomerName.trim()) {
-      setCreateError('Enter a client name')
+      setCreateError('projects.errClientName')
       return
     }
     if (!createTotalPrice || Number(createTotalPrice) <= 0) {
-      setCreateError('Enter a valid price')
+      setCreateError('projects.errValidPrice')
       return
     }
     setCreateSaving(true)
@@ -284,9 +289,9 @@ export default function ProjectsPage() {
       setCreateManualCustomerName('')
       setCreateCustomerMode('select')
       setCreatePaymentTerms('')
-      showSaved('Project created')
+      showSaved('projects.createdToast')
     } catch {
-      setCreateError('Failed to create project. Please try again.')
+      setCreateError('projects.errCreateFailed')
     } finally {
       setCreateSaving(false)
     }
@@ -315,7 +320,7 @@ export default function ProjectsPage() {
       setMilestoneAmount('')
       setMilestoneDueDate('')
       setShowAddMilestone(false)
-      showSaved('Milestone added')
+      showSaved('projects.milestoneAddedToast')
     } catch {
       // show error inline
     } finally {
@@ -326,11 +331,11 @@ export default function ProjectsPage() {
   const handleSaveEditProject = async () => {
     if (!selectedProject) return
     if (!editProjectName.trim()) {
-      setEditError('Project name is required')
+      setEditError('projects.errNameRequired')
       return
     }
     if (!editProjectTotalPrice || Number(editProjectTotalPrice) <= 0) {
-      setEditError('Enter a valid price')
+      setEditError('projects.errValidPrice')
       return
     }
     setEditSaving(true)
@@ -347,9 +352,9 @@ export default function ProjectsPage() {
         p.id === selectedProject.id ? { ...p, ...updated } : p))
       setSelectedProject(prev => prev ? { ...prev, ...updated } : null)
       setShowEditProject(false)
-      showSaved('Project updated')
+      showSaved('projects.updatedToast')
     } catch {
-      setEditError('Failed to save. Please try again.')
+      setEditError('projects.errSaveFailed')
     } finally {
       setEditSaving(false)
     }
@@ -366,25 +371,27 @@ export default function ProjectsPage() {
   if (!guardReady) return null
 
   return (
-    <AuthLayout title="Projects">
+    <AuthLayout title={t('nav.projects')}>
       {/* ── Header ───────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-extrabold text-text-1">Projects</h1>
-          <p className="text-sm text-text-2 mt-1">{total} total projects</p>
+          <h1 className="text-2xl font-extrabold text-text-1">{t('nav.projects')}</h1>
+          <p className="text-sm text-text-2 mt-1">
+            {t('projects.totalProjects', { count: total })}
+          </p>
         </div>
         <Button
           variant="primary"
           leftIcon="add"
           onClick={() => setShowCreateForm(true)}
         >
-          New project
+          {t('home.quickActionNewProject')}
         </Button>
       </div>
 
       {/* ── Status filters ──────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 mb-6">
-        {STATUS_FILTERS.map(({ label, value }) => (
+        {STATUS_FILTERS.map((value) => (
           <button
             key={value}
             type="button"
@@ -394,7 +401,7 @@ export default function ProjectsPage() {
             }}
             className={chip(statusFilter === value)}
           >
-            {label}
+            {value === 'ALL' ? t('common.all') : t('status.' + value)}
           </button>
         ))}
       </div>
@@ -405,16 +412,16 @@ export default function ProjectsPage() {
           <LoadingSpinner />
         ) : error ? (
           <Card>
-            <p className="text-sm text-error-strong">
-              {error}
+            <p className="text-base text-error-strong">
+              {t(error)}
               <button
-                className="ml-2 text-sm font-semibold text-accent hover:text-accent-hover"
+                className="ml-2 text-base font-semibold text-accent hover:text-accent-hover"
                 onClick={() => {
                   setError(null)
                   fetchProjects()
                 }}
               >
-                Try again
+                {t('common.tryAgain')}
               </button>
             </p>
           </Card>
@@ -423,7 +430,7 @@ export default function ProjectsPage() {
             <div className="mx-auto mb-4 w-16 h-16 rounded-lg bg-accent-soft flex items-center justify-center text-accent">
               <Icon name="projects" size={28} />
             </div>
-            <p className="text-sm text-text-2">No projects found</p>
+            <p className="text-base text-text-2">{t('projects.empty')}</p>
           </Card>
         ) : (
           projects.map((project) => (
@@ -440,25 +447,27 @@ export default function ProjectsPage() {
                   </p>
                   <div className="flex items-center gap-2 mb-3">
                     <Avatar name={project.customer.name} size="sm" />
-                    <p className="text-sm text-text-2 truncate">
+                    <p className="text-base text-text-2 truncate">
                       {project.customer.name}
                     </p>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-text-2">
                     <p className="tabular-nums">
-                      {completedMilestoneCount(project.milestones)}/
-                      {project.milestones.length} milestones
+                      {t('projects.milestoneProgress', {
+                        done: completedMilestoneCount(project.milestones),
+                        total: project.milestones.length,
+                      })}
                     </p>
                     {project.deadline && (
                       <p className="text-text-3">
-                        Due {formatDate(project.deadline)}
+                        {t('projects.dueDate', { date: formatDate(project.deadline) })}
                       </p>
                     )}
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2 flex-shrink-0">
                   <Badge status={project.status} type="project" />
-                  <p className="text-sm font-bold text-text-1 tabular-nums">
+                  <p className="text-base font-bold text-text-1 tabular-nums">
                     {formatUZS(project.totalPrice)}
                   </p>
                 </div>
@@ -472,7 +481,11 @@ export default function ProjectsPage() {
       {total > LIMIT && (
         <div className="flex items-center justify-between px-1 py-4 mt-4">
           <p className="text-sm text-text-2">
-            Showing {(page - 1) * LIMIT + 1}–{Math.min(page * LIMIT, total)} of {total}
+            {t('customers.showing', {
+              from: (page - 1) * LIMIT + 1,
+              to: Math.min(page * LIMIT, total),
+              total,
+            })}
           </p>
           <div className="flex gap-2">
             <Button
@@ -481,7 +494,7 @@ export default function ProjectsPage() {
               disabled={page === 1}
               onClick={() => setPage(page - 1)}
             >
-              Previous
+              {t('common.previous')}
             </Button>
             <Button
               variant="secondary"
@@ -489,7 +502,7 @@ export default function ProjectsPage() {
               disabled={page * LIMIT >= total}
               onClick={() => setPage(page + 1)}
             >
-              Next
+              {t('common.next')}
             </Button>
           </div>
         </div>
@@ -497,61 +510,46 @@ export default function ProjectsPage() {
 
       {/* ── Detail slide-over ───────────────────────────────────── */}
       {selectedProject && (
-        <div className="fixed inset-0 z-50 flex">
-          <div
-            className="flex-1 bg-text-1/30"
-            onClick={() => setSelectedProject(null)}
-          />
-          <div className="relative z-50 w-full md:max-w-xl bg-surface border-l border-border shadow-lg flex flex-col h-full overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
-              <div className="min-w-0 mr-3">
-                <p className="text-lg font-bold text-text-1 truncate">
-                  {selectedProject.name}
-                </p>
-                <p className="text-sm text-text-2 mt-1 truncate">
-                  Client: {selectedProject.customer.name}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {!showEditProject && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setEditProjectName(selectedProject.name)
-                      setEditProjectDescription(selectedProject.description || '')
-                      setEditProjectTotalPrice(String(selectedProject.totalPrice))
-                      setEditProjectDeadline(
-                        selectedProject.deadline
-                          ? selectedProject.deadline.split('T')[0]
-                          : ''
-                      )
-                      setEditProjectStatus(selectedProject.status)
-                      setEditError(null)
-                      setShowEditProject(true)
-                    }}
-                  >
-                    Edit
-                  </Button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setSelectedProject(null)}
-                  aria-label="Close"
-                  className="text-text-3 hover:text-text-1 transition-colors"
-                >
-                  <Icon name="close" size={20} />
-                </button>
-              </div>
-            </div>
-
+        <SlideOver
+          open
+          onClose={() => setSelectedProject(null)}
+          title={selectedProject.name}
+          closeLabel={t('common.close')}
+          maxWidth="md:max-w-xl"
+          headerRight={
+            !showEditProject && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setEditProjectName(selectedProject.name)
+                  setEditProjectDescription(selectedProject.description || '')
+                  setEditProjectTotalPrice(String(selectedProject.totalPrice))
+                  setEditProjectDeadline(
+                    selectedProject.deadline
+                      ? selectedProject.deadline.split('T')[0]
+                      : ''
+                  )
+                  setEditProjectStatus(selectedProject.status)
+                  setEditError(null)
+                  setShowEditProject(true)
+                }}
+              >
+                {t('common.edit')}
+              </Button>
+            )
+          }
+        >
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
+              <p className="text-sm text-text-2 truncate">
+                {t('projects.clientLabel', { name: selectedProject.customer.name })}
+              </p>
               {showEditProject ? (
                 /* Edit project inline form */
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-text-2 mb-1.5">
-                      Project name *
+                    <label className="block text-base font-medium text-text-2 mb-1.5">
+                      {t('projects.nameLabel')} *
                     </label>
                     <Input
                       type="text"
@@ -560,8 +558,8 @@ export default function ProjectsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-text-2 mb-1.5">
-                      Total price ({currencyWord()}) *
+                    <label className="block text-base font-medium text-text-2 mb-1.5">
+                      {t('projects.totalPriceLabel')} ({currencyWord()}) *
                     </label>
                     <Input
                       type="number"
@@ -572,8 +570,8 @@ export default function ProjectsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-text-2 mb-1.5">
-                      Scope of work
+                    <label className="block text-base font-medium text-text-2 mb-1.5">
+                      {t('projects.scopeOfWork')}
                     </label>
                     <Textarea
                       rows={4}
@@ -582,8 +580,8 @@ export default function ProjectsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-text-2 mb-1.5">
-                      Deadline
+                    <label className="block text-base font-medium text-text-2 mb-1.5">
+                      {t('projects.deadlineLabel')}
                     </label>
                     <Input
                       type="date"
@@ -592,8 +590,8 @@ export default function ProjectsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-text-2 mb-1.5">
-                      Status
+                    <label className="block text-base font-medium text-text-2 mb-1.5">
+                      {t('common.statusLabel')}
                     </label>
                     <select
                       value={editProjectStatus}
@@ -601,14 +599,14 @@ export default function ProjectsPage() {
                       className={SELECT_CLASS}
                     >
                       {STATUS_OPTIONS.map((s) => (
-                        <option key={s.value} value={s.value}>{s.label}</option>
+                        <option key={s} value={s}>{t('status.' + s)}</option>
                       ))}
                     </select>
                   </div>
 
                   {editError && (
                     <div className="p-3 bg-error-soft border border-error-strong rounded-md">
-                      <p className="text-sm text-error-strong">{editError}</p>
+                      <p className="text-base text-error-strong">{t(editError)}</p>
                     </div>
                   )}
 
@@ -619,14 +617,14 @@ export default function ProjectsPage() {
                       loading={editSaving}
                       onClick={handleSaveEditProject}
                     >
-                      {editSaving ? 'Saving...' : 'Save changes'}
+                      {editSaving ? t('projects.saving') : t('common.saveChanges')}
                     </Button>
                     <Button
                       variant="secondary"
                       fullWidth
                       onClick={() => setShowEditProject(false)}
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </Button>
                   </div>
                 </div>
@@ -638,17 +636,17 @@ export default function ProjectsPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-surface-2 border border-border rounded-md p-3">
-                      <p className="text-xs text-text-2 mb-1">Total value</p>
+                      <p className="text-xs text-text-2 mb-1">{t('projects.totalValue')}</p>
                       <p className="text-base font-bold text-text-1 tabular-nums">
                         {formatUZS(selectedProject.totalPrice)}
                       </p>
                     </div>
                     <div className="bg-surface-2 border border-border rounded-md p-3">
-                      <p className="text-xs text-text-2 mb-1">Deadline</p>
+                      <p className="text-xs text-text-2 mb-1">{t('projects.deadlineLabel')}</p>
                       <p className="text-base font-bold text-text-1">
                         {selectedProject.deadline
                           ? formatDate(selectedProject.deadline)
-                          : 'Not set'}
+                          : t('projects.notSet')}
                       </p>
                     </div>
                   </div>
@@ -659,9 +657,9 @@ export default function ProjectsPage() {
               {!showEditProject && selectedProject.description && (
                 <div>
                   <p className="text-xs font-semibold text-text-2 uppercase tracking-wider mb-2">
-                    Scope of work
+                    {t('projects.scopeOfWork')}
                   </p>
-                  <p className="text-sm text-text-1">{selectedProject.description}</p>
+                  <p className="text-base text-text-1">{selectedProject.description}</p>
                 </div>
               )}
 
@@ -669,10 +667,10 @@ export default function ProjectsPage() {
               {!showEditProject && (
                 <div>
                   <p className="text-xs font-semibold text-text-2 uppercase tracking-wider mb-3">
-                    Milestones
+                    {t('projects.milestones')}
                   </p>
                   {selectedProject.milestones.length === 0 ? (
-                    <p className="text-sm text-text-3">No milestones added</p>
+                    <p className="text-base text-text-3">{t('projects.noMilestones')}</p>
                   ) : (
                     selectedProject.milestones.map((milestone) => (
                       <div
@@ -681,16 +679,16 @@ export default function ProjectsPage() {
                       >
                         <div className="flex items-start justify-between gap-3 mb-2">
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-text-1 truncate">
+                            <p className="text-base font-semibold text-text-1 truncate">
                               {milestone.name}
                             </p>
                             {milestone.dueDate && (
                               <p className="text-xs text-text-3 mt-0.5">
-                                Due {formatDate(milestone.dueDate)}
+                                {t('projects.dueDate', { date: formatDate(milestone.dueDate) })}
                               </p>
                             )}
                           </div>
-                          <p className="text-sm font-bold text-text-1 tabular-nums flex-shrink-0">
+                          <p className="text-base font-bold text-text-1 tabular-nums flex-shrink-0">
                             {formatUZS(milestone.amount)}
                           </p>
                         </div>
@@ -698,7 +696,7 @@ export default function ProjectsPage() {
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-pill text-xs font-semibold ${milestoneTone(milestone.status)}`}
                           >
-                            {getMilestoneStatusLabel(milestone.status)}
+                            {t('status.' + milestone.status)}
                           </span>
                           {milestone.status === 'APPROVED' && (
                             <Button
@@ -707,12 +705,12 @@ export default function ProjectsPage() {
                               loading={payingMilestoneId === milestone.id}
                               onClick={() => handleMilestonePayment(milestone)}
                             >
-                              Mark payment received
+                              {t('projects.markPaymentReceived')}
                             </Button>
                           )}
                           {milestone.status === 'SUBMITTED_FOR_REVIEW' && (
                             <span className="text-xs text-text-3">
-                              Waiting for client
+                              {t('projects.waitingForClient')}
                             </span>
                           )}
                         </div>
@@ -728,27 +726,27 @@ export default function ProjectsPage() {
                       onClick={() => setShowAddMilestone(true)}
                       className="mt-2"
                     >
-                      Add milestone
+                      {t('projects.addMilestone')}
                     </Button>
                   )}
 
                   {showAddMilestone && (
                     <div className="border border-border rounded-md p-4 mt-2 bg-surface-2">
-                      <p className="text-sm font-semibold text-text-1 mb-3">
-                        New milestone
+                      <p className="text-lg font-semibold text-text-1 mb-3">
+                        {t('projects.newMilestone')}
                       </p>
                       <div className="space-y-3">
                         <Input
                           type="text"
                           value={milestoneName}
                           onChange={(e) => setMilestoneName(e.target.value)}
-                          placeholder="Milestone name"
+                          placeholder={t('projects.milestoneNamePlaceholder')}
                         />
                         <Input
                           type="number"
                           value={milestoneAmount}
                           onChange={(e) => setMilestoneAmount(e.target.value)}
-                          placeholder={`Amount (${currencyWord()})`}
+                          placeholder={`${t('projects.amountLabel')} (${currencyWord()})`}
                           className="tabular-nums"
                         />
                         <Input
@@ -765,7 +763,7 @@ export default function ProjectsPage() {
                             loading={addingMilestone}
                             onClick={handleAddMilestone}
                           >
-                            {addingMilestone ? 'Adding...' : 'Add'}
+                            {addingMilestone ? t('projects.adding') : t('common.add')}
                           </Button>
                           <Button
                             variant="secondary"
@@ -773,7 +771,7 @@ export default function ProjectsPage() {
                             size="sm"
                             onClick={() => setShowAddMilestone(false)}
                           >
-                            Cancel
+                            {t('common.cancel')}
                           </Button>
                         </div>
                       </div>
@@ -786,10 +784,10 @@ export default function ProjectsPage() {
               {!showEditProject && (
                 <div>
                   <p className="text-xs font-semibold text-text-2 uppercase tracking-wider mb-3">
-                    Invoices
+                    {t('projects.invoices')}
                   </p>
                   {selectedProject.invoices.length === 0 ? (
-                    <p className="text-sm text-text-3">No invoices generated</p>
+                    <p className="text-base text-text-3">{t('projects.noInvoices')}</p>
                   ) : (
                     selectedProject.invoices.map((invoice) => (
                       <div
@@ -797,17 +795,17 @@ export default function ProjectsPage() {
                         className="flex items-center justify-between p-4 border border-border rounded-md mb-2 bg-surface"
                       >
                         <div className="min-w-0 mr-3">
-                          <p className="text-sm font-semibold text-text-1 truncate">
+                          <p className="text-base font-semibold text-text-1 truncate">
                             {invoice.invoiceNumber}
                           </p>
                           <p className="text-xs text-text-3 mt-0.5">
                             {invoice.dueDate
-                              ? `Due ${formatDate(invoice.dueDate)}`
-                              : 'No due date'}
+                              ? t('projects.dueDate', { date: formatDate(invoice.dueDate) })
+                              : t('projects.noDueDate')}
                           </p>
                         </div>
                         <div className="flex items-center gap-3 flex-shrink-0">
-                          <p className="text-sm font-bold text-text-1 tabular-nums">
+                          <p className="text-base font-bold text-text-1 tabular-nums">
                             {formatUZS(invoice.total)}
                           </p>
                           {invoice.status === 'UNPAID' && (
@@ -817,12 +815,12 @@ export default function ProjectsPage() {
                               loading={payingInvoiceId === invoice.id}
                               onClick={() => handleMarkInvoicePaid(invoice)}
                             >
-                              Mark paid
+                              {t('projects.markPaid')}
                             </Button>
                           )}
                           {invoice.status === 'PAID' && (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-pill text-xs font-semibold bg-success-soft text-success-strong">
-                              Paid
+                              {t('status.PAID')}
                             </span>
                           )}
                         </div>
@@ -840,53 +838,39 @@ export default function ProjectsPage() {
                     fullWidth
                     onClick={copyProposalLink}
                   >
-                    {copiedProposal ? 'Copied!' : 'Copy proposal link'}
+                    {copiedProposal ? t('projects.copied') : t('projects.copyProposalLink')}
                   </Button>
                 </div>
               )}
             </div>
-          </div>
-        </div>
+        </SlideOver>
       )}
 
       {/* ── Create project slide-over ───────────────────────────── */}
-      {showCreateForm && (
-        <div className="fixed inset-0 z-40 flex justify-end">
-          <div
-            className="absolute inset-0 bg-text-1/30"
-            onClick={() => setShowCreateForm(false)}
-          />
-          <div className="relative z-50 w-full max-w-lg bg-surface border-l border-border shadow-lg flex flex-col h-full">
-            <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
-              <p className="text-lg font-bold text-text-1">New project</p>
-              <button
-                type="button"
-                onClick={() => setShowCreateForm(false)}
-                aria-label="Close"
-                className="text-text-3 hover:text-text-1 transition-colors"
-              >
-                <Icon name="close" size={20} />
-              </button>
-            </div>
-
+      <SlideOver
+        open={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        title={t('home.quickActionNewProject')}
+        closeLabel={t('common.close')}
+      >
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
               {/* Project name */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Project name *
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('projects.nameLabel')} *
                 </label>
                 <Input
                   type="text"
                   value={createName}
                   onChange={(e) => setCreateName(e.target.value)}
-                  placeholder="e.g. Logo design, Website redesign"
+                  placeholder={t('projects.namePlaceholder')}
                 />
               </div>
 
               {/* Client */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Client *
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('projects.clientField')} *
                 </label>
 
                 <div className="flex gap-2 mb-2">
@@ -895,14 +879,14 @@ export default function ProjectsPage() {
                     onClick={() => setCreateCustomerMode('select')}
                     className={chip(createCustomerMode === 'select', true)}
                   >
-                    Select existing
+                    {t('projects.selectExisting')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setCreateCustomerMode('manual')}
                     className={chip(createCustomerMode === 'manual', true)}
                   >
-                    Enter manually
+                    {t('projects.enterManually')}
                   </button>
                 </div>
 
@@ -912,7 +896,7 @@ export default function ProjectsPage() {
                     onChange={(e) => setCreateCustomerId(e.target.value)}
                     className={SELECT_CLASS}
                   >
-                    <option value="">Select a client</option>
+                    <option value="">{t('projects.selectClient')}</option>
                     {customers.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
@@ -922,15 +906,15 @@ export default function ProjectsPage() {
                     type="text"
                     value={createManualCustomerName}
                     onChange={(e) => setCreateManualCustomerName(e.target.value)}
-                    placeholder="Client name"
+                    placeholder={t('projects.clientNamePlaceholder')}
                   />
                 )}
               </div>
 
               {/* Total price */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Total price ({currencyWord()}) *
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('projects.totalPriceLabel')} ({currencyWord()}) *
                 </label>
                 <Input
                   type="number"
@@ -944,21 +928,21 @@ export default function ProjectsPage() {
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Scope of work
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('projects.scopeOfWork')}
                 </label>
                 <Textarea
                   rows={4}
                   value={createDescription}
                   onChange={(e) => setCreateDescription(e.target.value)}
-                  placeholder="Describe what is included in this project..."
+                  placeholder={t('projects.descriptionPlaceholder')}
                 />
               </div>
 
               {/* Start date (optional) — mirrors the Flutter project form */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Start date
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('projects.startDate')}
                 </label>
                 <Input
                   type="date"
@@ -969,8 +953,8 @@ export default function ProjectsPage() {
 
               {/* Deadline */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Deadline
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('projects.deadlineLabel')}
                 </label>
                 <Input
                   type="date"
@@ -981,14 +965,14 @@ export default function ProjectsPage() {
 
               {/* Payment terms */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Payment terms
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('projects.paymentTerms')}
                 </label>
                 <Input
                   type="text"
                   value={createPaymentTerms}
                   onChange={(e) => setCreatePaymentTerms(e.target.value)}
-                  placeholder="e.g. 50% upfront, 50% on delivery"
+                  placeholder={t('projects.paymentTermsPlaceholder')}
                 />
               </div>
             </div>
@@ -996,7 +980,7 @@ export default function ProjectsPage() {
             <div className="p-6 border-t border-border flex-shrink-0 space-y-3">
               {createError && (
                 <div className="p-3 bg-error-soft border border-error-strong rounded-md">
-                  <p className="text-sm text-error-strong">{createError}</p>
+                  <p className="text-base text-error-strong">{t(createError)}</p>
                 </div>
               )}
               <Button
@@ -1005,27 +989,25 @@ export default function ProjectsPage() {
                 loading={createSaving}
                 onClick={handleCreateProject}
               >
-                {createSaving ? 'Saving...' : 'Create project'}
+                {createSaving ? t('projects.saving') : t('projects.createProject')}
               </Button>
               <Button
                 variant="secondary"
                 fullWidth
                 onClick={() => setShowCreateForm(false)}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+      </SlideOver>
 
       {/* Success toast */}
       {savedMessage && (
-        <div className="fixed bottom-6 right-6 bg-text-1 text-surface px-4 py-3 rounded-md text-sm font-medium shadow-md z-50 flex items-center gap-2">
+        <div className="fixed bottom-6 right-6 bg-text-1 text-surface px-4 py-3 rounded-md text-base font-medium shadow-md z-50 flex items-center gap-2">
           <span className="text-success-soft">
             <Icon name="paid" size={16} />
           </span>
-          {savedMessage}
+          {t(savedMessage)}
         </div>
       )}
     </AuthLayout>

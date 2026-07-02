@@ -76,9 +76,11 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     setLocaleState(resolveInitial())
   }, [])
 
-  // Keep the (read-inside) currency formatter's word in sync with the language.
+  // Keep the (read-inside) currency/date formatters and <html lang> in sync
+  // with the language (screen readers pick pronunciation from the lang attr).
   useEffect(() => {
     setCurrencyLocale(locale)
+    document.documentElement.lang = locale
   }, [locale])
 
   const setLocale = useCallback((next: Locale) => {

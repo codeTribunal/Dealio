@@ -27,25 +27,65 @@ export function formatUZS(amount: number | null | undefined): string {
   return amount.toLocaleString('uz-UZ').replace(/,/g, ' ') + ' ' + currencyWord()
 }
 
+// ── Localized dates ──────────────────────────────────────────────────────────
+// Spec (CLAUDE.md): "15 yanvar 2026" (uz) / "15 января 2026" (ru). Browser
+// Intl support for the uz locale is unreliable, and ru needs the genitive
+// month for this format, so month/weekday names are explicit tables. Kept in
+// sync with the Flutter app (app/lib/shared/utils/format.dart).
+const MONTHS: Record<CurrencyLocale, string[]> = {
+  en: ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'],
+  uz: ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun',
+    'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'],
+  ru: ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'],
+}
+
+// Index 0 = Sunday, matching Date.getDay().
+const WEEKDAYS: Record<CurrencyLocale, string[]> = {
+  en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  uz: ['yakshanba', 'dushanba', 'seshanba', 'chorshanba', 'payshanba', 'juma', 'shanba'],
+  ru: ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'],
+}
+
+const MONTHS_SHORT: Record<CurrencyLocale, string[]> = {
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  uz: ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'],
+  ru: ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'],
+}
+
+/** Localized short month name for chart axes and compact labels. */
+export function formatMonthShort(monthIndex: number): string {
+  return MONTHS_SHORT[_currencyLocale][((monthIndex % 12) + 12) % 12]
+}
+
+function composeDate(day: number, monthIndex: number, year: number): string {
+  return `${day} ${MONTHS[_currencyLocale][monthIndex]} ${year}`
+}
+
 export function formatDate(dateString: string): string {
   const date = new Date(dateString)
-  return date.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
+  return composeDate(date.getDate(), date.getMonth(), date.getFullYear())
 }
 
 export function formatDateTime(dateString: string): string {
   const date = new Date(dateString)
-  return date.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
+  const time = date.toLocaleTimeString('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
   })
+  return `${formatDate(dateString)}, ${time}`
+}
+
+/** Localized weekday name for a YYYY-MM-DD date string or ISO instant. */
+export function formatWeekday(dateString: string): string {
+  // Date-only strings parse as UTC midnight; anchor to noon so the weekday
+  // can't shift a day in western-timezone browsers.
+  const date = new Date(
+    /^\d{4}-\d{2}-\d{2}$/.test(dateString) ? dateString + 'T12:00:00' : dateString,
+  )
+  return WEEKDAYS[_currencyLocale][date.getDay()]
 }
 
 export function formatTime(dateString: string): string {
@@ -93,14 +133,17 @@ export function tashkentWallClockToIso(dateStr: string, hhmm: string): string {
   return new Date(utcMs).toISOString()
 }
 
-// Display an instant as a Tashkent calendar date.
+// Display an instant as a Tashkent calendar date (localized month name).
 export function formatDateTashkent(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-GB', {
+  const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Tashkent',
     day: 'numeric',
-    month: 'short',
+    month: 'numeric',
     year: 'numeric',
-  })
+  }).formatToParts(new Date(dateString))
+  const get = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value ?? 0)
+  return composeDate(get('day'), get('month') - 1, get('year'))
 }
 
 // Display an instant as a Tashkent 24h time "HH:MM".

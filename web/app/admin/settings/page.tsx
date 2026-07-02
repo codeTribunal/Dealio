@@ -56,7 +56,7 @@ export default function AdminSettingsPage() {
               <CreditCard size={18} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white">Card payments</p>
+              <p className="text-lg font-semibold text-white">Card payments</p>
               <p className="text-xs text-gray-500 mt-0.5">
                 Show card setup &amp; checkout display platform-wide. When off, the
                 card-number/bank setup (onboarding &amp; Settings) and the bot

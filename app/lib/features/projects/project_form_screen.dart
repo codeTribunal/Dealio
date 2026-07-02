@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/api/api_service.dart';
 import '../../core/icons/app_icon.dart';
 import '../../core/models/customer.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_text_field.dart';
 import 'projects_provider.dart';
-
-final _displayFmt = DateFormat('d MMM yyyy');
 
 class ProjectFormScreen extends ConsumerStatefulWidget {
   const ProjectFormScreen({super.key});
@@ -205,7 +203,7 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                         initial: _startDate,
                         onPicked: (d) => setState(() {
                           _startDate = d;
-                          _startCtrl.text = _displayFmt.format(d);
+                          _startCtrl.text = formatDate(d);
                         }),
                       ),
                     ),
@@ -241,7 +239,7 @@ class _ProjectFormScreenState extends ConsumerState<ProjectFormScreen> {
                         initial: _deadline,
                         onPicked: (d) => setState(() {
                           _deadline = d;
-                          _deadlineCtrl.text = _displayFmt.format(d);
+                          _deadlineCtrl.text = formatDate(d);
                         }),
                       ),
                     ),

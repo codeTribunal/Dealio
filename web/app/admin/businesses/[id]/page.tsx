@@ -165,14 +165,14 @@ export default function AdminBusinessDetailPage() {
     <AdminLayout title={business?.name || 'Business'}>
       {/* Saved message */}
       {savedMessage && (
-        <div className="fixed top-4 right-4 z-50 bg-green-800 border border-green-700 text-green-200 text-sm px-4 py-2.5 rounded-xl shadow-lg">
+        <div className="fixed top-4 right-4 z-50 bg-green-800 border border-green-700 text-green-200 text-base px-4 py-2.5 rounded-xl shadow-lg">
           {savedMessage}
         </div>
       )}
 
       <button
         onClick={() => router.back()}
-        className="flex items-center gap-1 text-sm text-gray-400 hover:text-white mb-6 transition-colors"
+        className="flex items-center gap-1 text-base text-gray-400 hover:text-white mb-6 transition-colors"
       >
         <ChevronLeft size={16} />
         Back to businesses
@@ -180,7 +180,7 @@ export default function AdminBusinessDetailPage() {
 
       {loading && (
         <div className="flex items-center justify-center h-64">
-          <p className="text-sm text-gray-500">Loading...</p>
+          <p className="text-base text-gray-500">Loading...</p>
         </div>
       )}
 
@@ -353,7 +353,7 @@ export default function AdminBusinessDetailPage() {
             <h3 className="text-base font-bold text-white mb-2">
               Suspend business
             </h3>
-            <p className="text-sm text-gray-400 mb-4">
+            <p className="text-base text-gray-400 mb-4">
               The business owner will see this reason. Be professional.
             </p>
             <textarea
@@ -361,19 +361,19 @@ export default function AdminBusinessDetailPage() {
               value={suspendReason}
               onChange={(e) => setSuspendReason(e.target.value)}
               placeholder="Reason for suspension (min 10 characters)..."
-              className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-base text-white placeholder-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-red-500"
             />
             <div className="flex gap-3 mt-4">
               <button
                 onClick={() => setShowSuspendModal(false)}
-                className="px-4 py-2 bg-gray-700 text-white rounded-xl text-sm"
+                className="px-4 py-2 bg-gray-700 text-white rounded-xl text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSuspend}
                 disabled={suspendReason.length < 10 || saving}
-                className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 bg-red-600 text-white rounded-xl text-base font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
               >
                 {saving ? 'Suspending...' : 'Suspend'}
               </button>
@@ -389,7 +389,7 @@ export default function AdminBusinessDetailPage() {
             <h3 className="text-base font-bold text-white mb-2">
               View as owner
             </h3>
-            <p className="text-sm text-gray-400 mb-4">
+            <p className="text-base text-gray-400 mb-4">
               A read-only owner session (15 minutes). The reason is recorded in the audit log.
             </p>
             <textarea
@@ -397,19 +397,19 @@ export default function AdminBusinessDetailPage() {
               value={impersonateReason}
               onChange={(e) => setImpersonateReason(e.target.value)}
               placeholder="Reason for impersonation (min 10 characters)..."
-              className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-base text-white placeholder-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <div className="flex gap-3 mt-4">
               <button
                 onClick={() => setShowImpersonateModal(false)}
-                className="px-4 py-2 bg-gray-700 text-white rounded-xl text-sm"
+                className="px-4 py-2 bg-gray-700 text-white rounded-xl text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={handleImpersonate}
                 disabled={impersonateReason.trim().length < 10 || impersonating}
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-base font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
                 {impersonating ? 'Opening...' : 'View as owner'}
               </button>
@@ -425,7 +425,7 @@ export default function AdminBusinessDetailPage() {
             <h3 className="text-base font-bold text-white mb-2">
               Unsuspend business
             </h3>
-            <p className="text-sm text-gray-400 mb-4">
+            <p className="text-base text-gray-400 mb-4">
               The reason is recorded in the audit log.
             </p>
             <textarea
@@ -433,19 +433,19 @@ export default function AdminBusinessDetailPage() {
               value={unsuspendReason}
               onChange={(e) => setUnsuspendReason(e.target.value)}
               placeholder="Reason for unsuspending (min 10 characters)..."
-              className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-base text-white placeholder-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
             />
             <div className="flex gap-3 mt-4">
               <button
                 onClick={() => setShowUnsuspendModal(false)}
-                className="px-4 py-2 bg-gray-700 text-white rounded-xl text-sm"
+                className="px-4 py-2 bg-gray-700 text-white rounded-xl text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={handleUnsuspend}
                 disabled={unsuspendReason.trim().length < 10 || saving}
-                className="px-4 py-2 bg-green-700 text-white rounded-xl text-sm font-semibold hover:bg-green-600 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 bg-green-700 text-white rounded-xl text-base font-semibold hover:bg-green-600 disabled:opacity-50 transition-colors"
               >
                 {saving ? 'Unsuspending...' : 'Unsuspend'}
               </button>
@@ -461,7 +461,7 @@ export default function AdminBusinessDetailPage() {
             <h3 className="text-base font-bold text-white mb-4">
               Change plan
             </h3>
-            <p className="text-sm text-gray-400 mb-2">
+            <p className="text-base text-gray-400 mb-2">
               Current plan: {business?.plan}
             </p>
 
@@ -474,7 +474,7 @@ export default function AdminBusinessDetailPage() {
                 <button
                   key={value}
                   onClick={() => setNewPlan(value)}
-                  className={`py-3 rounded-xl text-sm font-semibold transition-colors ${
+                  className={`py-3 rounded-xl text-base font-semibold transition-colors ${
                     newPlan === value
                       ? 'bg-blue-600 text-white border-2 border-blue-500'
                       : 'bg-gray-800 text-gray-300 border-2 border-gray-700 hover:border-gray-500'
@@ -490,20 +490,20 @@ export default function AdminBusinessDetailPage() {
               value={planNote}
               onChange={(e) => setPlanNote(e.target.value)}
               placeholder="Internal note (optional)..."
-              className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-base text-white placeholder-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
 
             <div className="flex gap-3 mt-4">
               <button
                 onClick={() => setShowPlanModal(false)}
-                className="px-4 py-2 bg-gray-700 text-white rounded-xl text-sm"
+                className="px-4 py-2 bg-gray-700 text-white rounded-xl text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={handleChangePlan}
                 disabled={!newPlan || saving}
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-base font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
                 {saving ? 'Saving...' : 'Save'}
               </button>
@@ -518,7 +518,7 @@ export default function AdminBusinessDetailPage() {
             {eraseCounts ? (
               <>
                 <h3 className="text-base font-bold text-white mb-2">Business erased</h3>
-                <p className="text-sm text-gray-400 mb-3">Rows removed per table:</p>
+                <p className="text-base text-gray-400 mb-3">Rows removed per table:</p>
                 <div className="max-h-60 overflow-y-auto text-xs text-gray-300 mb-4 border border-gray-800 rounded-xl">
                   {Object.entries(eraseCounts).map(([k, v]) => (
                     <div
@@ -532,7 +532,7 @@ export default function AdminBusinessDetailPage() {
                 </div>
                 <button
                   onClick={() => router.replace('/admin/businesses')}
-                  className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
+                  className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-base font-semibold hover:bg-blue-700 transition-colors"
                 >
                   Back to businesses
                 </button>
@@ -542,7 +542,7 @@ export default function AdminBusinessDetailPage() {
                 <h3 className="text-base font-bold text-red-400 mb-2">
                   Erase entire business
                 </h3>
-                <p className="text-sm text-gray-400 mb-2">
+                <p className="text-base text-gray-400 mb-2">
                   This permanently deletes{' '}
                   <span className="text-white font-semibold">{business.name}</span>, its owner
                   account, and ALL of its data (customers, orders, appointments, projects). This
@@ -555,19 +555,19 @@ export default function AdminBusinessDetailPage() {
                   value={eraseConfirmText}
                   onChange={(e) => setEraseConfirmText(e.target.value)}
                   placeholder={business.name}
-                  className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-600 mb-4 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-base text-white placeholder-gray-600 mb-4 focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowEraseModal(false)}
-                    className="px-4 py-2 bg-gray-700 text-white rounded-xl text-sm"
+                    className="px-4 py-2 bg-gray-700 text-white rounded-xl text-base"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleErase}
                     disabled={erasing || eraseConfirmText !== business.name}
-                    className="flex-1 px-4 py-2 bg-red-700 text-white rounded-xl text-sm font-bold hover:bg-red-800 disabled:opacity-40 transition-colors"
+                    className="flex-1 px-4 py-2 bg-red-700 text-white rounded-xl text-base font-bold hover:bg-red-800 disabled:opacity-40 transition-colors"
                   >
                     {erasing ? 'Erasing...' : 'Erase permanently'}
                   </button>

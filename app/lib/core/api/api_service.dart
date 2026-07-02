@@ -24,6 +24,7 @@ import '../models/customer.dart'
         HomeData,
         HomeMilestone,
         HomeProject,
+        PendingApptPayment,
         PendingPayment,
         Reminder,
         ReminderItem,
@@ -509,6 +510,12 @@ class ApiService {
         pendingPayments: (json['pendingPayments'] as List)
             .map((e) => PendingPayment.fromJson(e as Map<String, dynamic>))
             .toList(),
+        // Tolerate older backends that don't send the appointment queue yet.
+        pendingAppointmentPayments:
+            (json['pendingAppointmentPayments'] as List? ?? [])
+                .map((e) =>
+                    PendingApptPayment.fromJson(e as Map<String, dynamic>))
+                .toList(),
         newCustomers: (json['newCustomers'] as List)
             .map((e) => SimpleCustomer.fromJson(e as Map<String, dynamic>))
             .toList(),

@@ -3,21 +3,24 @@ import { useI18n } from '@/lib/i18n/i18nContext'
 
 export type BadgeType = 'order' | 'payment' | 'appointment' | 'project'
 
-type Tone = 'success' | 'warning' | 'error'
+type Tone = 'success' | 'warning' | 'error' | 'neutral'
 
 // Semantic mapping — fixed regardless of brand accent.
-// success = positive terminal, warning = in-progress / awaiting action,
-// error = terminal failure.
+// success = positive terminal, warning = OWNER action needed / in progress,
+// error = terminal failure, neutral = healthy resting state (nothing to do).
+// NEW and payment-PENDING are neutral so a fresh order never shows two amber
+// pills — the caution tone is reserved for states that actually ask for
+// attention (PAYMENT_RECEIVED above all). Mirrored in the Flutter AppBadge.
 const TONES: Record<BadgeType, Record<string, Tone>> = {
   order: {
-    NEW: 'warning',
+    NEW: 'neutral',
     PREPARING: 'warning',
     READY: 'success',
     DELIVERED: 'success',
     CANCELLED: 'error',
   },
   payment: {
-    PENDING: 'warning',
+    PENDING: 'neutral',
     PAYMENT_RECEIVED: 'warning',
     CONFIRMED: 'success',
   },
@@ -41,6 +44,7 @@ const TONE_CLASSES: Record<Tone, string> = {
   success: 'bg-success-soft text-success-strong',
   warning: 'bg-warning-soft text-warning-strong',
   error: 'bg-error-soft text-error-strong',
+  neutral: 'bg-surface-2 text-text-2 border border-border',
 }
 
 interface BadgeProps {

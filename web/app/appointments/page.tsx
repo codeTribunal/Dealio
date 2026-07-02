@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
+import { SlideOver } from '@/components/ui/SlideOver'
 import { Icon } from '@/components/icons/Icon'
 import {
   getAppointments,
@@ -22,26 +23,12 @@ import {
   getStaffForForm,
   getCustomers,
 } from '@/lib/api'
-import { formatUZS, formatDate, formatTime, currencyWord } from '@/lib/format'
+import { formatUZS, formatDate, formatTime, formatWeekday, currencyWord } from '@/lib/format'
 import { useI18n } from '@/lib/i18n/i18nContext'
+import { useToast } from '@/lib/toast'
 import type { Appointment, Service, StaffMember, Customer } from '@/types'
 
-const STATUS_FILTERS = [
-  { label: 'All', value: 'ALL' },
-  { label: 'Requested', value: 'REQUESTED' },
-  { label: 'Confirmed', value: 'CONFIRMED' },
-  { label: 'Completed', value: 'COMPLETED' },
-  { label: 'Cancelled', value: 'CANCELLED' },
-]
-
-// Semantic left-border accent for the row, mapped through tokens.
-const STATUS_BORDER: Record<string, string> = {
-  REQUESTED: 'border-l-4 border-l-warning',
-  CONFIRMED: 'border-l-4 border-l-success',
-  COMPLETED: 'border-l-4 border-l-border-strong',
-  CANCELLED: 'border-l-4 border-l-error',
-  NO_SHOW: 'border-l-4 border-l-error',
-}
+const STATUS_FILTER_VALUES = ['ALL', 'REQUESTED', 'CONFIRMED', 'COMPLETED', 'CANCELLED'] as const
 
 function getDurationMinutes(start: string, end: string): number {
   return Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000)
@@ -53,20 +40,17 @@ function addDays(dateStr: string, days: number): string {
   return d.toISOString().split('T')[0]
 }
 
-function getDayOfWeek(dateStr: string): string {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long' })
-}
-
 function isToday(dateStr: string): boolean {
   return dateStr === new Date().toISOString().split('T')[0]
 }
 
 const SELECT_CLASS =
-  'w-full bg-surface border border-border rounded-md py-2.5 px-3.5 text-sm text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors'
+  'w-full bg-surface border border-border rounded-md py-2.5 px-3.5 text-base text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors'
 
 export default function AppointmentsPage() {
   const guardReady = useModeGuard('SERVICES')
   const { t } = useI18n()
+  const { showToast } = useToast()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -130,7 +114,7 @@ export default function AppointmentsPage() {
       .then((data) => {
         setAppointments(Array.isArray(data.appointments) ? data.appointments : [])
       })
-      .catch(() => setError('Failed to load appointments'))
+      .catch(() => setError(t('appointments.failedLoad')))
       .finally(() => setLoading(false))
   }
 
@@ -197,6 +181,9 @@ export default function AppointmentsPage() {
       setSelectedAppointment((prev) =>
         prev && prev.id === appointmentId ? { ...prev, status: newStatus } : prev
       )
+    } catch {
+      // A failed status change must never be silent — the chips just snap back.
+      showToast(t('appointments.statusUpdateFailed'), 'error')
     } finally {
       setStatusUpdating(false)
     }
@@ -301,14 +288,14 @@ export default function AppointmentsPage() {
       }
       const wasEdit = !!editingId
       closeForm()
-      showSaved(wasEdit ? 'Appointment updated' : 'Appointment created')
+      showSaved(wasEdit ? t('appointments.updatedToast') : t('appointments.createdToast'))
     } catch (e) {
       if (isAppointmentConflict(e)) {
         setConflictOpen(true)
         setApptSaving(false)
         return
       }
-      setApptError('Failed to save appointment. Please try again.')
+      setApptError(t('appointments.saveFailed'))
       setApptSaving(false)
     }
   }
@@ -316,23 +303,23 @@ export default function AppointmentsPage() {
   const handleSubmitAppointment = async () => {
     // Customer is only chosen on create — it's fixed in edit mode.
     if (!editingId && apptCustomerMode === 'select' && !apptCustomerId) {
-      setApptError('Select a customer')
+      setApptError(t('appointments.selectCustomer'))
       return
     }
     if (!editingId && apptCustomerMode === 'manual' && !apptManualCustomerName.trim()) {
-      setApptError('Enter a customer name')
+      setApptError(t('appointments.enterCustomerName'))
       return
     }
     if (apptServiceMode === 'select' && !apptServiceId) {
-      setApptError('Select a service')
+      setApptError(t('appointments.selectService'))
       return
     }
     if (apptServiceMode === 'manual' && !apptManualServiceName.trim()) {
-      setApptError('Enter a service name')
+      setApptError(t('appointments.enterServiceName'))
       return
     }
     if (!apptDate) {
-      setApptError('Select a date')
+      setApptError(t('appointments.selectDate'))
       return
     }
     setApptSaving(true)
@@ -357,7 +344,7 @@ export default function AppointmentsPage() {
       pendingSubmit.current = { customerId, serviceId, newService }
       await sendAppointment(false)
     } catch {
-      setApptError('Failed to save appointment. Please try again.')
+      setApptError(t('appointments.saveFailed'))
       setApptSaving(false)
     }
   }
@@ -382,14 +369,14 @@ export default function AppointmentsPage() {
 
   // Inline segmented-style chip, used for filters and mode toggles.
   const chip = (active: boolean, sm = false) =>
-    `${sm ? 'px-3 py-1.5 text-xs' : 'px-3 py-1.5 text-sm'} rounded-md font-semibold transition-colors ${
+    `${sm ? 'px-3 py-1.5 text-xs' : 'px-3 py-1.5 text-base'} rounded-md font-semibold transition-colors ${
       active
         ? 'bg-accent-soft text-accent'
         : 'bg-surface border border-border text-text-2 hover:bg-surface-2'
     }`
 
   const segButton = (active: boolean) =>
-    `px-4 py-2 rounded-md text-sm font-semibold transition-colors ${
+    `px-4 py-2 rounded-md text-base font-semibold transition-colors ${
       active
         ? 'bg-accent text-accent-on'
         : 'border border-border bg-surface text-text-1 hover:bg-surface-2'
@@ -398,7 +385,7 @@ export default function AppointmentsPage() {
   if (!guardReady) return null
 
   return (
-    <AuthLayout title="Appointments">
+    <AuthLayout title={t('nav.appointments')}>
       {/* ── Header: date nav, actions, filters ───────────────────── */}
       <div className="mb-6 space-y-3">
         {/* Date navigator */}
@@ -407,21 +394,21 @@ export default function AppointmentsPage() {
             type="button"
             onClick={() => setSelectedDate(addDays(selectedDate, -1))}
             className="h-10 w-10 flex-shrink-0 rounded-md border border-border bg-surface text-text-1 hover:bg-surface-2 transition-colors flex items-center justify-center text-xl"
-            aria-label="Previous day"
+            aria-label={t('appointments.prevDay')}
           >
             ‹
           </button>
           <div className="flex-1 text-center">
             <p className="text-lg font-bold text-text-1">
-              {isToday(selectedDate) ? 'Today' : formatDate(selectedDate + 'T00:00:00')}
+              {isToday(selectedDate) ? t('common.today') : formatDate(selectedDate + 'T00:00:00')}
             </p>
-            <p className="text-sm text-text-2">{getDayOfWeek(selectedDate)}</p>
+            <p className="text-sm text-text-2">{formatWeekday(selectedDate)}</p>
           </div>
           <button
             type="button"
             onClick={() => setSelectedDate(addDays(selectedDate, 1))}
             className="h-10 w-10 flex-shrink-0 rounded-md border border-border bg-surface text-text-1 hover:bg-surface-2 transition-colors flex items-center justify-center text-xl"
-            aria-label="Next day"
+            aria-label={t('appointments.nextDay')}
           >
             ›
           </button>
@@ -429,14 +416,14 @@ export default function AppointmentsPage() {
 
         {/* Status filters — full width, horizontal scroll (never crowded) */}
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {STATUS_FILTERS.map(({ label, value }) => (
+          {STATUS_FILTER_VALUES.map((value) => (
             <button
               key={value}
               type="button"
               onClick={() => setStatusFilter(value)}
               className={`flex-shrink-0 ${chip(statusFilter === value)}`}
             >
-              {label}
+              {value === 'ALL' ? t('common.all') : t(`status.${value}`)}
             </button>
           ))}
         </div>
@@ -450,7 +437,7 @@ export default function AppointmentsPage() {
               className="flex-shrink-0"
               onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
             >
-              Today
+              {t('common.today')}
             </Button>
           )}
           {/* Per-day rule: the small add button shows ONLY when this day has
@@ -464,7 +451,7 @@ export default function AppointmentsPage() {
               className="flex-1"
               onClick={openCreate}
             >
-              New appointment
+              {t('appointments.newAppointment')}
             </Button>
           )}
           <Button
@@ -484,16 +471,16 @@ export default function AppointmentsPage() {
           <LoadingSpinner />
         ) : error ? (
           <Card>
-            <p className="text-sm text-error-strong">
+            <p className="text-base text-error-strong">
               {error}
               <button
-                className="ml-2 text-sm font-semibold text-accent hover:text-accent-hover"
+                className="ml-2 text-base font-semibold text-accent hover:text-accent-hover"
                 onClick={() => {
                   setError(null)
                   fetchAppointments()
                 }}
               >
-                Try again
+                {t('common.tryAgain')}
               </button>
             </p>
           </Card>
@@ -502,14 +489,14 @@ export default function AppointmentsPage() {
             <div className="mx-auto mb-4 w-16 h-16 rounded-lg bg-accent-soft flex items-center justify-center text-accent">
               <Icon name="calendar" size={28} />
             </div>
-            <p className="text-sm text-text-2">
+            <p className="text-base text-text-2">
               {statusFilter !== 'ALL'
-                ? `No ${statusFilter.toLowerCase()} appointments on this day`
-                : 'No appointments on this day'}
+                ? t('appointments.emptyDayFiltered', { status: t(`status.${statusFilter}`) })
+                : t('appointments.emptyDay')}
             </p>
             <div className="mt-5 flex justify-center">
               <Button variant="primary" leftIcon="add" onClick={openCreate}>
-                Create appointment
+                {t('appointments.createAppointment')}
               </Button>
             </div>
           </Card>
@@ -519,7 +506,7 @@ export default function AppointmentsPage() {
               <Card key={appointment.id} padded={false} className="p-5 opacity-70">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-text-1 tabular-nums">
+                    <p className="text-base font-bold text-text-1 tabular-nums">
                       {formatTime(appointment.startTime)} — {formatTime(appointment.endTime)}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
@@ -530,7 +517,7 @@ export default function AppointmentsPage() {
                         {t('common.deletedBadge')}
                       </span>
                     </div>
-                    <p className="text-sm text-text-2 truncate mt-1">{appointment.customer.name}</p>
+                    <p className="text-base text-text-2 truncate mt-1">{appointment.customer.name}</p>
                   </div>
                   <Button
                     variant="secondary"
@@ -551,13 +538,11 @@ export default function AppointmentsPage() {
                 setApptDeleteConfirm(false)
                 setSelectedAppointment(appointment)
               }}
-              className={`p-5 cursor-pointer hover:border-border-strong hover:shadow-md transition-shadow ${
-                STATUS_BORDER[appointment.status] || ''
-              }`}
+              className="p-5 cursor-pointer hover:border-border-strong hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-text-1 tabular-nums">
+                  <p className="text-base font-bold text-text-1 tabular-nums">
                     {formatTime(appointment.startTime)} — {formatTime(appointment.endTime)}
                   </p>
                   <p className="text-base font-bold text-text-1 mt-1 truncate">
@@ -565,7 +550,7 @@ export default function AppointmentsPage() {
                   </p>
                   <div className="flex items-center gap-2 mt-2">
                     <Avatar name={appointment.customer.name} size="sm" />
-                    <p className="text-sm text-text-2 truncate">
+                    <p className="text-base text-text-2 truncate">
                       {appointment.customer.name}
                       {appointment.customer.telegramUsername && (
                         <span className="text-text-3">
@@ -577,14 +562,14 @@ export default function AppointmentsPage() {
                   </div>
                   {appointment.staff && (
                     <p className="text-xs text-text-3 mt-1">
-                      with {appointment.staff.name}
+                      {t('appointments.withStaff', { name: appointment.staff.name })}
                     </p>
                   )}
                 </div>
 
                 <div className="flex flex-col items-end gap-2 flex-shrink-0">
                   <Badge status={appointment.status} type="appointment" />
-                  <p className="text-sm font-semibold text-text-1 tabular-nums">
+                  <p className="text-base font-semibold text-text-1 tabular-nums">
                     {formatUZS(appointment.price)}
                   </p>
                 </div>
@@ -596,33 +581,20 @@ export default function AppointmentsPage() {
 
       {/* ── Detail slide-over ───────────────────────────────────── */}
       {selectedAppointment && (
-        <div className="fixed inset-0 z-50 flex">
-          <div
-            className="flex-1 bg-text-1/30"
-            onClick={() => setSelectedAppointment(null)}
-          />
-          <div className="relative z-50 w-full md:max-w-lg bg-surface border-l border-border shadow-lg flex flex-col h-full overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-border">
-              <div className="min-w-0 mr-3">
-                <p className="text-lg font-bold text-text-1 truncate">
-                  {selectedAppointment.service.name}
-                </p>
-                <p className="text-sm text-text-2 mt-1 tabular-nums">
-                  {formatDate(selectedAppointment.startTime)} at{' '}
-                  {formatTime(selectedAppointment.startTime)}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedAppointment(null)}
-                aria-label="Close"
-                className="text-text-3 hover:text-text-1 transition-colors"
-              >
-                <Icon name="close" size={20} />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-6">
+        <SlideOver
+          open
+          onClose={() => setSelectedAppointment(null)}
+          title={selectedAppointment.service.name}
+          closeLabel={t('common.close')}
+          maxWidth="md:max-w-lg"
+        >
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <p className="text-sm text-text-2 tabular-nums">
+                {t('appointments.dateAtTime', {
+                  date: formatDate(selectedAppointment.startTime),
+                  time: formatTime(selectedAppointment.startTime),
+                })}
+              </p>
               <div className="flex flex-wrap gap-2">
                 <Badge status={selectedAppointment.status} type="appointment" />
                 {selectedAppointment.paymentType === 'IN_ADVANCE' && (
@@ -635,12 +607,12 @@ export default function AppointmentsPage() {
 
               <div>
                 <p className="text-xs font-semibold text-text-2 uppercase tracking-wider mb-3">
-                  Customer
+                  {t('customers.colCustomer')}
                 </p>
                 <div className="flex items-center gap-3">
                   <Avatar name={selectedAppointment.customer.name} size="md" />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-text-1 truncate">
+                    <p className="text-base font-semibold text-text-1 truncate">
                       {selectedAppointment.customer.name}
                     </p>
                     <p className="text-xs text-text-2 truncate">
@@ -654,43 +626,44 @@ export default function AppointmentsPage() {
 
               <div>
                 <p className="text-xs font-semibold text-text-2 uppercase tracking-wider mb-3">
-                  Details
+                  {t('appointments.detailsLabel')}
                 </p>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <p className="text-sm text-text-2">Service</p>
-                    <p className="text-sm font-medium text-text-1">
+                    <p className="text-sm text-text-2">{t('appointments.serviceLabel')}</p>
+                    <p className="text-base font-medium text-text-1">
                       {selectedAppointment.service.name}
                     </p>
                   </div>
                   <div className="flex justify-between">
-                    <p className="text-sm text-text-2">Duration</p>
-                    <p className="text-sm font-medium text-text-1 tabular-nums">
-                      {getDurationMinutes(
-                        selectedAppointment.startTime,
-                        selectedAppointment.endTime
-                      )}{' '}
-                      min
+                    <p className="text-sm text-text-2">{t('appointments.durationLabel')}</p>
+                    <p className="text-base font-medium text-text-1 tabular-nums">
+                      {t('appointments.minutesShort', {
+                        n: getDurationMinutes(
+                          selectedAppointment.startTime,
+                          selectedAppointment.endTime
+                        ),
+                      })}
                     </p>
                   </div>
                   <div className="flex justify-between">
-                    <p className="text-sm text-text-2">Price</p>
-                    <p className="text-sm font-medium text-text-1 tabular-nums">
+                    <p className="text-sm text-text-2">{t('appointments.priceLabel')}</p>
+                    <p className="text-base font-medium text-text-1 tabular-nums">
                       {formatUZS(selectedAppointment.price)}
                     </p>
                   </div>
                   <div className="flex justify-between">
-                    <p className="text-sm text-text-2">Payment</p>
-                    <p className="text-sm font-medium text-text-1">
+                    <p className="text-sm text-text-2">{t('appointments.paymentLabel')}</p>
+                    <p className="text-base font-medium text-text-1">
                       {selectedAppointment.paymentType === 'AT_APPOINTMENT'
-                        ? 'Pay at appointment'
-                        : 'Pay in advance'}
+                        ? t('appointments.payAtAppointment')
+                        : t('appointments.payInAdvance')}
                     </p>
                   </div>
                   {selectedAppointment.staff && (
                     <div className="flex justify-between">
-                      <p className="text-sm text-text-2">Staff</p>
-                      <p className="text-sm font-medium text-text-1">
+                      <p className="text-sm text-text-2">{t('appointments.staffLabel')}</p>
+                      <p className="text-base font-medium text-text-1">
                         {selectedAppointment.staff.name}
                       </p>
                     </div>
@@ -702,7 +675,7 @@ export default function AppointmentsPage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-semibold text-text-2 uppercase tracking-wider">
-                    Notes
+                    {t('customers.notes')}
                   </p>
                   {!notesEditing && (
                     <button
@@ -723,7 +696,7 @@ export default function AppointmentsPage() {
                       rows={3}
                       value={notesDraft}
                       onChange={(e) => setNotesDraft(e.target.value)}
-                      placeholder="Any notes about this appointment..."
+                      placeholder={t('appointments.notesPlaceholder')}
                     />
                     <div className="flex gap-2">
                       <Button
@@ -745,7 +718,7 @@ export default function AppointmentsPage() {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-text-1">
+                  <p className="text-base text-text-1">
                     {selectedAppointment.notes || (
                       <span className="text-text-3">—</span>
                     )}
@@ -788,7 +761,7 @@ export default function AppointmentsPage() {
                           onClick={() =>
                             handleStatusUpdate(selectedAppointment.id, s)
                           }
-                          className={`px-3 py-1.5 text-sm font-semibold rounded-pill border transition-colors ${
+                          className={`px-3 py-1.5 text-base font-semibold rounded-pill border transition-colors ${
                             active
                               ? 'bg-accent-soft text-accent border-accent'
                               : 'bg-surface text-text-2 border-border hover:bg-surface-2'
@@ -814,10 +787,10 @@ export default function AppointmentsPage() {
                   </Button>
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-sm font-semibold text-text-1">
+                    <p className="text-base font-semibold text-text-1">
                       {t('common.deleteAppointmentTitle')}
                     </p>
-                    <p className="text-sm text-text-2">
+                    <p className="text-base text-text-2">
                       {t('common.deleteAppointmentBody')}
                     </p>
                     <div className="flex gap-2">
@@ -841,39 +814,23 @@ export default function AppointmentsPage() {
                   </div>
                 )}
               </div>
-            </div>
           </div>
-        </div>
+        </SlideOver>
       )}
 
       {/* ── Create appointment slide-over ───────────────────────── */}
-      {showCreateForm && (
-        <div className="fixed inset-0 z-40 flex justify-end">
-          <div
-            className="absolute inset-0 bg-text-1/30"
-            onClick={closeForm}
-          />
-          <div className="relative z-50 w-full max-w-lg bg-surface border-l border-border shadow-lg flex flex-col h-full">
-            <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
-              <p className="text-lg font-bold text-text-1">
-                {editingId ? t('common.editAppointment') : 'New appointment'}
-              </p>
-              <button
-                type="button"
-                onClick={closeForm}
-                aria-label="Close"
-                className="text-text-3 hover:text-text-1 transition-colors"
-              >
-                <Icon name="close" size={20} />
-              </button>
-            </div>
-
+      <SlideOver
+        open={showCreateForm}
+        onClose={closeForm}
+        title={editingId ? t('common.editAppointment') : t('appointments.newAppointment')}
+        closeLabel={t('common.close')}
+      >
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
               {/* Customer — only on create; fixed (not editable) in edit mode */}
               {!editingId && (
                 <div>
-                  <label className="block text-sm font-medium text-text-2 mb-1.5">
-                    Customer *
+                  <label className="block text-base font-medium text-text-2 mb-1.5">
+                    {t('customers.colCustomer')} *
                   </label>
 
                   <div className="flex gap-2 mb-2">
@@ -882,14 +839,14 @@ export default function AppointmentsPage() {
                       onClick={() => setApptCustomerMode('select')}
                       className={chip(apptCustomerMode === 'select', true)}
                     >
-                      Select existing
+                      {t('appointments.selectExisting')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setApptCustomerMode('manual')}
                       className={chip(apptCustomerMode === 'manual', true)}
                     >
-                      Enter manually
+                      {t('appointments.enterManually')}
                     </button>
                   </div>
 
@@ -899,7 +856,7 @@ export default function AppointmentsPage() {
                       onChange={(e) => setApptCustomerId(e.target.value)}
                       className={SELECT_CLASS}
                     >
-                      <option value="">Select a customer</option>
+                      <option value="">{t('appointments.selectCustomer')}</option>
                       {customers.map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
@@ -909,7 +866,7 @@ export default function AppointmentsPage() {
                       type="text"
                       value={apptManualCustomerName}
                       onChange={(e) => setApptManualCustomerName(e.target.value)}
-                      placeholder="Customer name"
+                      placeholder={t('appointments.customerNamePlaceholder')}
                     />
                   )}
                 </div>
@@ -917,8 +874,8 @@ export default function AppointmentsPage() {
 
               {/* Service */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Service *
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('appointments.serviceLabel')} *
                 </label>
 
                 {services.length > 0 && (
@@ -928,14 +885,14 @@ export default function AppointmentsPage() {
                       onClick={() => setApptServiceMode('manual')}
                       className={chip(apptServiceMode === 'manual', true)}
                     >
-                      Enter manually
+                      {t('appointments.enterManually')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setApptServiceMode('select')}
                       className={chip(apptServiceMode === 'select', true)}
                     >
-                      From my services
+                      {t('appointments.fromMyServices')}
                     </button>
                   </div>
                 )}
@@ -946,10 +903,10 @@ export default function AppointmentsPage() {
                     onChange={(e) => setApptServiceId(e.target.value)}
                     className={SELECT_CLASS}
                   >
-                    <option value="">Select a service</option>
+                    <option value="">{t('appointments.selectService')}</option>
                     {services.map(s => (
                       <option key={s.id} value={s.id}>
-                        {s.name} — {s.durationMinutes} min — {formatUZS(s.price)}
+                        {s.name} — {t('appointments.minutesShort', { n: s.durationMinutes })} — {formatUZS(s.price)}
                       </option>
                     ))}
                   </select>
@@ -959,7 +916,7 @@ export default function AppointmentsPage() {
                       type="text"
                       value={apptManualServiceName}
                       onChange={(e) => setApptManualServiceName(e.target.value)}
-                      placeholder="Service name (e.g. Haircut, Consultation)"
+                      placeholder={t('appointments.serviceNamePlaceholder')}
                     />
                     <div className="flex gap-2">
                       <div className="flex-1">
@@ -967,22 +924,22 @@ export default function AppointmentsPage() {
                           type="number"
                           value={apptManualDuration}
                           onChange={(e) => setApptManualDuration(e.target.value)}
-                          placeholder="Duration (min)"
+                          placeholder={t('appointments.durationMinPlaceholder')}
                           min="1"
                           className="tabular-nums"
                         />
-                        <p className="text-xs text-text-3 mt-1">Duration (minutes)</p>
+                        <p className="text-xs text-text-3 mt-1">{t('appointments.durationMinutesCaption')}</p>
                       </div>
                       <div className="flex-1">
                         <Input
                           type="number"
                           value={apptManualPrice}
                           onChange={(e) => setApptManualPrice(e.target.value)}
-                          placeholder={`Price (${currencyWord()})`}
+                          placeholder={t('appointments.priceWithCurrency', { currency: currencyWord() })}
                           min="0"
                           className="tabular-nums"
                         />
-                        <p className="text-xs text-text-3 mt-1">Price ({currencyWord()})</p>
+                        <p className="text-xs text-text-3 mt-1">{t('appointments.priceWithCurrency', { currency: currencyWord() })}</p>
                       </div>
                     </div>
                   </div>
@@ -992,15 +949,15 @@ export default function AppointmentsPage() {
               {/* Staff member */}
               {staff.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-text-2 mb-1.5">
-                    Staff member
+                  <label className="block text-base font-medium text-text-2 mb-1.5">
+                    {t('appointments.staffMember')}
                   </label>
                   <select
                     value={apptStaffId}
                     onChange={(e) => setApptStaffId(e.target.value)}
                     className={SELECT_CLASS}
                   >
-                    <option value="">Any available</option>
+                    <option value="">{t('appointments.anyAvailable')}</option>
                     {staff
                       .filter((member) => apptServiceId === '' ||
                         member.staffServices.some((ss) => ss.service.id === apptServiceId))
@@ -1013,8 +970,8 @@ export default function AppointmentsPage() {
 
               {/* Date */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Date *
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('scheduling.date')} *
                 </label>
                 {/* No min: owners may book in the PAST (history / walk-ins). */}
                 <Input
@@ -1026,8 +983,8 @@ export default function AppointmentsPage() {
 
               {/* Time — two-number HH:MM kept for locale safety */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Time *
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('appointments.timeLabel')} *
                 </label>
                 <div className="flex gap-2 items-center">
                   <div className="w-20">
@@ -1059,14 +1016,14 @@ export default function AppointmentsPage() {
                       className="text-center tabular-nums"
                     />
                   </div>
-                  <span className="text-xs text-text-3">24h format</span>
+                  <span className="text-xs text-text-3">{t('appointments.time24hCaption')}</span>
                 </div>
               </div>
 
               {/* Payment type */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Payment
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('appointments.paymentLabel')}
                 </label>
                 <div className="flex gap-2">
                   <button
@@ -1074,28 +1031,28 @@ export default function AppointmentsPage() {
                     onClick={() => setApptPaymentType('AT_APPOINTMENT')}
                     className={segButton(apptPaymentType === 'AT_APPOINTMENT')}
                   >
-                    Pay at appointment
+                    {t('appointments.payAtAppointment')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setApptPaymentType('IN_ADVANCE')}
                     className={segButton(apptPaymentType === 'IN_ADVANCE')}
                   >
-                    Pay in advance
+                    {t('appointments.payInAdvance')}
                   </button>
                 </div>
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Notes (optional)
+                <label className="block text-base font-medium text-text-2 mb-1.5">
+                  {t('appointments.notesOptional')}
                 </label>
                 <Textarea
                   rows={2}
                   value={apptNotes}
                   onChange={(e) => setApptNotes(e.target.value)}
-                  placeholder="Any notes about this appointment..."
+                  placeholder={t('appointments.notesPlaceholder')}
                 />
               </div>
             </div>
@@ -1103,7 +1060,7 @@ export default function AppointmentsPage() {
             <div className="p-6 border-t border-border flex-shrink-0 space-y-3">
               {apptError && (
                 <div className="p-3 bg-error-soft border border-error-strong rounded-md">
-                  <p className="text-sm text-error-strong">{apptError}</p>
+                  <p className="text-base text-error-strong">{apptError}</p>
                 </div>
               )}
               <Button
@@ -1113,22 +1070,20 @@ export default function AppointmentsPage() {
                 onClick={handleSubmitAppointment}
               >
                 {apptSaving
-                  ? 'Saving...'
+                  ? t('appointments.saving')
                   : editingId
                     ? t('common.save')
-                    : 'Create appointment'}
+                    : t('appointments.createAppointment')}
               </Button>
               <Button
                 variant="secondary"
                 fullWidth
                 onClick={closeForm}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+      </SlideOver>
 
       {/* Overlap confirm — the soft guardrail the owner can override */}
       {conflictOpen && (
@@ -1137,11 +1092,16 @@ export default function AppointmentsPage() {
             className="absolute inset-0 bg-text-1/40"
             onClick={() => setConflictOpen(false)}
           />
-          <div className="relative z-[60] w-full max-w-sm bg-surface rounded-xl shadow-lg p-6 space-y-4">
-            <p className="text-lg font-bold text-text-1">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="appointment-conflict-title"
+            className="relative z-[60] w-full max-w-sm bg-surface rounded-xl shadow-lg p-6 space-y-4"
+          >
+            <p id="appointment-conflict-title" className="text-lg font-bold text-text-1">
               {t('common.appointmentConflictTitle')}
             </p>
-            <p className="text-sm text-text-2">
+            <p className="text-base text-text-2">
               {t('common.appointmentConflictBody')}
             </p>
             <div className="flex gap-2">
@@ -1170,7 +1130,7 @@ export default function AppointmentsPage() {
 
       {/* Success toast */}
       {savedMessage && (
-        <div className="fixed bottom-6 right-6 bg-text-1 text-surface px-4 py-3 rounded-md text-sm font-medium shadow-md z-50 flex items-center gap-2">
+        <div className="fixed bottom-6 right-6 bg-text-1 text-surface px-4 py-3 rounded-md text-base font-medium shadow-md z-50 flex items-center gap-2">
           <span className="text-success-soft">
             <Icon name="paid" size={16} />
           </span>

@@ -44,7 +44,7 @@ export default function OfferPage() {
 
         {/* Language toggle: keyboard-operable buttons; the active option is
             distinguished by weight and an underline in addition to the accent. */}
-        <div role="group" aria-label="Language" className="mt-6 flex gap-5 text-sm">
+        <div role="group" aria-label="Language" className="mt-6 flex gap-5 text-base">
           {LANG_ORDER.map((code) => {
             const active = code === lang
             return (
@@ -81,7 +81,7 @@ export default function OfferPage() {
         </div>
 
         {/* Footer: link to the OTHER document using a relative path. */}
-        <footer className="mt-16 border-t border-border pt-6 text-sm">
+        <footer className="mt-16 border-t border-border pt-6 text-base">
           <Link
             href="/privacy"
             className="text-accent underline underline-offset-4"

@@ -100,7 +100,7 @@ export default function AdminBusinessesPage() {
               setPage(1)
             }}
             placeholder="Search businesses..."
-            className="pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-600 w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-base text-white placeholder-gray-600 w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
@@ -131,13 +131,13 @@ export default function AdminBusinessesPage() {
 
         {loading && (
           <div className="px-5 py-8 text-center">
-            <p className="text-sm text-gray-500">Loading...</p>
+            <p className="text-base text-gray-500">Loading...</p>
           </div>
         )}
 
         {!loading && businesses.length === 0 && (
           <div className="px-5 py-8 text-center">
-            <p className="text-sm text-gray-600">No businesses found</p>
+            <p className="text-base text-gray-600">No businesses found</p>
           </div>
         )}
 
@@ -153,7 +153,7 @@ export default function AdminBusinessesPage() {
               >
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <p className="text-sm font-semibold text-white">
+                    <p className="text-base font-semibold text-white">
                       {business.name}
                     </p>
                     <p className="text-xs text-gray-500">
@@ -196,7 +196,7 @@ export default function AdminBusinessesPage() {
                 }
               >
                 <div className="col-span-4">
-                  <p className="text-sm font-semibold text-white">
+                  <p className="text-base font-semibold text-white">
                     {business.name}
                   </p>
                   <p className="text-xs text-gray-500">
@@ -218,12 +218,12 @@ export default function AdminBusinessesPage() {
                   )}
                 </div>
                 <div className="col-span-2">
-                  <p className="text-sm text-gray-300">
+                  <p className="text-base text-gray-300">
                     {business._count.customers}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-sm text-gray-500">
+                  <p className="text-base text-gray-500">
                     {formatRelativeTime(business.createdAt)}
                   </p>
                 </div>

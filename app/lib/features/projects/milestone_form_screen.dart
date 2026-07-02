@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/api/api_service.dart';
 import '../../core/icons/app_icon.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_text_field.dart';
 import 'projects_provider.dart';
-
-final _displayFmt = DateFormat('d MMM yyyy');
 
 class MilestoneFormScreen extends ConsumerStatefulWidget {
   final String projectId;
@@ -50,7 +48,7 @@ class _MilestoneFormScreenState extends ConsumerState<MilestoneFormScreen> {
     if (picked != null) {
       setState(() {
         _dueDate = picked;
-        _dueDateCtrl.text = _displayFmt.format(picked);
+        _dueDateCtrl.text = formatDate(picked);
       });
     }
   }

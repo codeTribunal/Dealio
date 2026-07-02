@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/icons/app_icon.dart';
 import '../../core/models/project.dart';
@@ -9,9 +8,9 @@ import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
 import '../../shared/widgets/app_badge.dart';
-import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_empty_state.dart';
+import '../../shared/widgets/app_error_state.dart';
 import '../../shared/widgets/app_spinner.dart';
 import '../../shared/widgets/floating_tab_bar.dart';
 import 'projects_provider.dart';
@@ -86,10 +85,11 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
       ),
       body: projectsAsync.when(
         loading: () => const Center(child: AppSpinner(size: 32)),
-        error: (e, _) => _ErrorView(
-          message: e.toString(),
-          onRetry: () =>
-              ref.read(projectsProvider.notifier).refresh(status: _selectedStatus),
+        error: (e, _) => AppErrorState(
+          error: e,
+          onRetry: () => ref
+              .read(projectsProvider.notifier)
+              .refresh(status: _selectedStatus),
         ),
         data: (projects) {
           final filtered = _selectedStatus == null
@@ -125,11 +125,14 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
                 .read(projectsProvider.notifier)
                 .refresh(status: _selectedStatus),
             child: ListView.separated(
-              padding: EdgeInsets.fromLTRB(AppSpacing.s4, AppSpacing.s3,
+              padding: EdgeInsets.fromLTRB(
+                  AppSpacing.s4,
+                  AppSpacing.s3,
                   AppSpacing.s4,
                   AppSpacing.s6 + MediaQuery.of(context).padding.bottom),
               itemCount: filtered.length,
-              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.s2),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: AppSpacing.s2),
               itemBuilder: (ctx, i) => _ProjectCard(project: filtered[i]),
             ),
           );
@@ -262,7 +265,7 @@ class _ProjectCard extends StatelessWidget {
                         name: AppIconName.calendar, size: 13, color: t.text3),
                     const SizedBox(width: AppSpacing.s1),
                     Text(
-                      DateFormat('d MMM').format(project.deadline!),
+                      formatDayMonthShort(project.deadline!),
                       style: TextStyle(
                           color: t.text3, fontSize: AppTextSizes.caption),
                     ),
@@ -272,47 +275,13 @@ class _ProjectCard extends StatelessWidget {
                 const SizedBox(width: AppSpacing.s3),
                 Text(
                   l.projectsMilestoneCount(doneMilestones, totalMilestones),
-                  style: TextStyle(
-                      color: t.text3, fontSize: AppTextSizes.caption),
+                  style:
+                      TextStyle(color: t.text3, fontSize: AppTextSizes.caption),
                 ),
               ],
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorView({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.s5),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
-            const SizedBox(height: AppSpacing.s3),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: t.text2)),
-            const SizedBox(height: AppSpacing.s4),
-            AppButton(
-              label: l.buttonRetry,
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.sm,
-              onPressed: onRetry,
-            ),
-          ],
-        ),
       ),
     );
   }

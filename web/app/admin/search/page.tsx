@@ -74,7 +74,7 @@ export default function AdminSearchPage() {
             setPage(1)
           }}
           placeholder="Search by name, phone, or @handle..."
-          className="pl-10 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-600 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="pl-10 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-base text-white placeholder-gray-600 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
@@ -107,18 +107,18 @@ export default function AdminSearchPage() {
       </div>
 
       {/* States */}
-      {tooShort && <p className="text-sm text-gray-500 px-1">Type at least 2 characters.</p>}
+      {tooShort && <p className="text-base text-gray-500 px-1">Type at least 2 characters.</p>}
 
       {!tooShort && trimmed.length < 2 && (
-        <p className="text-sm text-gray-600 px-1">Start typing to search.</p>
+        <p className="text-base text-gray-600 px-1">Start typing to search.</p>
       )}
 
       {trimmed.length >= 2 && (
         <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
-          {loading && <div className="px-5 py-8 text-center text-sm text-gray-500">Searching...</div>}
+          {loading && <div className="px-5 py-8 text-center text-base text-gray-500">Searching...</div>}
 
           {!loading && data && data.items.length === 0 && (
-            <div className="px-5 py-8 text-center text-sm text-gray-600">No results for “{trimmed}”</div>
+            <div className="px-5 py-8 text-center text-base text-gray-600">No results for “{trimmed}”</div>
           )}
 
           {!loading && data && data.items.length > 0 && (
@@ -136,7 +136,7 @@ export default function AdminSearchPage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <Badge color="bg-blue-900 text-blue-300">Business</Badge>
-                        <p className="text-sm font-semibold text-white truncate">{item.name}</p>
+                        <p className="text-base font-semibold text-white truncate">{item.name}</p>
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {item.ownerPhone} · {item.plan} ·{' '}
@@ -156,7 +156,7 @@ export default function AdminSearchPage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge color="bg-gray-700 text-gray-300">Customer</Badge>
-                        <p className="text-sm font-semibold text-white truncate">{item.name}</p>
+                        <p className="text-base font-semibold text-white truncate">{item.name}</p>
                         {item.anonymizedAt && <Badge color="bg-purple-900 text-purple-300">Erased</Badge>}
                         {item.deleted && <Badge color="bg-red-900 text-red-300">Deleted</Badge>}
                       </div>

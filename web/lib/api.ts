@@ -115,6 +115,22 @@ export async function getBusiness(): Promise<Business> {
   return res.data
 }
 
+// Self-serve account deletion. `confirmation` must be the business name or the
+// literal "DELETE" (also validated server-side). Schedules an irreversible purge
+// in 30 days and suspends the account immediately.
+export async function requestAccountDeletion(
+  confirmation: string,
+): Promise<{ pending: boolean; deletionScheduledAt: string | null }> {
+  const res = await api.post('/business/request-deletion', { confirmation })
+  return res.data
+}
+
+// Cancel a pending deletion within the 30-day window and restore access.
+export async function reactivateAccount(): Promise<{ reactivated: boolean }> {
+  const res = await api.post('/business/reactivate', {})
+  return res.data
+}
+
 export async function getHome(): Promise<HomeData> {
   const res = await api.get('/home')
   return res.data

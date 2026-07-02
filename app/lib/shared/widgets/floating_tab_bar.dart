@@ -5,11 +5,12 @@ import 'package:flutter/material.dart';
 import '../../core/icons/app_icon.dart';
 import '../../core/theme/app_tokens.dart';
 
-/// Frosted-glass blur is ON by default. `BackdropFilter` can jank on low-end
-/// Android, so this is the single switch to fall back to a SOLID (opaque)
-/// floating bar — the shape, shadow, and sliding selector are identical either
-/// way; only the translucent blur is dropped.
-const bool kUseGlassBlur = true;
+/// Frosted-glass blur is OFF by default: `BackdropFilter` janks on low-end
+/// Android, which is exactly this market's hardware, and the blur is
+/// decorative (the solid bar keeps the identical shape, shadow, and sliding
+/// selector). Flip to true to treat blur as an enhancement on known-good
+/// devices.
+const bool kUseGlassBlur = false;
 
 class FloatingTabItem {
   final AppIconName icon;
@@ -51,7 +52,8 @@ class FloatingTabBar extends StatelessWidget {
     const radius = AppRadii.xl;
 
     // Glass → translucent so the blur shows through; Solid → opaque surface.
-    final barColor = kUseGlassBlur ? t.surface.withValues(alpha: 0.72) : t.surface;
+    final barColor =
+        kUseGlassBlur ? t.surface.withValues(alpha: 0.72) : t.surface;
 
     // Inset so the selector pill sits a touch inside each slot. Kept small so
     // the active pill reads as a prominent, full-feeling highlight.
@@ -98,11 +100,14 @@ class FloatingTabBar extends StatelessWidget {
                     return Expanded(
                       child: _TabButton(
                         onTap: () => onTap(i),
+                        label: items[i].label,
+                        selected: selected,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            AppIcon(name: items[i].icon, size: 22, color: color),
+                            AppIcon(
+                                name: items[i].icon, size: 22, color: color),
                             const SizedBox(height: 2),
                             Text(
                               items[i].label,
@@ -164,8 +169,15 @@ class FloatingTabBar extends StatelessWidget {
 /// rounded pill.
 class _TabButton extends StatefulWidget {
   final VoidCallback onTap;
+  final String label;
+  final bool selected;
   final Widget child;
-  const _TabButton({required this.onTap, required this.child});
+  const _TabButton({
+    required this.onTap,
+    required this.label,
+    required this.selected,
+    required this.child,
+  });
 
   @override
   State<_TabButton> createState() => _TabButtonState();
@@ -180,17 +192,25 @@ class _TabButtonState extends State<_TabButton> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: widget.onTap,
-      onTapDown: (_) => _set(true),
-      onTapUp: (_) => _set(false),
-      onTapCancel: () => _set(false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.9 : 1.0,
-        duration: AppMotion.durFast,
-        curve: AppMotion.ease,
-        child: Center(child: widget.child),
+    // Semantics: announce as a selectable tab ("Orders, tab, selected") so
+    // TalkBack users can navigate the app shell.
+    return Semantics(
+      button: true,
+      selected: widget.selected,
+      label: widget.label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        onTapDown: (_) => _set(true),
+        onTapUp: (_) => _set(false),
+        onTapCancel: () => _set(false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.9 : 1.0,
+          duration: AppMotion.durFast,
+          curve: AppMotion.ease,
+          child: Center(child: widget.child),
+        ),
       ),
     );
   }

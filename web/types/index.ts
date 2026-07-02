@@ -38,6 +38,12 @@ export interface Business {
   newsletterConsentAt?: string | null
   emailPromptDismissedAt?: string | null
   emailPromptDismissCount?: number
+  // Self-serve account deletion. PENDING_DELETION = scheduled for irreversible
+  // purge at deletionScheduledAt (30-day recoverable window); the account is
+  // suspended meanwhile. Reactivate via reactivateAccount() within the window.
+  deletionState?: 'ACTIVE' | 'PENDING_DELETION'
+  deletionRequestedAt?: string | null
+  deletionScheduledAt?: string | null
 }
 
 export interface BlockedSlot {
@@ -309,6 +315,17 @@ export interface HomeData {
     orderNumber: number
     total: number
     customer: { id: string; name: string }
+    updatedAt: string
+  }[]
+  // In-advance appointments awaiting payment confirmation — merged with
+  // pendingPayments into the home payment queue. Optional so older backends
+  // degrade gracefully.
+  pendingAppointmentPayments?: {
+    id: string
+    serviceName: string
+    price: number
+    customer: { id: string; name: string }
+    updatedAt: string
   }[]
   newCustomers: {
     id: string

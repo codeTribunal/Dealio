@@ -44,31 +44,36 @@ class _NeuTileState extends State<NeuTile> {
   Widget build(BuildContext context) {
     final t = AppTokens.of(context);
 
-    return GestureDetector(
-      onTapDown: (_) => _set(true),
-      onTapUp: (_) => _set(false),
-      onTapCancel: () => _set(false),
-      onTap: widget.onTap,
-      child: AnimatedContainer(
-        duration: AppMotion.durFast,
-        curve: AppMotion.ease,
-        width: widget.width,
-        height: widget.height,
-        padding: widget.padding,
-        transform: _pressed
-            ? Matrix4.diagonal3Values(0.97, 0.97, 1)
-            : Matrix4.identity(),
-        transformAlignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: _pressed ? t.surface2 : t.surface,
-          borderRadius: widget.borderRadius,
-          border: Border.all(
-            color: _pressed ? t.borderStrong : Colors.transparent,
-            width: 1,
+    // Semantics: tappable tiles are buttons to TalkBack/VoiceOver; the tile's
+    // label text provides the announced name.
+    return Semantics(
+      button: widget.onTap != null,
+      child: GestureDetector(
+        onTapDown: (_) => _set(true),
+        onTapUp: (_) => _set(false),
+        onTapCancel: () => _set(false),
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: AppMotion.durFast,
+          curve: AppMotion.ease,
+          width: widget.width,
+          height: widget.height,
+          padding: widget.padding,
+          transform: _pressed
+              ? Matrix4.diagonal3Values(0.97, 0.97, 1)
+              : Matrix4.identity(),
+          transformAlignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: _pressed ? t.surface2 : t.surface,
+            borderRadius: widget.borderRadius,
+            border: Border.all(
+              color: _pressed ? t.borderStrong : Colors.transparent,
+              width: 1,
+            ),
+            boxShadow: _pressed ? t.neuPressed : t.neuRaised,
           ),
-          boxShadow: _pressed ? t.neuPressed : t.neuRaised,
+          child: widget.child,
         ),
-        child: widget.child,
       ),
     );
   }

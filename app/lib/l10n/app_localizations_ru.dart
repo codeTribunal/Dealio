@@ -2078,4 +2078,66 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsCardNotSet => 'Платёжная карта ещё не добавлена.';
+
+  @override
+  String get paymentConfirmTitle => 'Подтвердить получение оплаты?';
+
+  @override
+  String paymentConfirmBody(String amount, String name) {
+    return 'Подтвердить получение $amount от $name? Клиент получит уведомление.';
+  }
+
+  @override
+  String get paymentConfirmAction => 'Да, оплата получена';
+
+  @override
+  String paymentConfirmedSnack(String amount) {
+    return 'Оплата подтверждена — $amount';
+  }
+
+  @override
+  String get settingsCardInvalidLength =>
+      'Номер карты должен состоять из 16 цифр';
+
+  @override
+  String get settingsCardInvalidPrefix =>
+      'Введите номер карты Uzcard (8600) или Humo (9860)';
+
+  @override
+  String get homeQueueTitle => 'Платежи ждут подтверждения';
+
+  @override
+  String homeQueueOrderMeta(int n) {
+    return 'Заказ #$n';
+  }
+
+  @override
+  String homeQueueViewAll(int n) {
+    return 'Показать все ($n)';
+  }
+
+  @override
+  String get errorNoConnection =>
+      'Нет соединения. Проверьте интернет и попробуйте ещё раз.';
+
+  @override
+  String get errorServer =>
+      'Произошла ошибка на нашей стороне. Попробуйте ещё раз чуть позже.';
+
+  @override
+  String get customerHistoryTitle => 'История';
+
+  @override
+  String get customerHistoryEmptyOrders => 'Заказов пока нет';
+
+  @override
+  String get customerHistoryEmptyAppointments => 'Записей пока нет';
+
+  @override
+  String get customerHistoryEmptyProjects => 'Проектов пока нет';
+
+  @override
+  String customerHistoryMore(int n) {
+    return 'И ещё $n';
+  }
 }

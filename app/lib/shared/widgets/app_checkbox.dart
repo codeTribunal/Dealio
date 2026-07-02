@@ -34,34 +34,46 @@ class _AppCheckboxState extends State<AppCheckbox> {
     final enabled = widget.onChanged != null;
     final checked = widget.value;
 
-    return Opacity(
-      opacity: enabled ? 1.0 : 0.5,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: enabled ? () => widget.onChanged!(!checked) : null,
-        onTapDown: enabled ? (_) => _set(true) : null,
-        onTapUp: enabled ? (_) => _set(false) : null,
-        onTapCancel: () => _set(false),
-        child: AnimatedScale(
-          scale: _pressed ? 0.88 : 1.0,
-          duration: AppMotion.durFast,
-          curve: AppMotion.ease,
-          child: AnimatedContainer(
-            duration: AppMotion.durBase,
-            curve: AppMotion.ease,
-            width: _size,
-            height: _size,
-            decoration: BoxDecoration(
-              color: checked ? t.accent : t.surface,
-              borderRadius: AppRadii.sm,
-              border: Border.all(
-                color: checked ? t.accent : t.borderStrong,
-                width: 2,
+    // Semantics: announce as a checkbox with its checked state to TalkBack /
+    // VoiceOver. The hit area is expanded to the 44px floor (PRODUCT.md)
+    // while the visual stays 22px — Center only grows when the parent allows.
+    return Semantics(
+      checked: checked,
+      enabled: enabled,
+      child: Opacity(
+        opacity: enabled ? 1.0 : 0.5,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: enabled ? () => widget.onChanged!(!checked) : null,
+          onTapDown: enabled ? (_) => _set(true) : null,
+          onTapUp: enabled ? (_) => _set(false) : null,
+          onTapCancel: () => _set(false),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            child: Center(
+              child: AnimatedScale(
+                scale: _pressed ? 0.88 : 1.0,
+                duration: AppMotion.durFast,
+                curve: AppMotion.ease,
+                child: AnimatedContainer(
+                  duration: AppMotion.durBase,
+                  curve: AppMotion.ease,
+                  width: _size,
+                  height: _size,
+                  decoration: BoxDecoration(
+                    color: checked ? t.accent : t.surface,
+                    borderRadius: AppRadii.sm,
+                    border: Border.all(
+                      color: checked ? t.accent : t.borderStrong,
+                      width: 2,
+                    ),
+                  ),
+                  child: checked
+                      ? Icon(Icons.check, size: 15, color: t.accentOn)
+                      : null,
+                ),
               ),
             ),
-            child: checked
-                ? Icon(Icons.check, size: 15, color: t.accentOn)
-                : null,
           ),
         ),
       ),

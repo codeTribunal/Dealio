@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/api/api_service.dart';
 import '../../core/models/customer.dart' show Customer;
@@ -290,7 +289,7 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
                         decoration: _decoration(context, l.orderDateLabel),
                         child: Text(
                           _deliveryDate != null
-                              ? DateFormat('d MMMM yyyy').format(_deliveryDate!)
+                              ? formatDate(_deliveryDate!)
                               : '—',
                           style: TextStyle(
                               color: _deliveryDate != null ? t.text1 : t.text3),

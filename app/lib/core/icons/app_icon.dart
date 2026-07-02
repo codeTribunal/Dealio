@@ -74,7 +74,8 @@ const Map<AppIconName, String> _kIconMarkup = {
       '<path d="M12 3.6a4.9 4.9 0 0 1 4.9 4.9c0 4.2 1.5 5.6 1.5 5.6H5.6s1.5-1.4 1.5-5.6A4.9 4.9 0 0 1 12 3.6Z"/><path d="M10.2 17.4a1.9 1.9 0 0 0 3.6 0"/>',
   AppIconName.logout:
       '<path d="M14 5.5V4.4A1.4 1.4 0 0 0 12.6 3H5.4A1.4 1.4 0 0 0 4 4.4v15.2A1.4 1.4 0 0 0 5.4 21h7.2a1.4 1.4 0 0 0 1.4-1.4v-1.1"/><path d="M9 12h11"/><path d="M17 8.5 20.5 12 17 15.5"/>',
-  AppIconName.menu: '<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>',
+  AppIconName.menu:
+      '<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>',
   AppIconName.arrowLeft: '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>',
   AppIconName.close: '<path d="M6 6l12 12"/><path d="M18 6 6 18"/>',
   AppIconName.staff:
@@ -108,12 +109,18 @@ class AppIcon extends StatelessWidget {
   final Color? color;
   final double strokeWidth;
 
+  /// Screen-reader label. Set when the icon stands alone (no adjacent text
+  /// that already names it); leave null for purely decorative icons so
+  /// TalkBack/VoiceOver skip them.
+  final String? semanticLabel;
+
   const AppIcon({
     super.key,
     required this.name,
     this.size = 24,
     this.color,
     this.strokeWidth = 1.5,
+    this.semanticLabel,
   });
 
   @override
@@ -131,10 +138,11 @@ class AppIcon extends StatelessWidget {
       height: size,
     );
 
+    Widget icon = picture;
     if (name == AppIconName.revenue) {
       // Overlay the soʻm glyph, sized to match the SVG <text font-size="4.1">
       // within the 24-unit viewBox.
-      return SizedBox(
+      icon = SizedBox(
         width: size,
         height: size,
         child: Stack(
@@ -156,7 +164,8 @@ class AppIcon extends StatelessWidget {
       );
     }
 
-    return picture;
+    if (semanticLabel == null) return icon;
+    return Semantics(label: semanticLabel, child: icon);
   }
 
   /// Wraps inner [markup] in the shared `<svg>` frame with [hex] applied to the

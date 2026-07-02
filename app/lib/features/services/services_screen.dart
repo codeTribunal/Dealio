@@ -7,9 +7,9 @@ import '../../core/models/service.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/format.dart';
-import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_empty_state.dart';
+import '../../shared/widgets/app_error_state.dart';
 import '../../shared/widgets/app_spinner.dart';
 import 'services_provider.dart';
 
@@ -44,8 +44,8 @@ class ServicesScreen extends ConsumerWidget {
         // switch animates instead of flashing the loading spinner.
         skipLoadingOnReload: true,
         loading: () => const Center(child: AppSpinner(size: 32)),
-        error: (e, _) => _ErrorView(
-          message: e.toString(),
+        error: (e, _) => AppErrorState(
+          error: e,
           onRetry: () => ref.read(servicesProvider.notifier).refresh(),
         ),
         data: (services) {
@@ -148,40 +148,6 @@ class _ActiveBadge extends StatelessWidget {
             fontSize: AppTextSizes.caption,
             fontWeight: AppFontWeights.semibold,
             color: fg),
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorView({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final t = AppTokens.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.s5),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppIcon(name: AppIconName.close, size: 48, color: t.errorStrong),
-            const SizedBox(height: AppSpacing.s3),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: t.text2)),
-            const SizedBox(height: AppSpacing.s4),
-            AppButton(
-              label: l.buttonRetry,
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.sm,
-              onPressed: onRetry,
-            ),
-          ],
-        ),
       ),
     );
   }

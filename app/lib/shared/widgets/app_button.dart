@@ -49,7 +49,8 @@ class AppButton extends StatefulWidget {
   });
 
   AppButtonVariant get _variant =>
-      variant ?? (outlined ? AppButtonVariant.secondary : AppButtonVariant.primary);
+      variant ??
+      (outlined ? AppButtonVariant.secondary : AppButtonVariant.primary);
 
   @override
   State<AppButton> createState() => _AppButtonState();
@@ -108,7 +109,8 @@ class _AppButtonState extends State<AppButton> {
       case AppButtonVariant.danger:
         bg = t.error;
         fg = Colors.white;
-        shadow = isInteractive ? t.shadowAccent : null;
+      // No glow: the accent glow under an error fill read as a *blue* halo,
+      // and a destructive action should never out-shine the primary one.
     }
 
     final labelStyle = text.labelLarge?.copyWith(
@@ -144,9 +146,11 @@ class _AppButtonState extends State<AppButton> {
     final body = AnimatedContainer(
       duration: AppMotion.durFast,
       curve: AppMotion.ease,
-      height: _height,
+      // minHeight (not a fixed height) so long uz/ru labels at large system
+      // text scales wrap and grow the button instead of clipping inside it.
+      constraints: BoxConstraints(minHeight: _height),
       width: widget.fullWidth ? double.infinity : null,
-      padding: EdgeInsets.symmetric(horizontal: _hPad),
+      padding: EdgeInsets.symmetric(horizontal: _hPad, vertical: AppSpacing.s2),
       alignment: Alignment.center,
       transform: _pressed && isInteractive
           ? Matrix4.diagonal3Values(0.98, 0.98, 1)
@@ -161,14 +165,21 @@ class _AppButtonState extends State<AppButton> {
       child: content,
     );
 
-    return Opacity(
-      opacity: isInteractive ? 1 : 0.5,
-      child: GestureDetector(
-        onTapDown: isInteractive ? (_) => _set(true) : null,
-        onTapUp: isInteractive ? (_) => _set(false) : null,
-        onTapCancel: isInteractive ? () => _set(false) : null,
-        onTap: isInteractive ? widget.onPressed : null,
-        child: body,
+    // Semantics: announce as a button with its label even while [loading]
+    // hides the text behind a spinner.
+    return Semantics(
+      button: true,
+      enabled: isInteractive,
+      label: widget.loading ? widget.label : null,
+      child: Opacity(
+        opacity: isInteractive ? 1 : 0.5,
+        child: GestureDetector(
+          onTapDown: isInteractive ? (_) => _set(true) : null,
+          onTapUp: isInteractive ? (_) => _set(false) : null,
+          onTapCancel: isInteractive ? () => _set(false) : null,
+          onTap: isInteractive ? widget.onPressed : null,
+          child: body,
+        ),
       ),
     );
   }

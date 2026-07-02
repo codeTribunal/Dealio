@@ -20,7 +20,9 @@ import {
   type ReminderSettings,
 } from '@/lib/api'
 import { useBusiness } from '@/lib/businessContext'
+import { formatCardNumber, validateCardNumber } from '@/lib/card'
 import { useI18n, codeToEnum, type Locale } from '@/lib/i18n/i18nContext'
+import { useToast } from '@/lib/toast'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { WorkingHoursCard } from '@/components/scheduling/WorkingHoursCard'
 import { BlockedTimeCard } from '@/components/scheduling/BlockedTimeCard'
@@ -66,7 +68,7 @@ function Toggle({
 }
 
 const SELECT_CLASS =
-  'bg-surface border border-border rounded-md py-2.5 px-3.5 text-sm text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors'
+  'bg-surface border border-border rounded-md py-2.5 px-3.5 text-base text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors'
 
 // Public base URL for ICS feeds — the API root without the /api/v1 prefix.
 const calendarBaseUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace('/api/v1', '')
@@ -74,6 +76,7 @@ const calendarBaseUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace('/api/v1
 export default function SettingsPage() {
   const { refetch: refetchContext } = useBusiness()
   const { t, setLocale } = useI18n()
+  const { showToast } = useToast()
   const [business, setBusiness] = useState<Business | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -103,6 +106,7 @@ export default function SettingsPage() {
   // Payment card (P2P transfer) — gated by business.cardPaymentsEnabled.
   const [cardNumber, setCardNumber] = useState('')
   const [cardHolderName, setCardHolderName] = useState('')
+  const [cardError, setCardError] = useState<string | null>(null)
   const [savingCard, setSavingCard] = useState(false)
 
   const [reminderSettings, setReminderSettings] =
@@ -143,7 +147,7 @@ export default function SettingsPage() {
       setBusiness(updated)
       await refetchContext()
     } catch {
-      showSaved(t('common.errorGeneric'))
+      showToast(t('common.errorGeneric'), 'error')
     }
   }
 
@@ -164,7 +168,7 @@ export default function SettingsPage() {
       await updateReminderSettings({ [key]: value })
     } catch {
       setReminderSettings(previous)
-      showSaved(t('settings.reminderSaveFailed'))
+      showToast(t('settings.reminderSaveFailed'), 'error')
     }
   }
 
@@ -217,9 +221,22 @@ export default function SettingsPage() {
   }
 
   async function saveCard() {
+    // Guard the money route: a mistyped card silently misroutes every future
+    // customer payment, so the number must be a full Uzcard/Humo card before
+    // it can be saved. Empty clears the card.
+    const validation = validateCardNumber(cardNumber)
+    if (validation) {
+      setCardError(
+        validation === 'length'
+          ? t('settings.cardInvalidLength')
+          : t('settings.cardInvalidPrefix'),
+      )
+      return
+    }
+    setCardError(null)
     setSavingCard(true)
     try {
-      const num = cardNumber.trim()
+      const num = formatCardNumber(cardNumber)
       const holder = cardHolderName.trim()
       // An empty number clears the card (no holder without a number).
       const updated = await updatePayment({
@@ -231,7 +248,7 @@ export default function SettingsPage() {
       setCardHolderName(updated.cardHolderName || '')
       showSaved(t('settings.cardSaved'))
     } catch {
-      showSaved(t('common.errorGeneric'))
+      showToast(t('common.errorGeneric'), 'error')
     } finally {
       setSavingCard(false)
     }
@@ -249,7 +266,7 @@ export default function SettingsPage() {
       }
       await refetchContext()
     } catch {
-      showSaved(t('settings.calendarFailed'))
+      showToast(t('settings.calendarFailed'), 'error')
     } finally {
       setCalendarLoading(false)
     }
@@ -278,7 +295,7 @@ export default function SettingsPage() {
       await refetchContext()
       setModeSwitchTarget(null)
     } catch {
-      showSaved(t('common.errorGeneric'))
+      showToast(t('common.errorGeneric'), 'error')
     } finally {
       setModeSwitching(false)
     }
@@ -346,29 +363,29 @@ export default function SettingsPage() {
             <div className="space-y-3">
               <div className="flex justify-between items-center py-2 border-b border-border">
                 <p className="text-sm text-text-2">{t('settings.businessName')}</p>
-                <p className="text-sm font-medium text-text-1">{business.name}</p>
+                <p className="text-base font-medium text-text-1">{business.name}</p>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-border">
                 <p className="text-sm text-text-2">{t('settings.description')}</p>
-                <p className="text-sm font-medium text-text-1">
+                <p className="text-base font-medium text-text-1">
                   {business.description || '—'}
                 </p>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-border">
                 <p className="text-sm text-text-2">{t('settings.address')}</p>
-                <p className="text-sm font-medium text-text-1">
+                <p className="text-base font-medium text-text-1">
                   {business.address || '—'}
                 </p>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-border">
                 <p className="text-sm text-text-2">{t('settings.email')}</p>
-                <p className="text-sm font-medium text-text-1">
+                <p className="text-base font-medium text-text-1">
                   {business.ownerEmail || '—'}
                 </p>
               </div>
               <div className="flex justify-between items-center py-2">
                 <p className="text-sm text-text-2">{t('settings.language')}</p>
-                <p className="text-sm font-medium text-text-1">
+                <p className="text-base font-medium text-text-1">
                   {business.language === 'UZBEK'
                     ? "O'zbek"
                     : business.language === 'ENGLISH'
@@ -380,7 +397,7 @@ export default function SettingsPage() {
           ) : (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
+                <label className="block text-base font-medium text-text-2 mb-1.5">
                   {t('settings.businessName')}
                 </label>
                 <Input
@@ -390,7 +407,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
+                <label className="block text-base font-medium text-text-2 mb-1.5">
                   {t('settings.description')}
                 </label>
                 <Textarea
@@ -400,7 +417,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
+                <label className="block text-base font-medium text-text-2 mb-1.5">
                   {t('settings.address')}
                 </label>
                 <Textarea
@@ -413,7 +430,7 @@ export default function SettingsPage() {
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
+                <label className="block text-base font-medium text-text-2 mb-1.5">
                   {t('settings.email')}
                 </label>
                 <Input
@@ -422,7 +439,7 @@ export default function SettingsPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                 />
-                <label className="flex items-start gap-2.5 mt-3 text-sm text-text-2 cursor-pointer">
+                <label className="flex items-start gap-2.5 mt-3 text-base text-text-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={newsletterConsent}
@@ -434,7 +451,7 @@ export default function SettingsPage() {
                 </label>
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
+                <label className="block text-base font-medium text-text-2 mb-1.5">
                   {t('settings.language')}
                 </label>
                 <LanguageSwitcher onChange={selectLanguage} />
@@ -472,7 +489,7 @@ export default function SettingsPage() {
         {/* ── Business Mode ────────────────────────────────────── */}
         <Card>
           <CardHeader title={t('settings.businessMode')} />
-          <p className="text-sm text-text-2 mb-4">
+          <p className="text-base text-text-2 mb-4">
             {t('settings.businessModeHint')}
           </p>
 
@@ -489,7 +506,7 @@ export default function SettingsPage() {
                   key={m}
                   type="button"
                   onClick={() => requestModeSwitch(m)}
-                  className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
+                  className={`rounded-md px-4 py-2 text-base font-semibold transition-colors ${
                     active
                       ? 'bg-surface text-text-1 shadow-sm'
                       : 'text-text-2 hover:text-text-1'
@@ -512,7 +529,7 @@ export default function SettingsPage() {
                 href="/services"
                 className="flex items-center justify-between py-3 group"
               >
-                <span className="text-sm font-medium text-text-1">
+                <span className="text-base font-medium text-text-1">
                   Manage services
                 </span>
                 <span className="text-text-3 group-hover:text-text-1 transition-colors">
@@ -531,7 +548,7 @@ export default function SettingsPage() {
               href="/staff"
               className="flex items-center justify-between py-3 group"
             >
-              <span className="text-sm font-medium text-text-1">
+              <span className="text-base font-medium text-text-1">
                 Manage staff
               </span>
               <span className="text-text-3 group-hover:text-text-1 transition-colors">
@@ -559,13 +576,13 @@ export default function SettingsPage() {
         {/* ── Calendar sync ────────────────────────────────────── */}
         <Card>
           <CardHeader title={t('settings.calendarSync')} />
-          <p className="text-sm text-text-2 mb-5">
+          <p className="text-base text-text-2 mb-5">
             {t('settings.calendarSyncHint')}
           </p>
 
           <div className="flex items-center justify-between py-3 border-t border-border">
             <div>
-              <p className="text-sm font-medium text-text-1">
+              <p className="text-base font-medium text-text-1">
                 {t('settings.syncToCalendar')}
               </p>
               <p className="text-xs text-text-2 mt-0.5">
@@ -630,7 +647,7 @@ export default function SettingsPage() {
         {/* ── Reminders ────────────────────────────────────────── */}
         <Card>
           <CardHeader title={t('settings.reminders')} />
-          <p className="text-sm text-text-2 mb-5">
+          <p className="text-base text-text-2 mb-5">
             {t('settings.remindersHint')}
           </p>
 
@@ -712,7 +729,7 @@ export default function SettingsPage() {
             <div className="space-y-3">
               <div className="flex justify-between items-center py-2 border-b border-border">
                 <p className="text-sm text-text-2">{t('settings.botUsername')}</p>
-                <p className="text-sm font-medium text-text-1">
+                <p className="text-base font-medium text-text-1">
                   {business.botUsername
                     ? `@${business.botUsername}`
                     : t('settings.notConfigured')}
@@ -722,7 +739,7 @@ export default function SettingsPage() {
                 <p className="text-sm text-text-2">{t('settings.botLink')}</p>
                 {business.botUsername ? (
                   <div className="flex items-center gap-2">
-                    <p className="text-sm text-accent font-medium">
+                    <p className="text-base text-accent font-medium">
                       https://t.me/{business.botUsername}
                     </p>
                     <Button
@@ -738,14 +755,14 @@ export default function SettingsPage() {
                     </Button>
                   </div>
                 ) : (
-                  <p className="text-sm text-text-3">—</p>
+                  <p className="text-base text-text-3">—</p>
                 )}
               </div>
             </div>
           ) : (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
+                <label className="block text-base font-medium text-text-2 mb-1.5">
                   {t('settings.pasteToken')}
                 </label>
                 <Input
@@ -783,22 +800,31 @@ export default function SettingsPage() {
         {business.cardPaymentsEnabled !== false && (
           <Card>
             <CardHeader title={t('settings.paymentCard')} />
-            <p className="text-sm text-text-2 mb-4">{t('settings.paymentHint')}</p>
+            <p className="text-base text-text-2 mb-4">{t('settings.paymentHint')}</p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
+                <label className="block text-base font-medium text-text-2 mb-1.5">
                   {t('settings.cardNumber')}
                 </label>
                 <Input
                   type="text"
                   inputMode="numeric"
                   value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value)}
+                  onChange={(e) => {
+                    setCardNumber(formatCardNumber(e.target.value))
+                    setCardError(null)
+                  }}
                   placeholder="8600 1234 5678 9012"
+                  aria-invalid={cardError !== null}
                 />
+                {cardError && (
+                  <p className="text-sm font-medium text-error-strong mt-1.5" role="alert">
+                    {cardError}
+                  </p>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
+                <label className="block text-base font-medium text-text-2 mb-1.5">
                   {t('settings.cardHolder')}
                 </label>
                 <Input
@@ -818,7 +844,7 @@ export default function SettingsPage() {
 
       {/* Success toast */}
       {savedMessage && (
-        <div className="fixed bottom-6 right-6 bg-text-1 text-surface px-4 py-3 rounded-md text-sm font-medium shadow-md z-50 flex items-center gap-2">
+        <div className="fixed bottom-6 right-6 bg-text-1 text-surface px-4 py-3 rounded-md text-base font-medium shadow-md z-50 flex items-center gap-2">
           <span className="text-success-soft">
             <Icon name="paid" size={16} />
           </span>
@@ -837,7 +863,7 @@ export default function SettingsPage() {
             <p className="text-base font-bold text-text-1 mb-2">
               {t('settings.modeSwitchTitle')}
             </p>
-            <p className="text-sm text-text-2 mb-5">
+            <p className="text-base text-text-2 mb-5">
               {t('settings.modeSwitchBody', {
                 from: modeDisplayName(mode),
                 to: modeDisplayName(modeSwitchTarget),
@@ -886,7 +912,7 @@ function ReminderRow({
     <div className="py-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-text-1">{title}</p>
+          <p className="text-base font-medium text-text-1">{title}</p>
           <p className="text-xs text-text-2 mt-0.5">{subtitle}</p>
         </div>
         <Toggle active={enabled} onClick={() => onToggle(!enabled)} />

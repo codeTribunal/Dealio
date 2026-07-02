@@ -162,7 +162,7 @@ export default function CalendarPage() {
       <div className="max-w-2xl w-full">
         {error ? (
           <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-            <p className="text-sm text-error-strong">{error}</p>
+            <p className="text-base text-error-strong">{error}</p>
             <Button variant="primary" onClick={() => setRetry((r) => r + 1)}>
               {t('common.tryAgain')}
             </Button>
@@ -173,13 +173,13 @@ export default function CalendarPage() {
           <div className="flex flex-col items-center justify-center gap-3 py-20 px-6 text-center">
             <Icon name="calendar" size={40} className="text-text-3" />
             <p className="text-base font-semibold text-text-1">{emptyTitle}</p>
-            <p className="text-sm text-text-2">{emptyMessage}</p>
+            <p className="text-base text-text-2">{emptyMessage}</p>
           </div>
         ) : (
           <div className="space-y-5">
             {groups.map(([key, rows]) => (
               <div key={key}>
-                <p className="text-sm font-bold text-text-2 mb-2 px-1">
+                <p className="text-lg font-bold text-text-2 mb-2 px-1">
                   {dayLabel(rows[0].date)}
                 </p>
                 <div className="space-y-2">
@@ -191,7 +191,7 @@ export default function CalendarPage() {
                       style={{ transitionDuration: 'var(--dur-base)' }}
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-text-1 truncate">
+                        <p className="text-base font-semibold text-text-1 truncate">
                           {it.title}
                         </p>
                         {it.subtitle && (
@@ -211,7 +211,7 @@ export default function CalendarPage() {
                           <Badge status={it.status} type={it.kind} />
                         )}
                         {it.trailing && (
-                          <p className="text-sm font-semibold text-text-1 tabular-nums">
+                          <p className="text-base font-semibold text-text-1 tabular-nums">
                             {it.trailing}
                           </p>
                         )}

@@ -27,33 +27,46 @@ class AppSwitch extends StatelessWidget {
     final t = AppTokens.of(context);
     final enabled = onChanged != null;
 
-    return Opacity(
-      opacity: enabled ? 1.0 : 0.5,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: enabled ? () => onChanged!(!value) : null,
-        child: AnimatedContainer(
-          duration: AppMotion.durBase,
-          curve: AppMotion.ease,
-          width: _trackW,
-          height: _trackH,
-          decoration: BoxDecoration(
-            color: value ? t.accent : t.borderStrong,
-            borderRadius: AppRadii.pill,
-          ),
-          child: AnimatedAlign(
-            duration: AppMotion.durBase,
-            curve: AppMotion.ease,
-            alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-            child: Padding(
-              padding: const EdgeInsets.all(_inset),
-              child: Container(
-                width: _thumb,
-                height: _thumb,
+    // Semantics: announce as a switch with its on/off state to TalkBack /
+    // VoiceOver. The hit area is expanded to the 44px floor (PRODUCT.md)
+    // while the 44×24 visual stays — Center only grows when the parent allows.
+    return Semantics(
+      toggled: value,
+      enabled: enabled,
+      child: Opacity(
+        opacity: enabled ? 1.0 : 0.5,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: enabled ? () => onChanged!(!value) : null,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            child: Center(
+              child: AnimatedContainer(
+                duration: AppMotion.durBase,
+                curve: AppMotion.ease,
+                width: _trackW,
+                height: _trackH,
                 decoration: BoxDecoration(
-                  color: t.surface,
-                  shape: BoxShape.circle,
-                  boxShadow: t.shadowSm,
+                  color: value ? t.accent : t.borderStrong,
+                  borderRadius: AppRadii.pill,
+                ),
+                child: AnimatedAlign(
+                  duration: AppMotion.durBase,
+                  curve: AppMotion.ease,
+                  alignment:
+                      value ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(_inset),
+                    child: Container(
+                      width: _thumb,
+                      height: _thumb,
+                      decoration: BoxDecoration(
+                        color: t.surface,
+                        shape: BoxShape.circle,
+                        boxShadow: t.shadowSm,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),

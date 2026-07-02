@@ -6,7 +6,7 @@ import LoadingSpinner from '@/components/LoadingSpinner'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Icon } from '@/components/icons/Icon'
+import { SlideOver } from '@/components/ui/SlideOver'
 import { getServices, createService, updateService, deleteService } from '@/lib/api'
 import { formatUZS, currencyWord } from '@/lib/format'
 import { useI18n } from '@/lib/i18n/i18nContext'
@@ -64,7 +64,7 @@ export default function ServicesPage() {
     setError(null)
     getServices()
       .then(setServices)
-      .catch(() => setError('Could not load services'))
+      .catch(() => setError(t('services.failedLoad')))
       .finally(() => setLoading(false))
   }
   useEffect(() => {
@@ -97,15 +97,15 @@ export default function ServicesPage() {
     const d = Number(duration)
     const p = Number(price)
     if (!name.trim()) {
-      setFormError('Enter a service name')
+      setFormError(t('services.errorName'))
       return
     }
     if (!d || d <= 0) {
-      setFormError('Enter a valid duration')
+      setFormError(t('services.errorDuration'))
       return
     }
     if (Number.isNaN(p) || p < 0) {
-      setFormError('Enter a valid price')
+      setFormError(t('services.errorPrice'))
       return
     }
     setSaving(true)
@@ -132,7 +132,7 @@ export default function ServicesPage() {
       }
       setShowForm(false)
     } catch {
-      setFormError('Could not save. Please try again.')
+      setFormError(t('scheduling.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -149,7 +149,7 @@ export default function ServicesPage() {
       setServices((prev) => prev.filter((x) => x.id !== editing.id))
       setShowForm(false)
     } catch {
-      setFormError('Could not delete. Please try again.')
+      setFormError(t('scheduling.deleteFailed'))
     } finally {
       setDeleting(false)
     }
@@ -158,10 +158,10 @@ export default function ServicesPage() {
   if (!guardReady) return null
 
   return (
-    <AuthLayout title="Services">
+    <AuthLayout title={t('nav.services')}>
       <div className="max-w-2xl w-full space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-text-2">The services customers can book.</p>
+          <p className="text-sm text-text-2">{t('services.subtitle')}</p>
           <Button
             variant="primary"
             size="sm"
@@ -169,7 +169,7 @@ export default function ServicesPage() {
             className="flex-shrink-0"
             onClick={openCreate}
           >
-            New service
+            {t('services.newService')}
           </Button>
         </div>
 
@@ -177,14 +177,14 @@ export default function ServicesPage() {
           <LoadingSpinner />
         ) : error ? (
           <Card className="text-center">
-            <p className="text-sm text-error-strong">{error}</p>
+            <p className="text-base text-error-strong">{error}</p>
             <Button variant="primary" className="mt-3" onClick={fetchServices}>
               {t('common.tryAgain')}
             </Button>
           </Card>
         ) : services.length === 0 ? (
           <Card className="text-center py-12">
-            <p className="text-sm text-text-2">No services yet</p>
+            <p className="text-base text-text-2">{t('services.empty')}</p>
           </Card>
         ) : (
           <div className="space-y-3">
@@ -195,11 +195,12 @@ export default function ServicesPage() {
                   onClick={() => openEdit(s)}
                   className="flex-1 min-w-0 text-left"
                 >
-                  <p className="text-sm font-semibold text-text-1 truncate">
+                  <p className="text-base font-semibold text-text-1 truncate">
                     {s.name}
                   </p>
                   <p className="text-xs text-text-2 tabular-nums mt-0.5">
-                    {s.durationMinutes} min · {formatUZS(s.price)}
+                    {t('services.durationValue', { n: s.durationMinutes })} ·{' '}
+                    {formatUZS(s.price)}
                   </p>
                 </button>
                 <span
@@ -209,7 +210,7 @@ export default function ServicesPage() {
                       : 'bg-warning-soft text-warning-strong'
                   }`}
                 >
-                  {s.active ? 'Active' : 'Paused'}
+                  {s.active ? t('common.active') : t('common.paused')}
                 </span>
               </Card>
             ))}
@@ -218,141 +219,127 @@ export default function ServicesPage() {
       </div>
 
       {/* Create / edit slide-over */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div
-            className="absolute inset-0 bg-text-1/30"
-            onClick={() => setShowForm(false)}
-          />
-          <div className="relative z-50 w-full max-w-md bg-surface border-l border-border shadow-lg flex flex-col h-full">
-            <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
-              <p className="text-lg font-bold text-text-1">
-                {editing ? 'Edit service' : 'New service'}
+      <SlideOver
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title={editing ? t('services.editService') : t('services.newService')}
+        closeLabel={t('common.close')}
+        maxWidth="max-w-md"
+      >
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div>
+            <label className="block text-base font-medium text-text-2 mb-1.5">
+              {t('services.nameLabel')}
+            </label>
+            <Input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t('services.namePlaceholder')}
+            />
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-base font-medium text-text-2 mb-1.5">
+                {t('services.durationLabel')}
+              </label>
+              <Input
+                type="number"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                min="1"
+                className="tabular-nums"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-base font-medium text-text-2 mb-1.5">
+                {t('services.priceLabel', { currency: currencyWord() })}
+              </label>
+              <Input
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                min="0"
+                className="tabular-nums"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between py-1">
+            <div>
+              <p className="text-base font-medium text-text-1">
+                {t('common.active')}
               </p>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                aria-label="Close"
-                className="text-text-3 hover:text-text-1 transition-colors"
-              >
-                <Icon name="close" size={20} />
-              </button>
+              <p className="text-xs text-text-2">
+                {t('services.activeHint')}
+              </p>
             </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Name
-                </label>
-                <Input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Haircut"
-                />
-              </div>
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-text-2 mb-1.5">
-                    Duration (min)
-                  </label>
-                  <Input
-                    type="number"
-                    value={duration}
-                    onChange={(e) => setDuration(e.target.value)}
-                    min="1"
-                    className="tabular-nums"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-text-2 mb-1.5">
-                    Price ({currencyWord()})
-                  </label>
-                  <Input
-                    type="number"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    min="0"
-                    className="tabular-nums"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center justify-between py-1">
-                <div>
-                  <p className="text-sm font-medium text-text-1">Active</p>
-                  <p className="text-xs text-text-2">
-                    Customers can book this service.
-                  </p>
-                </div>
-                <Toggle active={active} onClick={() => setActive((v) => !v)} />
-              </div>
-              {formError && (
-                <div className="p-3 bg-error-soft border border-error-strong rounded-md">
-                  <p className="text-sm text-error-strong">{formError}</p>
-                </div>
-              )}
+            <Toggle active={active} onClick={() => setActive((v) => !v)} />
+          </div>
+          {formError && (
+            <div className="p-3 bg-error-soft border border-error-strong rounded-md">
+              <p className="text-base text-error-strong">{formError}</p>
             </div>
+          )}
+        </div>
 
-            <div className="p-6 border-t border-border flex-shrink-0 space-y-3">
-              <Button
-                variant="primary"
-                fullWidth
-                loading={saving}
-                onClick={handleSave}
-              >
-                {t('common.save')}
-              </Button>
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={() => setShowForm(false)}
-              >
-                {t('common.cancel')}
-              </Button>
+        <div className="p-6 border-t border-border flex-shrink-0 space-y-3">
+          <Button
+            variant="primary"
+            fullWidth
+            loading={saving}
+            onClick={handleSave}
+          >
+            {t('common.save')}
+          </Button>
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={() => setShowForm(false)}
+          >
+            {t('common.cancel')}
+          </Button>
 
-              {/* Soft-delete (edit mode only) — danger button below Save, with
-                  an inline confirm matching the orders/catalog delete pattern. */}
-              {editing && !showDeleteConfirm && (
+          {/* Soft-delete (edit mode only) — danger button below Save, with
+              an inline confirm matching the orders/catalog delete pattern. */}
+          {editing && !showDeleteConfirm && (
+            <Button
+              variant="danger"
+              fullWidth
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              {t('common.deleteService')}
+            </Button>
+          )}
+          {editing && showDeleteConfirm && (
+            <div className="p-4 bg-error-soft border border-error-strong rounded-md space-y-3">
+              <p className="text-base font-semibold text-error-strong">
+                {t('common.deleteServiceTitle')}
+              </p>
+              <p className="text-xs text-error-strong">
+                {t('common.deleteServiceBody')}
+              </p>
+              <div className="flex gap-2">
                 <Button
                   variant="danger"
                   fullWidth
-                  onClick={() => setShowDeleteConfirm(true)}
+                  loading={deleting}
+                  onClick={handleDelete}
                 >
-                  {t('common.deleteService')}
+                  {t('common.yesDelete')}
                 </Button>
-              )}
-              {editing && showDeleteConfirm && (
-                <div className="p-4 bg-error-soft border border-error-strong rounded-md space-y-3">
-                  <p className="text-sm font-semibold text-error-strong">
-                    {t('common.deleteServiceTitle')}
-                  </p>
-                  <p className="text-xs text-error-strong">
-                    {t('common.deleteServiceBody')}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="danger"
-                      fullWidth
-                      loading={deleting}
-                      onClick={handleDelete}
-                    >
-                      {t('common.yesDelete')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      fullWidth
-                      disabled={deleting}
-                      onClick={() => setShowDeleteConfirm(false)}
-                    >
-                      {t('common.cancel')}
-                    </Button>
-                  </div>
-                </div>
-              )}
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  disabled={deleting}
+                  onClick={() => setShowDeleteConfirm(false)}
+                >
+                  {t('common.cancel')}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </SlideOver>
     </AuthLayout>
   )
 }

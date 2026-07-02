@@ -58,7 +58,7 @@ export default function DesignIconsPage() {
           <button
             type="button"
             onClick={toggleDark}
-            className="px-4 py-2 rounded-lg bg-accent text-accent-on text-sm font-semibold shadow-accent self-start sm:self-auto"
+            className="px-4 py-2 rounded-lg bg-accent text-accent-on text-base font-semibold shadow-accent self-start sm:self-auto"
           >
             Toggle dark
           </button>

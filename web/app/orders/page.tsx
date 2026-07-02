@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
 import { Spinner } from '@/components/ui/Spinner'
+import { SlideOver } from '@/components/ui/SlideOver'
 import { Icon } from '@/components/icons/Icon'
 import { getOrders, getProducts, getCustomers, createOrder, createCustomer, restoreOrder, type Product } from '@/lib/api'
 import { formatUZS } from '@/lib/format'
@@ -18,17 +19,17 @@ import type { Order, Customer } from '@/types'
 const LIMIT = 30
 
 const FILTER_TABS = [
-  { label: 'All', value: 'ALL' },
-  { label: 'New', value: 'NEW' },
-  { label: 'Preparing', value: 'PREPARING' },
-  { label: 'Ready', value: 'READY' },
-  { label: 'Delivered', value: 'DELIVERED' },
-  { label: 'Cancelled', value: 'CANCELLED' },
-  { label: 'Awaiting payment', value: 'AWAITING_PAYMENT' },
+  { labelKey: 'common.all', value: 'ALL' },
+  { labelKey: 'status.NEW', value: 'NEW' },
+  { labelKey: 'status.PREPARING', value: 'PREPARING' },
+  { labelKey: 'status.READY', value: 'READY' },
+  { labelKey: 'status.DELIVERED', value: 'DELIVERED' },
+  { labelKey: 'status.CANCELLED', value: 'CANCELLED' },
+  { labelKey: 'orders.filterAwaitingPayment', value: 'AWAITING_PAYMENT' },
 ]
 
 const SELECT_CLS =
-  'w-full bg-surface border border-border rounded-md py-2.5 px-3.5 text-sm text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors'
+  'w-full bg-surface border border-border rounded-md py-2.5 px-3.5 text-base text-text-1 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors'
 
 export default function OrdersPage() {
   const guardReady = useModeGuard('PRODUCTS')
@@ -146,20 +147,20 @@ export default function OrdersPage() {
 
   const handleCreateOrder = async () => {
     if (orderCustomerMode === 'select' && !orderCustomerId) {
-      setOrderError('Select a customer')
+      setOrderError(t('orders.selectCustomer'))
       return
     }
     if (orderCustomerMode === 'manual' && !orderManualCustomerName.trim()) {
-      setOrderError('Enter a customer name')
+      setOrderError(t('orders.errCustomerName'))
       return
     }
     if (orderItems.length === 0) {
-      setOrderError('Add at least one product')
+      setOrderError(t('orders.errNoItems'))
       return
     }
     if (orderDeliveryMethod === 'DELIVERY' &&
         !orderDeliveryAddress.trim()) {
-      setOrderError('Enter a delivery address')
+      setOrderError(t('orders.errDeliveryAddress'))
       return
     }
     setOrderSaving(true)
@@ -199,7 +200,7 @@ export default function OrdersPage() {
       setOrderDeliveryAddress('')
       setOrderDeliveryDate('')
       setOrderNotes('')
-      showSaved('Order created')
+      showSaved(t('orders.createdToast'))
     } catch (e) {
       // 402 = customer plan limit (from createCustomer) — surface the upgrade
       // message; otherwise a generic order error. Never a false success.
@@ -207,10 +208,10 @@ export default function OrdersPage() {
       if (err?.response?.status === 402) {
         setOrderError(
           err.response?.data?.message ||
-            'Customer limit reached. Upgrade to Pro to add more.'
+            t('orders.errCustomerLimit')
         )
       } else {
-        setOrderError('Failed to create order. Please try again.')
+        setOrderError(t('orders.createFailed'))
       }
     } finally {
       setOrderSaving(false)
@@ -235,14 +236,14 @@ export default function OrdersPage() {
         setOrders(Array.isArray(data.orders) ? data.orders : [])
         setTotal(data.total)
       })
-      .catch(() => setError('Failed to load orders'))
+      .catch(() => setError('orders.failedLoad'))
       .finally(() => setLoading(false))
   }, [debouncedSearch, statusFilter, page, retryToken, showDeleted])
 
   if (!guardReady) return null
 
   return (
-    <AuthLayout title="Orders">
+    <AuthLayout title={t('nav.orders')}>
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
@@ -250,15 +251,15 @@ export default function OrdersPage() {
             className="text-text-1"
             style={{ fontSize: 'var(--fs-h2)', fontWeight: 'var(--fw-extra)', lineHeight: 1.1 }}
           >
-            Orders
+            {t('nav.orders')}
           </h1>
-          <p className="text-sm text-text-2 mt-1">{total} total orders</p>
+          <p className="text-sm text-text-2 mt-1">{t('orders.totalOrders', { count: total })}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex-1 md:flex-none md:w-80">
             <Input
               leftIcon="search"
-              placeholder="Search by order # or customer name"
+              placeholder={t('orders.searchHint')}
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value)
@@ -282,14 +283,14 @@ export default function OrdersPage() {
             onClick={() => setShowCreateForm(true)}
             className="flex-shrink-0 whitespace-nowrap"
           >
-            New order
+            {t('home.quickActionNewOrder')}
           </Button>
         </div>
       </div>
 
       {/* Filter chips */}
       <div className="flex flex-wrap gap-2 mb-6">
-        {FILTER_TABS.map(({ label, value }) => {
+        {FILTER_TABS.map(({ labelKey, value }) => {
           const active = statusFilter === value
           return (
             <button
@@ -306,7 +307,7 @@ export default function OrdersPage() {
               }`}
               style={{ transitionDuration: 'var(--dur-base)' }}
             >
-              {label}
+              {t(labelKey)}
             </button>
           )
         })}
@@ -317,11 +318,11 @@ export default function OrdersPage() {
         {/* Desktop header */}
         <div className="hidden md:grid grid-cols-12 gap-4 px-5 py-3 bg-surface-2 border-b border-border text-xs font-semibold uppercase tracking-wide text-text-2">
           <div className="col-span-1">#</div>
-          <div className="col-span-3">Customer</div>
-          <div className="col-span-4">Items</div>
-          <div className="col-span-2">Total</div>
-          <div className="col-span-1">Status</div>
-          <div className="col-span-1">Payment</div>
+          <div className="col-span-3">{t('customers.colCustomer')}</div>
+          <div className="col-span-4">{t('orders.colItems')}</div>
+          <div className="col-span-2">{t('common.total')}</div>
+          <div className="col-span-1">{t('common.statusLabel')}</div>
+          <div className="col-span-1">{t('orders.colPayment')}</div>
         </div>
 
         {/* Body */}
@@ -331,7 +332,7 @@ export default function OrdersPage() {
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
-            <p className="text-sm text-error-strong">{error}</p>
+            <p className="text-base text-error-strong">{t(error)}</p>
             <Button
               variant="ghost"
               size="sm"
@@ -341,18 +342,18 @@ export default function OrdersPage() {
                 setRetryToken((tk) => tk + 1)
               }}
             >
-              Try again
+              {t('common.tryAgain')}
             </Button>
           </div>
         ) : (orders ?? []).length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
             <Icon name="orders" size={40} className="text-text-3" />
-            <p className="text-sm text-text-2">
+            <p className="text-base text-text-2">
               {search
-                ? 'No orders match your search'
+                ? t('orders.emptyFiltered')
                 : statusFilter !== 'ALL'
-                ? 'No orders with this status'
-                : 'No orders yet'}
+                ? t('orders.emptyStatus')
+                : t('orders.empty')}
             </p>
           </div>
         ) : (
@@ -364,7 +365,7 @@ export default function OrdersPage() {
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-text-1">#{order.orderNumber}</span>
+                    <span className="text-base font-bold text-text-1">#{order.orderNumber}</span>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-pill text-xs font-semibold bg-error-soft text-error-strong">
                       {t('common.deletedBadge')}
                     </span>
@@ -392,12 +393,12 @@ export default function OrdersPage() {
                 style={{ transitionDuration: 'var(--dur-base)' }}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-bold text-text-1">#{order.orderNumber}</span>
+                  <span className="text-base font-bold text-text-1">#{order.orderNumber}</span>
                   <Badge status={order.orderStatus} type="order" />
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm text-text-2 truncate">{order.customer.name}</p>
-                  <p className="text-sm font-semibold text-text-1 tabular-nums flex-shrink-0">
+                  <p className="text-base text-text-2 truncate">{order.customer.name}</p>
+                  <p className="text-base font-semibold text-text-1 tabular-nums flex-shrink-0">
                     {formatUZS(order.total)}
                   </p>
                 </div>
@@ -410,14 +411,14 @@ export default function OrdersPage() {
                 style={{ transitionDuration: 'var(--dur-base)' }}
               >
                 <div className="col-span-1">
-                  <p className="text-sm font-bold text-text-1">#{order.orderNumber}</p>
+                  <p className="text-base font-bold text-text-1">#{order.orderNumber}</p>
                 </div>
 
                 <div className="col-span-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <Avatar name={order.customer.name} size="sm" />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-text-1 truncate">{order.customer.name}</p>
+                      <p className="text-base font-medium text-text-1 truncate">{order.customer.name}</p>
                       <p className="text-xs text-text-2 truncate">
                         {order.customer.telegramUsername
                           ? `@${order.customer.telegramUsername}`
@@ -428,17 +429,19 @@ export default function OrdersPage() {
                 </div>
 
                 <div className="col-span-4 min-w-0">
-                  <p className="text-sm text-text-2 truncate">
+                  <p className="text-base text-text-2 truncate">
                     {order.items.length === 0
                       ? '—'
                       : `${order.items[0].product.name} × ${order.items[0].quantity}${
-                          order.items.length > 1 ? ` + ${order.items.length - 1} more` : ''
+                          order.items.length > 1
+                            ? ` ${t('orders.moreItems', { n: order.items.length - 1 })}`
+                            : ''
                         }`}
                   </p>
                 </div>
 
                 <div className="col-span-2">
-                  <p className="text-sm font-semibold text-text-1 tabular-nums">{formatUZS(order.total)}</p>
+                  <p className="text-base font-semibold text-text-1 tabular-nums">{formatUZS(order.total)}</p>
                 </div>
 
                 <div className="col-span-1">
@@ -457,7 +460,11 @@ export default function OrdersPage() {
         {total > LIMIT && (
           <div className="flex items-center justify-between px-5 py-4 border-t border-border">
             <p className="text-sm text-text-2">
-              Showing {(page - 1) * LIMIT + 1}–{Math.min(page * LIMIT, total)} of {total}
+              {t('customers.showing', {
+                from: (page - 1) * LIMIT + 1,
+                to: Math.min(page * LIMIT, total),
+                total,
+              })}
             </p>
             <div className="flex gap-2">
               <Button
@@ -466,7 +473,7 @@ export default function OrdersPage() {
                 disabled={page === 1}
                 onClick={() => setPage(page - 1)}
               >
-                Previous
+                {t('common.previous')}
               </Button>
               <Button
                 variant="secondary"
@@ -474,7 +481,7 @@ export default function OrdersPage() {
                 disabled={page * LIMIT >= total}
                 onClick={() => setPage(page + 1)}
               >
-                Next
+                {t('common.next')}
               </Button>
             </div>
           </div>
@@ -482,240 +489,226 @@ export default function OrdersPage() {
       </Card>
 
       {/* Create order panel */}
-      {showCreateForm && (
-        <div className="fixed inset-0 z-40 flex justify-end">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setShowCreateForm(false)}
-          />
-          <div className="relative z-50 w-full max-w-xl bg-surface shadow-lg flex flex-col h-full">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
-              <p className="text-lg font-bold text-text-1">New order</p>
-              <button
-                type="button"
-                onClick={() => setShowCreateForm(false)}
-                aria-label="Close"
-                className="p-2 rounded-md text-text-2 hover:bg-surface-2 hover:text-text-1 transition-colors"
-                style={{ transitionDuration: 'var(--dur-base)' }}
-              >
-                <Icon name="close" size={20} />
-              </button>
+      <SlideOver
+        open={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        title={t('home.quickActionNewOrder')}
+        closeLabel={t('common.close')}
+        maxWidth="max-w-xl"
+      >
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          {/* Customer — pick existing OR type a new walk-in */}
+          <div>
+            <label className="block text-base font-medium text-text-2 mb-1.5">
+              {t('customers.colCustomer')} *
+            </label>
+            <div className="flex gap-2 mb-2">
+              {(['select', 'manual'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setOrderCustomerMode(m)}
+                  className={`px-3 py-1.5 text-xs rounded-md font-semibold transition-colors ${
+                    orderCustomerMode === m
+                      ? 'bg-accent-soft text-accent'
+                      : 'bg-surface border border-border text-text-2 hover:bg-surface-2'
+                  }`}
+                >
+                  {m === 'select'
+                    ? t('orders.customerSelectExisting')
+                    : t('orders.customerEnterManually')}
+                </button>
+              ))}
             </div>
-
-            {/* Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-5">
-              {/* Customer — pick existing OR type a new walk-in */}
-              <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Customer *
-                </label>
-                <div className="flex gap-2 mb-2">
-                  {(['select', 'manual'] as const).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setOrderCustomerMode(m)}
-                      className={`px-3 py-1.5 text-xs rounded-md font-semibold transition-colors ${
-                        orderCustomerMode === m
-                          ? 'bg-accent-soft text-accent'
-                          : 'bg-surface border border-border text-text-2 hover:bg-surface-2'
-                      }`}
-                    >
-                      {m === 'select' ? 'Select existing' : 'Enter manually'}
-                    </button>
-                  ))}
-                </div>
-                {orderCustomerMode === 'select' ? (
-                  <select
-                    value={orderCustomerId}
-                    onChange={(e) => setOrderCustomerId(e.target.value)}
-                    className={SELECT_CLS}
-                  >
-                    <option value="">Select a customer</option>
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <div className="space-y-2">
-                    <Input
-                      type="text"
-                      value={orderManualCustomerName}
-                      onChange={(e) => setOrderManualCustomerName(e.target.value)}
-                      placeholder="Customer name"
-                    />
-                    <Input
-                      type="tel"
-                      value={orderManualCustomerPhone}
-                      onChange={(e) => setOrderManualCustomerPhone(e.target.value)}
-                      placeholder="Phone (optional)"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Products */}
-              <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Products *
-                </label>
-                <div className="border border-border rounded-md overflow-hidden">
-                  <div className="px-4 py-2 bg-surface-2 border-b border-border">
-                    <p className="text-xs font-medium text-text-2">Add products</p>
-                  </div>
-                  <div className="max-h-[200px] overflow-y-auto bg-surface">
-                    {products.map((product) => (
-                      <div
-                        key={product.id}
-                        className="flex items-center justify-between px-4 py-2.5 border-b border-border last:border-b-0"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-text-1 truncate">{product.name}</p>
-                          <p className="text-xs text-text-2">{formatUZS(product.price)}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => addOrderItem(product.id)}
-                          className="w-7 h-7 rounded-pill bg-accent text-accent-on text-sm font-bold hover:bg-accent-hover flex items-center justify-center flex-shrink-0 ml-3"
-                          aria-label={`Add ${product.name}`}
-                        >
-                          +
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {orderItems.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {orderItems.map((item) => (
-                      <div
-                        key={item.productId}
-                        className="flex items-center gap-3 p-3 bg-accent-soft rounded-md"
-                      >
-                        <p className="text-sm font-medium text-text-1 flex-1 min-w-0 truncate">{item.name}</p>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => updateOrderItemQuantity(item.productId, item.quantity - 1)}
-                            className="w-6 h-6 rounded bg-surface border border-border text-sm font-bold flex items-center justify-center hover:bg-surface-2"
-                            aria-label="Decrease quantity"
-                          >
-                            -
-                          </button>
-                          <p className="text-sm font-semibold text-text-1 w-6 text-center tabular-nums">{item.quantity}</p>
-                          <button
-                            type="button"
-                            onClick={() => updateOrderItemQuantity(item.productId, item.quantity + 1)}
-                            className="w-6 h-6 rounded bg-surface border border-border text-sm font-bold flex items-center justify-center hover:bg-surface-2"
-                            aria-label="Increase quantity"
-                          >
-                            +
-                          </button>
-                        </div>
-                        <p className="text-sm font-semibold text-text-1 w-24 text-right tabular-nums flex-shrink-0">
-                          {formatUZS(item.price * item.quantity)}
-                        </p>
-                      </div>
-                    ))}
-
-                    <div className="flex justify-between items-center px-3 py-2 border-t border-border mt-2">
-                      <p className="text-sm font-bold text-text-1">Total</p>
-                      <p className="text-sm font-bold text-text-1 tabular-nums">{formatUZS(orderTotal)}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Delivery method */}
-              <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Delivery
-                </label>
-                <div className="flex gap-2">
-                  <Button
-                    variant={orderDeliveryMethod === 'PICKUP' ? 'primary' : 'secondary'}
-                    size="sm"
-                    onClick={() => setOrderDeliveryMethod('PICKUP')}
-                  >
-                    Pickup
-                  </Button>
-                  <Button
-                    variant={orderDeliveryMethod === 'DELIVERY' ? 'primary' : 'secondary'}
-                    size="sm"
-                    onClick={() => setOrderDeliveryMethod('DELIVERY')}
-                  >
-                    Delivery
-                  </Button>
-                </div>
-
-                {orderDeliveryMethod === 'DELIVERY' && (
-                  <div className="space-y-3 mt-3">
-                    <Input
-                      type="text"
-                      value={orderDeliveryAddress}
-                      onChange={(e) => setOrderDeliveryAddress(e.target.value)}
-                      placeholder="Delivery address"
-                    />
-                    <div>
-                      <label className="block text-sm font-medium text-text-2 mb-1.5">
-                        Requested delivery date (optional)
-                      </label>
-                      <Input
-                        type="date"
-                        value={orderDeliveryDate}
-                        onChange={(e) => setOrderDeliveryDate(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className="block text-sm font-medium text-text-2 mb-1.5">
-                  Notes (optional)
-                </label>
-                <textarea
-                  rows={2}
-                  value={orderNotes}
-                  onChange={(e) => setOrderNotes(e.target.value)}
-                  className={`${SELECT_CLS} resize-none`}
+            {orderCustomerMode === 'select' ? (
+              <select
+                value={orderCustomerId}
+                onChange={(e) => setOrderCustomerId(e.target.value)}
+                className={SELECT_CLS}
+              >
+                <option value="">{t('orders.selectCustomer')}</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  value={orderManualCustomerName}
+                  onChange={(e) => setOrderManualCustomerName(e.target.value)}
+                  placeholder={t('orders.customerNamePlaceholder')}
+                />
+                <Input
+                  type="tel"
+                  value={orderManualCustomerPhone}
+                  onChange={(e) => setOrderManualCustomerPhone(e.target.value)}
+                  placeholder={t('orders.phoneOptionalPlaceholder')}
                 />
               </div>
+            )}
+          </div>
+
+          {/* Products */}
+          <div>
+            <label className="block text-base font-medium text-text-2 mb-1.5">
+              {t('orders.productsLabel')} *
+            </label>
+            <div className="border border-border rounded-md overflow-hidden">
+              <div className="px-4 py-2 bg-surface-2 border-b border-border">
+                <p className="text-xs font-medium text-text-2">{t('orders.addProducts')}</p>
+              </div>
+              <div className="max-h-[200px] overflow-y-auto bg-surface">
+                {products.map((product) => (
+                  <div
+                    key={product.id}
+                    className="flex items-center justify-between px-4 py-2.5 border-b border-border last:border-b-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-base font-medium text-text-1 truncate">{product.name}</p>
+                      <p className="text-xs text-text-2">{formatUZS(product.price)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => addOrderItem(product.id)}
+                      className="w-7 h-7 rounded-pill bg-accent text-accent-on text-base font-bold hover:bg-accent-hover flex items-center justify-center flex-shrink-0 ml-3"
+                      aria-label={t('orders.addProductAria', { name: product.name })}
+                    >
+                      +
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Footer */}
-            <div className="p-6 border-t border-border flex-shrink-0 space-y-3">
-              {orderError && (
-                <div className="p-3 bg-error-soft rounded-md">
-                  <p className="text-sm text-error-strong">{orderError}</p>
+            {orderItems.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {orderItems.map((item) => (
+                  <div
+                    key={item.productId}
+                    className="flex items-center gap-3 p-3 bg-accent-soft rounded-md"
+                  >
+                    <p className="text-base font-medium text-text-1 flex-1 min-w-0 truncate">{item.name}</p>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => updateOrderItemQuantity(item.productId, item.quantity - 1)}
+                        className="w-6 h-6 rounded bg-surface border border-border text-base font-bold flex items-center justify-center hover:bg-surface-2"
+                        aria-label={t('orders.decreaseQty')}
+                      >
+                        -
+                      </button>
+                      <p className="text-base font-semibold text-text-1 w-6 text-center tabular-nums">{item.quantity}</p>
+                      <button
+                        type="button"
+                        onClick={() => updateOrderItemQuantity(item.productId, item.quantity + 1)}
+                        className="w-6 h-6 rounded bg-surface border border-border text-base font-bold flex items-center justify-center hover:bg-surface-2"
+                        aria-label={t('orders.increaseQty')}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <p className="text-base font-semibold text-text-1 w-24 text-right tabular-nums flex-shrink-0">
+                      {formatUZS(item.price * item.quantity)}
+                    </p>
+                  </div>
+                ))}
+
+                <div className="flex justify-between items-center px-3 py-2 border-t border-border mt-2">
+                  <p className="text-base font-bold text-text-1">{t('common.total')}</p>
+                  <p className="text-base font-bold text-text-1 tabular-nums">{formatUZS(orderTotal)}</p>
                 </div>
-              )}
+              </div>
+            )}
+          </div>
+
+          {/* Delivery method */}
+          <div>
+            <label className="block text-base font-medium text-text-2 mb-1.5">
+              {t('delivery.method')}
+            </label>
+            <div className="flex gap-2">
               <Button
-                variant="primary"
-                fullWidth
-                loading={orderSaving}
-                onClick={handleCreateOrder}
+                variant={orderDeliveryMethod === 'PICKUP' ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => setOrderDeliveryMethod('PICKUP')}
               >
-                {orderSaving ? 'Saving...' : 'Create order'}
+                {t('delivery.PICKUP')}
               </Button>
               <Button
-                variant="secondary"
-                fullWidth
-                onClick={() => setShowCreateForm(false)}
+                variant={orderDeliveryMethod === 'DELIVERY' ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => setOrderDeliveryMethod('DELIVERY')}
               >
-                Cancel
+                {t('delivery.DELIVERY')}
               </Button>
             </div>
+
+            {orderDeliveryMethod === 'DELIVERY' && (
+              <div className="space-y-3 mt-3">
+                <Input
+                  type="text"
+                  value={orderDeliveryAddress}
+                  onChange={(e) => setOrderDeliveryAddress(e.target.value)}
+                  placeholder={t('delivery.address')}
+                />
+                <div>
+                  <label className="block text-base font-medium text-text-2 mb-1.5">
+                    {t('orders.deliveryDateOptional')}
+                  </label>
+                  <Input
+                    type="date"
+                    value={orderDeliveryDate}
+                    onChange={(e) => setOrderDeliveryDate(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-base font-medium text-text-2 mb-1.5">
+              {t('orders.notesOptional')}
+            </label>
+            <textarea
+              rows={2}
+              value={orderNotes}
+              onChange={(e) => setOrderNotes(e.target.value)}
+              className={`${SELECT_CLS} resize-none`}
+            />
           </div>
         </div>
-      )}
+
+        {/* Footer */}
+        <div className="p-6 border-t border-border flex-shrink-0 space-y-3">
+          {orderError && (
+            <div className="p-3 bg-error-soft rounded-md">
+              <p className="text-base text-error-strong">{orderError}</p>
+            </div>
+          )}
+          <Button
+            variant="primary"
+            fullWidth
+            loading={orderSaving}
+            onClick={handleCreateOrder}
+          >
+            {orderSaving ? t('orders.saving') : t('orders.createOrder')}
+          </Button>
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={() => setShowCreateForm(false)}
+          >
+            {t('common.cancel')}
+          </Button>
+        </div>
+      </SlideOver>
 
       {/* Success toast */}
       {savedMessage && (
-        <div className="fixed bottom-6 right-6 bg-text-1 text-surface px-4 py-3 rounded-md text-sm font-medium shadow-lg z-50 flex items-center gap-2">
+        <div className="fixed bottom-6 right-6 bg-text-1 text-surface px-4 py-3 rounded-md text-base font-medium shadow-lg z-50 flex items-center gap-2">
           <Icon name="paid" size={16} className="text-success-strong" />
           {savedMessage}
         </div>

@@ -99,16 +99,16 @@ export default function AdminLegalPage() {
   return (
     <AdminLayout title="Legal documents">
       <div className="max-w-3xl">
-        <p className="text-sm text-gray-400 mb-5">
+        <p className="text-base text-gray-400 mb-5">
           The document text is edited in the codebase (legalConfig.ts) and deployed
           separately. Publishing a new version here bumps the in-force version and,
           for the privacy policy, triggers re-consent. It does not change the wording.
         </p>
 
         {loading ? (
-          <p className="text-sm text-gray-500">Loading...</p>
+          <p className="text-base text-gray-500">Loading...</p>
         ) : error ? (
-          <p className="text-sm text-red-400">{error}</p>
+          <p className="text-base text-red-400">{error}</p>
         ) : (
           <div className="space-y-4">
             {DOC_ORDER.map((docType) => {
@@ -124,7 +124,7 @@ export default function AdminLegalPage() {
                       <FileText size={18} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white">{meta.label}</p>
+                      <p className="text-lg font-semibold text-white">{meta.label}</p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         In-force version:{' '}
                         <span className="text-gray-300">{doc?.version ?? 'not set'}</span>
@@ -151,7 +151,7 @@ export default function AdminLegalPage() {
                       <button
                         type="button"
                         onClick={() => openPublish(docType)}
-                        className="px-3.5 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors flex-shrink-0"
+                        className="px-3.5 py-2 bg-blue-600 text-white rounded-xl text-base font-semibold hover:bg-blue-700 transition-colors flex-shrink-0"
                       >
                         Publish new version
                       </button>
@@ -181,10 +181,10 @@ export default function AdminLegalPage() {
             <h3 className="text-base font-bold text-white mb-2">
               Publish {DOC_META[publishFor].label.toLowerCase()} version
             </h3>
-            <p className="text-sm text-gray-400 mb-1">
+            <p className="text-base text-gray-400 mb-1">
               Current version: <span className="text-gray-200">{current ?? 'not set'}</span>
             </p>
-            <p className="text-sm text-amber-300 mb-4">{reconsentWarning(publishFor)}</p>
+            <p className="text-base text-amber-300 mb-4">{reconsentWarning(publishFor)}</p>
 
             <label className="block text-xs text-gray-400 mb-1">New version</label>
             <input
@@ -192,7 +192,7 @@ export default function AdminLegalPage() {
               value={newVersion}
               onChange={(e) => setNewVersion(e.target.value)}
               placeholder="e.g. 2026-08-01"
-              className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-base text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {trimmed && trimmed === current && (
               <p className="text-xs text-red-400 mt-2">
@@ -206,7 +206,7 @@ export default function AdminLegalPage() {
                 type="button"
                 onClick={closeModal}
                 disabled={publishing}
-                className="px-4 py-2 bg-gray-700 text-white rounded-xl text-sm disabled:opacity-50"
+                className="px-4 py-2 bg-gray-700 text-white rounded-xl text-base disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -214,7 +214,7 @@ export default function AdminLegalPage() {
                 type="button"
                 onClick={confirmPublish}
                 disabled={!canPublish}
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-base font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
                 {publishing ? 'Publishing...' : 'Confirm publish'}
               </button>
