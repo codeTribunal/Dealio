@@ -78,6 +78,10 @@ model Business {
   updatedAt DateTime @updatedAt
 
   @@index([deletionState, deletionScheduledAt])
+  // GIN trigram index for admin ILIKE %…% search — created (with the pg_trgm
+  // extension) by the raw 20260608010000_search_trgm_indexes migration;
+  // declared here so `prisma migrate diff` recognizes it.
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "idx_business_name_trgm")
 }
 
 model SentReminder {
@@ -130,6 +134,10 @@ model User {
   business       Business?
   consentRecords ConsentRecord[]
   createdAt      DateTime        @default(now())
+
+  // Trigram index for admin owner-phone substring search (the @unique b-tree
+  // cannot serve %…%). Created by 20260608010000_search_trgm_indexes.
+  @@index([phone(ops: raw("gin_trgm_ops"))], type: Gin, map: "idx_user_phone_trgm")
 }
 
 model ConsentRecord {
@@ -183,6 +191,11 @@ model Customer {
   lastInteractionAt DateTime @default(now())
 
   @@unique([businessId, telegramUserId])
+  // GIN trigram indexes for admin ILIKE %…% search — created (with pg_trgm)
+  // by the raw 20260608010000_search_trgm_indexes migration.
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "idx_customer_name_trgm")
+  @@index([phone(ops: raw("gin_trgm_ops"))], type: Gin, map: "idx_customer_phone_trgm")
+  @@index([telegramUsername(ops: raw("gin_trgm_ops"))], type: Gin, map: "idx_customer_telegram_trgm")
 }
 
 model Product {
