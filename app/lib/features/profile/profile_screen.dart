@@ -93,7 +93,7 @@ class ProfileScreen extends ConsumerWidget {
 
           // Link to full business settings
           AppCard(
-            onTap: () => context.push('/settings'),
+            onTap: () => context.go('/settings'),
             child: Row(
               children: [
                 AppIcon(name: AppIconName.settings, size: 20, color: t.text2),

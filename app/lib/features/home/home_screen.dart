@@ -247,7 +247,7 @@ class _StatRow extends StatelessWidget {
             child: AppStatCard(
               label: l.homeStatNewCustomers,
               value: '${data.newCustomers.length}',
-              onTap: () => context.push('/customers'),
+              onTap: () => context.go('/customers'),
             ),
           ),
         ],
@@ -755,7 +755,7 @@ class _AppointmentActivityCard extends StatelessWidget {
         l.homeBadgeAppointment,
         style: TextStyle(fontSize: AppTextSizes.caption, color: t.text2),
       ),
-      onTap: () => context.push('/appointments'),
+      onTap: () => context.go('/appointments'),
     );
   }
 }
@@ -774,7 +774,7 @@ class _CancellationActivityCard extends StatelessWidget {
       subtitle: l.homeActivityCancelled(appt.serviceName),
       trailing:
           const AppBadge(status: 'CANCELLED', type: AppBadgeType.appointment),
-      onTap: () => context.push('/appointments'),
+      onTap: () => context.go('/appointments'),
     );
   }
 }
