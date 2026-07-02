@@ -23,6 +23,8 @@ export const ANONYMIZE_SCRUBBED_FIELDS = [
   'order.notes',
   'order.internalNotes',
   'order.timeline',
+  'order.paymentProofFileId',
+  'order.paymentProofUrl',
   'appointment.notes',
   'project.name',
   'project.description',
@@ -86,6 +88,8 @@ export interface AnonymizeCustomerSummary {
   projectsAnonymized: number;
   milestonesAnonymized: number;
   invoicesAnonymized: number;
+  /** Orders whose payment-proof Telegram file_id reference was cleared. */
+  proofRefsCleared: number;
 }
 
 /**
@@ -100,8 +104,11 @@ export interface AnonymizeCustomerSummary {
  * `note` inside each Order.timeline entry (the rest of the timeline, which is a
  * structured status history, is preserved), plus their freelance records —
  * Project name/description/paymentTerms, Milestone names, and the string fields
- * inside Invoice.lineItems. Financial integrity is locked: no amounts, totals,
- * statuses, dates, or invoiceNumbers change — only names and free text.
+ * inside Invoice.lineItems. The payment-proof screenshot reference
+ * (Order.paymentProofFileId, a Telegram file_id) is also cleared, making the
+ * image unreachable through the getFile proxy. Financial integrity is locked:
+ * no amounts, totals, statuses, dates, or invoiceNumbers change — only names,
+ * free text, and the proof reference.
  *
  * This is the SINGLE source of truth for both the admin anonymize route and the
  * bot-initiated erase, so the two can never diverge. Runs in one transaction and
@@ -128,6 +135,19 @@ export async function anonymizeCustomer(id: string): Promise<AnonymizeCustomerSu
         notes: null,
         internalNotes: null,
       },
+    });
+
+    // Clear the reference to the customer's payment-proof screenshot — a
+    // Telegram file_id that the authenticated getFile proxy resolves on
+    // demand (the image bytes live on Telegram's servers, reachable only via
+    // this business's bot token; once the ref is gone the proxy returns 404).
+    // paymentProofUrl is the not-yet-written future archive URL for the same
+    // artifact, cleared alongside so no reference can outlive the erasure.
+    // Same customer scoping as the scrubs above; the not-null filter makes
+    // the count meaningful (= orders that actually had a proof).
+    const proofRefs = await tx.order.updateMany({
+      where: { customerId: id, paymentProofFileId: { not: null } },
+      data: { paymentProofFileId: null, paymentProofUrl: null },
     });
 
     // Scrub the free-text notes on their appointments (customer-scoped).
@@ -209,6 +229,7 @@ export async function anonymizeCustomer(id: string): Promise<AnonymizeCustomerSu
       projectsAnonymized: projects.count,
       milestonesAnonymized: milestones.count,
       invoicesAnonymized: invoices.length,
+      proofRefsCleared: proofRefs.count,
     };
   });
 }
