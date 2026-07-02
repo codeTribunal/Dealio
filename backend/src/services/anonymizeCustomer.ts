@@ -24,6 +24,11 @@ export const ANONYMIZE_SCRUBBED_FIELDS = [
   'order.internalNotes',
   'order.timeline',
   'appointment.notes',
+  'project.name',
+  'project.description',
+  'project.paymentTerms',
+  'milestone.name',
+  'invoice.lineItems',
 ];
 
 /**
@@ -51,6 +56,39 @@ function scrubTimelineEntry(entry: Prisma.JsonValue): Prisma.InputJsonValue {
 }
 
 /**
+ * Scrub one invoice line-item JSON value: every string anywhere in it (the
+ * description etc.) becomes 'Deleted'; numbers (quantity, unitPrice, amounts)
+ * and booleans are preserved exactly so the financial record stays intact.
+ * Recurses through nested arrays/objects and is tolerant of odd shapes, like
+ * scrubTimelineEntry above.
+ */
+function scrubLineItemValue(value: Prisma.JsonValue): Prisma.InputJsonValue {
+  if (typeof value === 'string') return 'Deleted';
+  if (typeof value === 'number' || typeof value === 'boolean') return value;
+  if (Array.isArray(value)) {
+    return value.map((entry) => (entry === null ? null : scrubLineItemValue(entry)));
+  }
+  if (value !== null && typeof value === 'object') {
+    const cleaned: Record<string, Prisma.InputJsonValue | null> = {};
+    for (const [key, entry] of Object.entries(value)) {
+      if (entry === undefined) continue;
+      cleaned[key] = entry === null ? null : scrubLineItemValue(entry);
+    }
+    return cleaned;
+  }
+  // Only JSON null reaches here; it carries no PII but InputJsonValue cannot
+  // express a top-level null, so normalize to an empty object.
+  return {};
+}
+
+/** Per-model counts of what an anonymize run scrubbed, for the caller/audit. */
+export interface AnonymizeCustomerSummary {
+  projectsAnonymized: number;
+  milestonesAnonymized: number;
+  invoicesAnonymized: number;
+}
+
+/**
  * Irreversibly de-identify a customer (ZRU-547 "delete my personal data"): scrub
  * the personal fields on the customer row and their orders/appointments, delete
  * personal custom-field values + tags, clear consent, and stamp anonymizedAt —
@@ -58,9 +96,12 @@ function scrubTimelineEntry(entry: Prisma.JsonValue): Prisma.InputJsonValue {
  * business's accounting records (order numbers, amounts, dates, status) survive.
  *
  * Free-text PII is scrubbed everywhere it lives for this customer: the customer
- * notes, Order.notes / Order.internalNotes, Appointment.notes, and the free-text
+ * notes, Order.notes / Order.internalNotes, Appointment.notes, the free-text
  * `note` inside each Order.timeline entry (the rest of the timeline, which is a
- * structured status history, is preserved).
+ * structured status history, is preserved), plus their freelance records —
+ * Project name/description/paymentTerms, Milestone names, and the string fields
+ * inside Invoice.lineItems. Financial integrity is locked: no amounts, totals,
+ * statuses, dates, or invoiceNumbers change — only names and free text.
  *
  * This is the SINGLE source of truth for both the admin anonymize route and the
  * bot-initiated erase, so the two can never diverge. Runs in one transaction and
@@ -68,9 +109,10 @@ function scrubTimelineEntry(entry: Prisma.JsonValue): Prisma.InputJsonValue {
  * no-op). No restore.
  *
  * @param id the resolved Customer.id (caller resolves it by tenancy first).
+ * @returns per-model counts of the freelance records scrubbed.
  */
-export async function anonymizeCustomer(id: string): Promise<void> {
-  await prismaUnscoped.$transaction(async (tx) => {
+export async function anonymizeCustomer(id: string): Promise<AnonymizeCustomerSummary> {
+  return prismaUnscoped.$transaction(async (tx) => {
     // Personal custom-field values and tags are deleted outright.
     await tx.customerFieldValue.deleteMany({ where: { customerId: id } });
     await tx.customerTag.deleteMany({ where: { customerId: id } });
@@ -110,6 +152,39 @@ export async function anonymizeCustomer(id: string): Promise<void> {
       });
     }
 
+    // Scrub the customer's freelance projects: the title and free-text fields
+    // only. totalPrice, dates, and status are untouched so the accounting
+    // record survives. Scoped to this customer (customerId = id) exactly like
+    // the order/appointment scrubs above; soft-deleted projects are scrubbed
+    // too — erasure must reach them as well.
+    const projects = await tx.project.updateMany({
+      where: { customerId: id },
+      data: { name: 'Deleted project', description: null, paymentTerms: null },
+    });
+
+    // Milestones on those projects: `name` is the only free-text field.
+    // amount, dueDate, and status are untouched.
+    const milestones = await tx.milestone.updateMany({
+      where: { project: { customerId: id } },
+      data: { name: 'Milestone' },
+    });
+
+    // Invoice line items are JSON ({ description, quantity, unitPrice }):
+    // replace every string with 'Deleted', keep every number exactly.
+    // invoiceNumber, total, dueDate, and status are untouched. Read-then-update
+    // inside the tx, mirroring the timeline scrub above.
+    const invoices = await tx.invoice.findMany({
+      where: { project: { customerId: id } },
+      select: { id: true, lineItems: true },
+    });
+    for (const invoice of invoices) {
+      const scrubbed = invoice.lineItems.map(scrubLineItemValue);
+      await tx.invoice.update({
+        where: { id: invoice.id },
+        data: { lineItems: { set: scrubbed } },
+      });
+    }
+
     // De-identify the customer row itself; keep the row + transactional links.
     await tx.customer.update({
       where: { id },
@@ -129,5 +204,11 @@ export async function anonymizeCustomer(id: string): Promise<void> {
         anonymizedAt: new Date(),
       },
     });
+
+    return {
+      projectsAnonymized: projects.count,
+      milestonesAnonymized: milestones.count,
+      invoicesAnonymized: invoices.length,
+    };
   });
 }
