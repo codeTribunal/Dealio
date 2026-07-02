@@ -419,7 +419,7 @@ export async function markInvoicePaid(
   projectId: string,
   invoiceId: string
 ): Promise<void> {
-  await api.patch(`/projects/${projectId}/invoices/${invoiceId}`, { status: 'PAID' })
+  await api.patch(`/projects/${projectId}/invoices/${invoiceId}/paid`, {})
 }
 
 // Backend date fields use z.string().datetime(); a date-only value from
