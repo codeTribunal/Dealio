@@ -158,7 +158,7 @@ class _EditButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppTokens.of(context);
     return IconButton(
-      icon: AppIcon(name: AppIconName.settings, size: 18, color: t.text2),
+      icon: Icon(Icons.edit_outlined, size: 18, color: t.text2),
       onPressed: onPressed,
       tooltip: tooltip,
       visualDensity: VisualDensity.compact,
@@ -311,7 +311,6 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
     final l = AppLocalizations.of(context)!;
     final t = AppTokens.of(context);
     return _SectionCard(
-      icon: AppIconName.settings,
       title: l.settingsBusinessProfile,
       trailing: _editing
           ? null
@@ -434,7 +433,7 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
                     widget.data.business.address!.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.s1),
                   Text(
-                    '📍 ${widget.data.business.address!}',
+                    widget.data.business.address!,
                     style:
                         TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
                   ),
@@ -443,7 +442,7 @@ class _ProfileSectionState extends ConsumerState<_ProfileSection> {
                     widget.data.business.ownerEmail!.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.s1),
                   Text(
-                    '✉️ ${widget.data.business.ownerEmail!}',
+                    widget.data.business.ownerEmail!,
                     style:
                         TextStyle(color: t.text2, fontSize: AppTextSizes.sm),
                   ),
