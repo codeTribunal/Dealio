@@ -9,6 +9,7 @@ import { getCardPaymentsEnabled, setCardPaymentsEnabled } from '../lib/platformS
 import { invalidateVersionCache, type LegalDocType } from '../lib/legalVersion.js';
 import { startBusinessBot } from '../lib/botManager.js';
 import { runDeletionPurge } from '../jobs/deletionPurge.js';
+import { PLAN_LIMITS } from '../lib/planLimits.js';
 
 // Admin login lockout: after ADMIN_LOCK_THRESHOLD consecutive failures, lock the
 // ACCOUNT for ADMIN_LOCK_MINUTES. This is the PRIMARY brute-force defense (the
@@ -101,6 +102,115 @@ const updateAdminBody = z.object({
 const platformSettingsBody = z.object({
   cardPaymentsEnabled: z.boolean(),
 });
+
+// ── Dashboard v2 helpers ──────────────────────────────────────────────────────
+// Every number below is computed on request from existing rows (no new tables,
+// no instrumentation). At current scale (hundreds of businesses) a handful of
+// aggregate queries per dashboard load is fine; if this ever gets slow the fix
+// is a cached snapshot, not per-write counters.
+
+/** Percentage of `n` over `d`, one decimal, 0 when the denominator is 0. */
+const pctOf = (n: number, d: number): number => (d > 0 ? Math.round((n / d) * 1000) / 10 : 0);
+
+interface FunnelStep {
+  count: number;
+  /** % of the window's signups (0 when there are no signups). */
+  pct: number;
+}
+
+interface FunnelWindow {
+  signups: number;
+  botConnected: FunnelStep;
+  catalogReady: FunnelStep;
+  firstSale: FunnelStep;
+  activated: FunnelStep;
+  /** Median days from signup to first order/appointment/project; null when no
+   *  business in the window has a first sale. */
+  medianDaysToFirstSale: number | null;
+}
+
+// One activation-funnel window. `cutoff` = null means all-time. Aggregate
+// queries only — the per-business predicates run as EXISTS/correlated
+// subqueries inside single SQL statements, never as app-level loops.
+// NOTE: raw SQL bypasses the soft-delete client extension, so every raw
+// subquery filters `deletedAt IS NULL` explicitly.
+async function computeFunnelWindow(cutoff: Date | null): Promise<FunnelWindow> {
+  const windowWhere = cutoff ? { createdAt: { gte: cutoff } } : {};
+
+  const [signups, botConnected, catalogReady, firstSale, activatedRows, medianRows] =
+    await Promise.all([
+      prisma.business.count({ where: windowWhere }),
+      prisma.business.count({ where: { ...windowWhere, botUsername: { not: null } } }),
+      // Catalog ready: something a customer could buy — an active product or
+      // service; FREELANCE businesses have no catalog, so they count as ready.
+      prisma.business.count({
+        where: {
+          ...windowWhere,
+          OR: [
+            { mode: 'FREELANCE' },
+            { products: { some: { active: true, deletedAt: null } } },
+            { services: { some: { active: true, deletedAt: null } } },
+          ],
+        },
+      }),
+      prisma.business.count({
+        where: {
+          ...windowWhere,
+          OR: [
+            { orders: { some: { deletedAt: null } } },
+            { appointments: { some: { deletedAt: null } } },
+            { projects: { some: { deletedAt: null } } },
+          ],
+        },
+      }),
+      // Activated: >=5 orders+appointments created within 30 days of that
+      // business's own signup date ("created" = row createdAt for both).
+      prisma.$queryRaw<{ count: number }[]>`
+        SELECT COUNT(*)::int AS count
+        FROM "Business" b
+        WHERE (${cutoff}::timestamptz IS NULL OR b."createdAt" >= ${cutoff}::timestamptz)
+          AND (
+            (SELECT COUNT(*) FROM "Order" o
+              WHERE o."businessId" = b.id AND o."deletedAt" IS NULL
+                AND o."createdAt" <= b."createdAt" + INTERVAL '30 days')
+            +
+            (SELECT COUNT(*) FROM "Appointment" a
+              WHERE a."businessId" = b.id AND a."deletedAt" IS NULL
+                AND a."createdAt" <= b."createdAt" + INTERVAL '30 days')
+          ) >= 5
+      `,
+      prisma.$queryRaw<{ median: number | null }[]>`
+        SELECT (percentile_cont(0.5) WITHIN GROUP (ORDER BY s.days))::float8 AS median
+        FROM (
+          SELECT EXTRACT(EPOCH FROM (
+            LEAST(
+              (SELECT MIN(o."createdAt") FROM "Order" o
+                WHERE o."businessId" = b.id AND o."deletedAt" IS NULL),
+              (SELECT MIN(a."createdAt") FROM "Appointment" a
+                WHERE a."businessId" = b.id AND a."deletedAt" IS NULL),
+              (SELECT MIN(p."createdAt") FROM "Project" p
+                WHERE p."businessId" = b.id AND p."deletedAt" IS NULL)
+            ) - b."createdAt"
+          )) / 86400.0 AS days
+          FROM "Business" b
+          WHERE (${cutoff}::timestamptz IS NULL OR b."createdAt" >= ${cutoff}::timestamptz)
+        ) s
+        WHERE s.days IS NOT NULL
+      `,
+    ]);
+
+  const activated = activatedRows[0]?.count ?? 0;
+  const median = medianRows[0]?.median ?? null;
+
+  return {
+    signups,
+    botConnected: { count: botConnected, pct: pctOf(botConnected, signups) },
+    catalogReady: { count: catalogReady, pct: pctOf(catalogReady, signups) },
+    firstSale: { count: firstSale, pct: pctOf(firstSale, signups) },
+    activated: { count: activated, pct: pctOf(activated, signups) },
+    medianDaysToFirstSale: median === null ? null : Math.round(median * 10) / 10,
+  };
+}
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
@@ -213,6 +323,16 @@ export default async function adminRoutes(app: FastifyInstance) {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60_000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60_000);
+    const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60_000);
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60_000);
+
+    // 80% of the FREE limits from planLimits.ts — a business past these is
+    // close enough to the wall to be worth an upgrade conversation.
+    const FREE = PLAN_LIMITS.FREE;
+    const NEAR_CUSTOMERS = 24; // of FREE.customers (30)
+    const NEAR_ORDERS = 40; // of FREE.ordersPerMonth (50)
+    const NEAR_APPOINTMENTS = 40; // of FREE.appointmentsPerMonth (50)
 
     const [
       totalBusinesses,
@@ -224,6 +344,19 @@ export default async function adminRoutes(app: FastifyInstance) {
       recentSuspensions,
       activeOrderBizIds,
       activeApptBizIds,
+      // ── v2 additions (all aggregate queries; see Dashboard v2 helpers) ──
+      funnel7d,
+      funnel30d,
+      funnelAll,
+      pendingDeletion,
+      stuckOnboarding,
+      goneQuiet,
+      momentum,
+      nearCustomerRows,
+      nearOrderRows,
+      nearApptRows,
+      modeCounts,
+      languageCounts,
     ] = await Promise.all([
       prisma.business.count(),
       prisma.business.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
@@ -249,6 +382,110 @@ export default async function adminRoutes(app: FastifyInstance) {
         by: ['businessId'],
         where: { createdAt: { gte: startOfMonth } },
       }),
+
+      // Activation funnel per window.
+      computeFunnelWindow(sevenDaysAgo),
+      computeFunnelWindow(thirtyDaysAgo),
+      computeFunnelWindow(null),
+
+      // Attention: owner-requested deletions waiting for the purge.
+      prisma.business.findMany({
+        where: { deletionState: 'PENDING_DELETION' },
+        orderBy: { deletionScheduledAt: 'desc' },
+        take: 20,
+        select: { id: true, name: true, deletionScheduledAt: true },
+      }),
+      // Attention: signed up >48h ago and never connected a bot. Businesses
+      // already pending deletion are excluded so they don't appear twice.
+      prisma.business.findMany({
+        where: {
+          createdAt: { lt: fortyEightHoursAgo },
+          botUsername: null,
+          deletionState: 'ACTIVE',
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        select: { id: true, name: true, createdAt: true },
+      }),
+      // Attention: had at least one order/appointment ever, none in 14 days.
+      prisma.business.findMany({
+        where: {
+          AND: [
+            {
+              OR: [
+                { orders: { some: { deletedAt: null } } },
+                { appointments: { some: { deletedAt: null } } },
+              ],
+            },
+            { orders: { none: { deletedAt: null, createdAt: { gte: fourteenDaysAgo } } } },
+            { appointments: { none: { deletedAt: null, createdAt: { gte: fourteenDaysAgo } } } },
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        select: { id: true, name: true },
+      }),
+
+      // Momentum: last 30 calendar days (server timezone), one row per day
+      // even when a day had no activity. Raw SQL bypasses the soft-delete
+      // extension, so deletedAt is filtered explicitly.
+      prisma.$queryRaw<
+        { day: string; ordersPlusAppointments: number; newCustomers: number }[]
+      >`
+        WITH days AS (
+          SELECT generate_series(
+            CURRENT_DATE - INTERVAL '29 days', CURRENT_DATE, INTERVAL '1 day'
+          )::date AS day
+        ),
+        o AS (
+          SELECT "createdAt"::date AS day, COUNT(*)::int AS c FROM "Order"
+          WHERE "deletedAt" IS NULL AND "createdAt" >= CURRENT_DATE - INTERVAL '29 days'
+          GROUP BY 1
+        ),
+        a AS (
+          SELECT "createdAt"::date AS day, COUNT(*)::int AS c FROM "Appointment"
+          WHERE "deletedAt" IS NULL AND "createdAt" >= CURRENT_DATE - INTERVAL '29 days'
+          GROUP BY 1
+        ),
+        c AS (
+          SELECT "createdAt"::date AS day, COUNT(*)::int AS c FROM "Customer"
+          WHERE "deletedAt" IS NULL AND "createdAt" >= CURRENT_DATE - INTERVAL '29 days'
+          GROUP BY 1
+        )
+        SELECT to_char(days.day, 'YYYY-MM-DD') AS day,
+               (COALESCE(o.c, 0) + COALESCE(a.c, 0))::int AS "ordersPlusAppointments",
+               COALESCE(c.c, 0)::int AS "newCustomers"
+        FROM days
+        LEFT JOIN o ON o.day = days.day
+        LEFT JOIN a ON a.day = days.day
+        LEFT JOIN c ON c.day = days.day
+        ORDER BY days.day
+      `,
+
+      // Upgrade candidates: FREE businesses near a plan limit. Monthly counts
+      // come from createdAt >= start of month (not UsageLog).
+      prisma.customer.groupBy({
+        by: ['businessId'],
+        where: { deletedAt: null, business: { plan: 'FREE' } },
+        _count: { _all: true },
+        having: { businessId: { _count: { gte: NEAR_CUSTOMERS } } },
+      }),
+      prisma.order.groupBy({
+        by: ['businessId'],
+        where: { deletedAt: null, createdAt: { gte: startOfMonth }, business: { plan: 'FREE' } },
+        _count: { _all: true },
+        having: { businessId: { _count: { gte: NEAR_ORDERS } } },
+      }),
+      prisma.appointment.groupBy({
+        by: ['businessId'],
+        where: { deletedAt: null, createdAt: { gte: startOfMonth }, business: { plan: 'FREE' } },
+        _count: { _all: true },
+        having: { businessId: { _count: { gte: NEAR_APPOINTMENTS } } },
+      }),
+
+      // Composition.
+      prisma.business.groupBy({ by: ['mode'], _count: { _all: true } }),
+      prisma.business.groupBy({ by: ['language'], _count: { _all: true } }),
     ]);
 
     const activeBizSet = new Set([
@@ -259,6 +496,54 @@ export default async function adminRoutes(app: FastifyInstance) {
     const byPlan: Record<string, number> = { FREE: 0, PRO: 0, BUSINESS: 0 };
     for (const pc of planCounts) byPlan[pc.plan] = pc._count._all;
 
+    // Resolve names for upgrade candidates in ONE query, then emit one row per
+    // metric a business is near (a business can appear for several metrics).
+    const candidateIds = [
+      ...new Set([
+        ...nearCustomerRows.map((r) => r.businessId),
+        ...nearOrderRows.map((r) => r.businessId),
+        ...nearApptRows.map((r) => r.businessId),
+      ]),
+    ];
+    const candidateNames = new Map(
+      candidateIds.length > 0
+        ? (
+            await prisma.business.findMany({
+              where: { id: { in: candidateIds } },
+              select: { id: true, name: true },
+            })
+          ).map((b) => [b.id, b.name] as const)
+        : [],
+    );
+    const upgradeCandidates = [
+      ...nearCustomerRows.map((r) => ({
+        id: r.businessId,
+        name: candidateNames.get(r.businessId) ?? '',
+        metric: 'customers' as const,
+        current: r._count._all,
+        limit: FREE.customers,
+      })),
+      ...nearOrderRows.map((r) => ({
+        id: r.businessId,
+        name: candidateNames.get(r.businessId) ?? '',
+        metric: 'ordersPerMonth' as const,
+        current: r._count._all,
+        limit: FREE.ordersPerMonth,
+      })),
+      ...nearApptRows.map((r) => ({
+        id: r.businessId,
+        name: candidateNames.get(r.businessId) ?? '',
+        metric: 'appointmentsPerMonth' as const,
+        current: r._count._all,
+        limit: FREE.appointmentsPerMonth,
+      })),
+    ].sort((x, y) => y.current / y.limit - x.current / x.limit);
+
+    const byMode: Record<string, number> = { PRODUCTS: 0, SERVICES: 0, FREELANCE: 0 };
+    for (const mc of modeCounts) byMode[mc.mode] = mc._count._all;
+    const byLanguage: Record<string, number> = { UZBEK: 0, RUSSIAN: 0, ENGLISH: 0 };
+    for (const lc of languageCounts) byLanguage[lc.language] = lc._count._all;
+
     return reply.send({
       totalBusinesses,
       activeThisMonth: activeBizSet.size,
@@ -268,6 +553,12 @@ export default async function adminRoutes(app: FastifyInstance) {
       suspended,
       recentSignups,
       recentSuspensions,
+      // ── v2 ──
+      funnel: { '7d': funnel7d, '30d': funnel30d, all: funnelAll },
+      attention: { pendingDeletion, stuckOnboarding, goneQuiet },
+      momentum,
+      upgradeCandidates,
+      composition: { byMode, byLanguage },
     });
   });
 

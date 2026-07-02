@@ -96,6 +96,21 @@ export interface AdminBusiness {
   }
 }
 
+export interface FunnelStep {
+  count: number
+  /** % of the window's signups. */
+  pct: number
+}
+
+export interface FunnelWindow {
+  signups: number
+  botConnected: FunnelStep
+  catalogReady: FunnelStep
+  firstSale: FunnelStep
+  activated: FunnelStep
+  medianDaysToFirstSale: number | null
+}
+
 export interface DashboardMetrics {
   totalBusinesses: number
   activeThisMonth: number
@@ -115,6 +130,25 @@ export interface DashboardMetrics {
     suspendedReason: string | null
     suspendedAt: string
   }[]
+  // ── v2: activation funnel, attention lists, momentum, upgrade candidates ──
+  funnel: { '7d': FunnelWindow; '30d': FunnelWindow; all: FunnelWindow }
+  attention: {
+    pendingDeletion: { id: string; name: string; deletionScheduledAt: string | null }[]
+    stuckOnboarding: { id: string; name: string; createdAt: string }[]
+    goneQuiet: { id: string; name: string }[]
+  }
+  momentum: { day: string; ordersPlusAppointments: number; newCustomers: number }[]
+  upgradeCandidates: {
+    id: string
+    name: string
+    metric: 'customers' | 'ordersPerMonth' | 'appointmentsPerMonth'
+    current: number
+    limit: number
+  }[]
+  composition: {
+    byMode: Record<string, number>
+    byLanguage: Record<string, number>
+  }
 }
 
 export interface AuditEntry {
