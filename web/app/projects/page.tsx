@@ -19,6 +19,7 @@ import {
   addMilestone,
   updateMilestoneStatus,
   markInvoicePaid,
+  issueProposalLink,
 } from '@/lib/api'
 import { formatUZS, formatDate, currencyWord } from '@/lib/format'
 import { useI18n } from '@/lib/i18n/i18nContext'
@@ -233,12 +234,21 @@ export default function ProjectsPage() {
     }
   }
 
-  function copyProposalLink() {
+  async function copyProposalLink() {
     if (!selectedProject) return
-    const base = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') ?? ''
-    navigator.clipboard.writeText(`${base}/api/v1/proposals/${selectedProject.id}`)
-    setCopiedProposal(true)
-    setTimeout(() => setCopiedProposal(false), 2000)
+    try {
+      // The accept endpoint requires the single-use token issued here — a
+      // bare /proposals/:id link renders but can never be accepted.
+      const { token } = await issueProposalLink(selectedProject.id)
+      const base = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') ?? ''
+      await navigator.clipboard.writeText(
+        `${base}/api/v1/proposals/${selectedProject.id}?t=${token}`,
+      )
+      setCopiedProposal(true)
+      setTimeout(() => setCopiedProposal(false), 2000)
+    } catch {
+      showToast(t('common.errorGeneric'), 'error')
+    }
   }
 
   const handleCreateProject = async () => {

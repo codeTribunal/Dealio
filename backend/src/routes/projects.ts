@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
@@ -112,6 +113,34 @@ export default async function projectRoutes(app: FastifyInstance) {
     });
 
     return reply.status(201).send(project);
+  });
+
+  // POST /projects/:id/proposal-link — issue the shareable proposal link's
+  // single-use acceptance token. Generate-if-null so re-copying the link
+  // reuses the outstanding token; once an accept consumes it (token nulled),
+  // the next issue mints a fresh one. Owner-authenticated and business-bound.
+  app.post('/projects/:id/proposal-link', { preHandler: authenticate }, async (request, reply) => {
+    const business = await getBusinessOrFail(request, reply);
+    if (!business) return;
+
+    const { id } = request.params as { id: string };
+
+    const project = await prisma.project.findFirst({
+      where: { id, businessId: business.id, deletedAt: null },
+      select: { id: true, acceptToken: true },
+    });
+    if (!project) return sendError(reply, 404, 'Project not found');
+
+    let token = project.acceptToken;
+    if (!token) {
+      token = randomBytes(24).toString('hex');
+      await prisma.project.update({
+        where: { id: project.id },
+        data: { acceptToken: token },
+      });
+    }
+
+    return reply.send({ token });
   });
 
   // GET /projects/:id

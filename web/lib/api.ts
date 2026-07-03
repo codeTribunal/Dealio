@@ -438,6 +438,15 @@ export async function markInvoicePaid(
   await api.patch(`/projects/${projectId}/invoices/${invoiceId}/paid`, {})
 }
 
+// Issues the shareable proposal link's single-use acceptance token
+// (generate-if-null server-side). The public accept endpoint requires it.
+export async function issueProposalLink(
+  projectId: string
+): Promise<{ token: string }> {
+  const res = await api.post(`/projects/${projectId}/proposal-link`, {})
+  return res.data
+}
+
 // Backend date fields use z.string().datetime(); a date-only value from
 // <input type="date"> must be promoted to a full ISO datetime.
 function toIsoDateTime(value?: string): string | undefined {

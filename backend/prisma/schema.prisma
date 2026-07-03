@@ -372,6 +372,11 @@ model Project {
   startDate    DateTime?
   deadline     DateTime?
   status       ProjectStatus @default(PROPOSAL_SENT)
+  // Single-purpose capability token for the PUBLIC proposal-accept endpoint.
+  // Issued (generate-if-null) when the owner shares a proposal link; the
+  // accept transition requires it and nulls it in the same update (single
+  // use). Never exposed on public reads.
+  acceptToken  String?       @unique
   deletedAt    DateTime?
 
   milestones Milestone[]

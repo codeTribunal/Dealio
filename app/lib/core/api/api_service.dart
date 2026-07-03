@@ -1213,6 +1213,17 @@ class ApiService {
       throw _wrap(e);
     }
   }
+
+  /// Issues the shareable proposal link's single-use acceptance token
+  /// (generate-if-null server-side). The public accept endpoint requires it.
+  Future<String> issueProposalLink(String projectId) async {
+    try {
+      final res = await _dio.post('/projects/$projectId/proposal-link');
+      return (res.data as Map<String, dynamic>)['token'] as String;
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
 }
 
 final apiServiceProvider = Provider<ApiService>((ref) {

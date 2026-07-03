@@ -43,43 +43,45 @@ export default async function proposalRoutes(app: FastifyInstance) {
     });
   });
 
-  // POST /proposals/:projectId/accept — client accepts proposal
-  app.post('/proposals/:projectId/accept', async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+  // POST /proposals/:projectId/accept — client accepts proposal.
+  //
+  // The public page cannot verify Telegram identity (unlike the bot's
+  // /bot/accept-proposal, which binds to customer.telegramUserId), so
+  // possession of the single-use acceptance token issued with the share link
+  // IS the authorization. Token mismatch, unknown id, wrong status, and
+  // soft-deleted rows all return the SAME 404 — no oracle distinguishing
+  // "wrong token" from "no such proposal". The token is nulled in the same
+  // update that flips the status, so a captured link cannot be replayed.
+  app.post(
+    '/proposals/:projectId/accept',
+    { config: { rateLimit: { max: 10, timeWindow: 3600000 } } },
+    async (request, reply) => {
+      const { projectId } = request.params as { projectId: string };
 
-    const parsed = z
-      .object({ clientName: z.string().min(1).optional() })
-      .safeParse(request.body);
-    if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
+      const parsed = z.object({ t: z.string().min(1) }).safeParse(request.body);
+      if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
-    const project = await prisma.project.findFirst({
-      where: { id: projectId, deletedAt: null },
-    });
-    if (!project) return sendError(reply, 404, 'Proposal not found');
+      // Single atomic transition: WHERE carries the whole authorization
+      // (token + status + not-deleted); count 0 means uniform 404.
+      const accepted = await prisma.project.updateMany({
+        where: {
+          id: projectId,
+          acceptToken: parsed.data.t,
+          status: 'PROPOSAL_SENT',
+          deletedAt: null,
+        },
+        data: { status: 'IN_PROGRESS', acceptToken: null },
+      });
+      if (accepted.count === 0) return sendError(reply, 404, 'Proposal not found');
 
-    if (project.status !== 'PROPOSAL_SENT') {
-      return sendError(reply, 409, 'Proposal is no longer pending acceptance');
-    }
+      const project = await prisma.project.findFirst({
+        where: { id: projectId },
+        select: { id: true, name: true, status: true },
+      });
 
-    const updated = await prisma.project.update({
-      where: { id: projectId },
-      data: { status: 'IN_PROGRESS' },
-      include: {
-        business: { select: { name: true, ownerTelegramChatId: true } },
-        customer: { select: { id: true, name: true, telegramUserId: true } },
-      },
-    });
-
-    return reply.send({
-      project: {
-        id: updated.id,
-        name: updated.name,
-        status: updated.status,
-      },
-      ownerTelegramChatId: updated.business.ownerTelegramChatId,
-      customerName: updated.customer.name,
-    });
-  });
+      return reply.send({ project });
+    },
+  );
 
   // GET /invoices/:invoiceId — public, no auth required
   app.get('/invoices/:invoiceId', async (request, reply) => {

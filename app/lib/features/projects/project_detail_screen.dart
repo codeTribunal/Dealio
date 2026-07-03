@@ -276,26 +276,42 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _ShareProposalButton extends StatelessWidget {
+class _ShareProposalButton extends ConsumerWidget {
   final Project project;
   const _ShareProposalButton({required this.project});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
     return AppButton(
       label: l.projectShareProposal,
       variant: AppButtonVariant.secondary,
       leftIcon: AppIconName.inbox,
       fullWidth: true,
-      onPressed: () {
-        // Built from the configured backend so the copied link works for
-        // clients (never a hardcoded localhost).
-        final link = '${AppConfig.apiBaseUrl}/proposals/${project.id}';
-        Clipboard.setData(ClipboardData(text: link));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.projectProposalCopied)),
-        );
+      onPressed: () async {
+        try {
+          // The accept endpoint requires the single-use token issued here —
+          // a bare /proposals/:id link renders but can never be accepted.
+          final token =
+              await ref.read(apiServiceProvider).issueProposalLink(project.id);
+          // Built from the configured backend so the copied link works for
+          // clients (never a hardcoded localhost).
+          final link =
+              '${AppConfig.apiBaseUrl}/proposals/${project.id}?t=$token';
+          await Clipboard.setData(ClipboardData(text: link));
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l.projectProposalCopied)),
+          );
+        } catch (_) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l.errorGeneric),
+              backgroundColor: AppTokens.of(context).error,
+            ),
+          );
+        }
       },
     );
   }
