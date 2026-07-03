@@ -44,7 +44,13 @@ api.interceptors.response.use(
     // caller and must NOT trigger a redirect.
     const url: string = error.config?.url ?? ''
     const isAuthEndpoint = url.includes('/auth/')
-    if (error.response?.status === 401 && !isAuthEndpoint) {
+    // Admin routes carry their own auth (httpOnly admin_session) and their own
+    // 401 handling in adminApi. A stray owner-axios 401 on an /admin page must
+    // NOT clear the owner token or bounce to /welcome — that would hijack the
+    // admin login. Skip owner 401 handling entirely on admin paths.
+    const onAdminPath =
+      typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
+    if (error.response?.status === 401 && !isAuthEndpoint && !onAdminPath) {
       clearToken()
       if (typeof window !== 'undefined' && window.location.pathname !== '/welcome') {
         window.location.href = '/welcome'

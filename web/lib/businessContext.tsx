@@ -23,6 +23,16 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const fetchBusiness = useCallback(async () => {
+    // Admin routes (/admin/**) are a SEPARATE app with their own httpOnly
+    // admin_session auth (AdminLayout + adminApi). The owner BusinessProvider
+    // must not run the owner getBusiness() there — its 401 would trip the owner
+    // axios interceptor and bounce the admin login to /welcome. Skip the fetch
+    // on admin paths; behavior on every non-admin path is unchanged.
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+      setBusiness(null)
+      setLoading(false)
+      return
+    }
     try {
       const data = await getBusiness()
       setBusiness(data)
