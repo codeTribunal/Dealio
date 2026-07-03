@@ -26,6 +26,7 @@ export default async function homeRoutes(app: FastifyInstance) {
       dormantRaw,
       todayOrders,
       pendingPayments,
+      pendingAppointmentPayments,
       newCustomers,
       todayAppointments,
       recentCancellations,
@@ -87,6 +88,23 @@ export default async function homeRoutes(app: FastifyInstance) {
         },
         include: {
           customer: { select: { id: true, name: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+      }),
+
+      // In-advance appointments where customer reported payment, waiting for
+      // owner to confirm — same queue as pending order payments (SERVICES
+      // businesses otherwise never see the home payment queue).
+      prisma.appointment.findMany({
+        where: {
+          businessId: business.id,
+          deletedAt: null,
+          paymentStatus: 'PAYMENT_RECEIVED',
+          status: { notIn: ['CANCELLED', 'NO_SHOW'] },
+        },
+        include: {
+          customer: { select: { id: true, name: true } },
+          service: { select: { id: true, name: true } },
         },
         orderBy: { updatedAt: 'desc' },
       }),
@@ -189,6 +207,14 @@ export default async function homeRoutes(app: FastifyInstance) {
         orderNumber: o.orderNumber,
         total: o.total,
         customer: o.customer,
+        updatedAt: o.updatedAt,
+      })),
+      pendingAppointmentPayments: pendingAppointmentPayments.map((a) => ({
+        id: a.id,
+        serviceName: a.service.name,
+        price: a.price,
+        customer: { id: a.customer.id, name: a.customer.name },
+        updatedAt: a.updatedAt,
       })),
       newCustomers,
       todayAppointments: todayAppointments.map((a) => ({
