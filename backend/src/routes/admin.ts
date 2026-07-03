@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import { createHash } from 'crypto';
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
@@ -21,9 +22,15 @@ const ADMIN_LOCK_MINUTES = 15;
 const DUMMY_HASH = bcrypt.hashSync('unused-timing-equalizer', 12);
 
 // Legal-document publish body. Version must be a non-empty string; a no-op
-// (same-as-current) publish is rejected in the handler.
+// (same-as-current) publish is rejected in the handler. `content` is the
+// deterministic serialization of the document's in-code text (produced by
+// web/lib/legalHash.ts — the text lives in the web codebase, which the backend
+// cannot import): the server computes sha256 over it and stamps the hash on
+// the row, so the admin legal page can later detect wording drift between the
+// code and the in-force published version.
 const publishLegalBody = z.object({
   version: z.string().trim().min(1).max(100),
+  content: z.string().min(1).max(500_000),
 });
 
 const LEGAL_DOC_TYPES = ['PRIVACY', 'OFFER'] as const;
@@ -940,17 +947,31 @@ export default async function adminRoutes(app: FastifyInstance) {
   // GET /admin/legal-docs — both documents with current version + publish info.
   app.get('/admin/legal-docs', { preHandler: requireSuperAdmin }, async (_request, reply) => {
     const rows = await prisma.legalDocument.findMany({
-      select: { docType: true, version: true, publishedAt: true, publishedByAdminId: true },
+      select: {
+        docType: true,
+        version: true,
+        publishedAt: true,
+        publishedByAdminId: true,
+        contentHash: true,
+      },
     });
     const docs: Record<
       string,
-      { version: string; publishedAt: string; publishedByAdminId: string | null }
+      {
+        version: string;
+        publishedAt: string;
+        publishedByAdminId: string | null;
+        contentHash: string | null;
+      }
     > = {};
     for (const d of rows) {
       docs[d.docType] = {
         version: d.version,
         publishedAt: d.publishedAt.toISOString(),
         publishedByAdminId: d.publishedByAdminId ?? null,
+        // Null on rows published before hash tracking — the legal page treats
+        // that as "publish pending" (it cannot prove the wording matches).
+        contentHash: d.contentHash ?? null,
       };
     }
     return reply.send({ docs });
@@ -972,6 +993,14 @@ export default async function adminRoutes(app: FastifyInstance) {
       if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
       const newVersion = parsed.data.version;
 
+      // sha256 over the deterministic serialization of the in-code document
+      // text, computed SERVER-side so the stored hash provably matches the
+      // submitted payload (the serialization itself is produced by the admin
+      // panel, which is where the text lives — see web/lib/legalHash.ts).
+      const contentHash = createHash('sha256')
+        .update(parsed.data.content, 'utf8')
+        .digest('hex');
+
       const existing = await prisma.legalDocument.findUnique({
         where: { docType: docType as LegalDocType },
         select: { version: true },
@@ -987,8 +1016,15 @@ export default async function adminRoutes(app: FastifyInstance) {
           version: newVersion,
           publishedAt: new Date(),
           publishedByAdminId: request.adminUser!.id,
+          contentHash,
         },
-        select: { docType: true, version: true, publishedAt: true, publishedByAdminId: true },
+        select: {
+          docType: true,
+          version: true,
+          publishedAt: true,
+          publishedByAdminId: true,
+          contentHash: true,
+        },
       });
 
       // Drop the cache so the new version is in force immediately (this instance).
@@ -999,7 +1035,7 @@ export default async function adminRoutes(app: FastifyInstance) {
         action: 'PUBLISH_LEGAL_VERSION',
         targetType: 'LegalDocument',
         targetId: docType,
-        metadata: { docType, fromVersion: existing.version, toVersion: newVersion },
+        metadata: { docType, fromVersion: existing.version, toVersion: newVersion, contentHash },
         ipAddress: request.ip,
       });
 
@@ -1008,6 +1044,7 @@ export default async function adminRoutes(app: FastifyInstance) {
         version: updated.version,
         publishedAt: updated.publishedAt.toISOString(),
         publishedByAdminId: updated.publishedByAdminId ?? null,
+        contentHash: updated.contentHash,
       });
     },
   );

@@ -599,6 +599,13 @@ model LegalDocument {
   version            String
   publishedAt        DateTime     @default(now())
   publishedByAdminId String?
+  // sha256 (hex) of the deterministic serialization of this document's in-code
+  // text (web/lib/legalHash.ts — body text of all languages, sorted language
+  // keys, JSON-array delimiting) at the moment of publish. Stamped by the
+  // publish endpoint so the admin legal page can answer "has the wording
+  // changed since the in-force version was published?". Null = published
+  // before hash tracking existed.
+  contentHash        String?
   updatedAt          DateTime     @updatedAt
 }
 

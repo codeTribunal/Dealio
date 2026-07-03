@@ -497,6 +497,9 @@ export interface LegalDoc {
   version: string
   publishedAt: string
   publishedByAdminId: string | null
+  // sha256 of the in-code text serialization at publish time (see
+  // lib/legalHash.ts). Null on rows published before hash tracking.
+  contentHash: string | null
 }
 
 /** Both legal documents keyed by type. Either may be absent if unseeded. */
@@ -506,11 +509,14 @@ export async function getLegalDocs(): Promise<Partial<Record<LegalDocType, Legal
 }
 
 /** Publish a new in-force version for a document. For PRIVACY this forces
- *  re-consent. The backend rejects an empty or unchanged version. */
+ *  re-consent. The backend rejects an empty or unchanged version. `content` is
+ *  the deterministic serialization of the in-code text (lib/legalHash.ts);
+ *  the server computes sha256 over it and stamps the hash on the row. */
 export async function publishLegalVersion(
   docType: LegalDocType,
-  version: string
+  version: string,
+  content: string
 ): Promise<LegalDoc & { docType: LegalDocType }> {
-  const res = await adminApi.post(`/admin/legal-docs/${docType}/publish`, { version })
+  const res = await adminApi.post(`/admin/legal-docs/${docType}/publish`, { version, content })
   return res.data
 }
