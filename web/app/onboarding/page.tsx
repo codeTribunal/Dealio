@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { verifyBotToken, completeOnboarding, enrollStart, enrollVerify } from '@/lib/api'
 import { setToken } from '@/lib/auth'
 import { useI18n, enumToCode } from '@/lib/i18n/i18nContext'
+import { PRODUCTS_MODE_ENABLED } from '@/lib/featureFlags'
 
 type Mode = 'PRODUCTS' | 'SERVICES' | 'FREELANCE'
 type Language = 'UZBEK' | 'RUSSIAN' | 'ENGLISH'
@@ -93,7 +94,8 @@ export default function OnboardingPage() {
   const [crossBorderConsent, setCrossBorderConsent] = useState(false)
 
   // Onboarding business types. Order mirrors the Mode enum (PRODUCTS/SERVICES/FREELANCE).
-  const modeOptions: { value: Mode; title: string; subtitle: string }[] = [
+  // PRODUCTS is parked for launch and filtered out unless PRODUCTS_MODE_ENABLED.
+  const allModeOptions: { value: Mode; title: string; subtitle: string }[] = [
     {
       value: 'PRODUCTS',
       title: t('onboarding.modeProductsTitle'),
@@ -110,6 +112,9 @@ export default function OnboardingPage() {
       subtitle: t('onboarding.modeFreelanceSubtitle'),
     },
   ]
+  const modeOptions = allModeOptions.filter(
+    (o) => PRODUCTS_MODE_ENABLED || o.value !== 'PRODUCTS',
+  )
 
   const modeTitles: Record<Mode, string> = {
     PRODUCTS: t('onboarding.modeProductsTitle'),

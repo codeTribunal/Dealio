@@ -215,6 +215,32 @@ class ApiService {
     }
   }
 
+  /// Request self-serve account deletion. The business is suspended immediately
+  /// and hard-purged after a 30-day recovery window. The server accepts the
+  /// literal 'DELETE' (or the business name) as the confirmation gesture; the
+  /// localized typed word is only the client-side gate. Returns the scheduled
+  /// purge date when the server reports one.
+  Future<DateTime?> requestAccountDeletion() async {
+    try {
+      final res = await _dio.post('/business/request-deletion',
+          data: {'confirmation': 'DELETE'});
+      final scheduled = (res.data as Map)['deletionScheduledAt'] as String?;
+      return scheduled != null ? DateTime.tryParse(scheduled) : null;
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  /// Cancel a pending deletion within the 30-day window and restore the account
+  /// (clears the suspension and restarts the bot server-side). Idempotent.
+  Future<void> reactivateAccount() async {
+    try {
+      await _dio.post('/business/reactivate');
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
   /// Set the owner's email + newsletter consent (User-scoped). Pass email=null to
   /// clear it. Consent is SEPARATE from the email; the server sets consentAt only
   /// when consent is true. The caller should refetch the business to pick up the

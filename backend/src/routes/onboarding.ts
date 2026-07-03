@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { encryptBotToken } from '../lib/crypto.js';
 import { sendError } from '../lib/errors.js';
+import { PRODUCTS_MODE_ENABLED, PRODUCTS_MODE_PARKED_MESSAGE } from '../lib/productsMode.js';
 
 const BOT_TOKEN_REGEX = /^\d+:[A-Za-z0-9_-]{35,}$/;
 
@@ -89,6 +90,13 @@ export default async function onboardingRoutes(app: FastifyInstance) {
         return sendError(reply, 400, parsed.error.issues[0].message);
       }
       const { businessName, mode, language, botToken } = parsed.data;
+
+      // PRODUCTS mode is parked for launch: reject new selections at the API
+      // boundary so the UI gate cannot be bypassed. Onboarding always creates a
+      // new business, so this is always a new selection.
+      if (mode === 'PRODUCTS' && !PRODUCTS_MODE_ENABLED) {
+        return sendError(reply, 400, PRODUCTS_MODE_PARKED_MESSAGE);
+      }
 
       const existingBusiness = await prisma.business.findUnique({
         where: { ownerId: request.user.userId },

@@ -20,6 +20,7 @@ import {
   type ReminderSettings,
 } from '@/lib/api'
 import { useBusiness } from '@/lib/businessContext'
+import { PRODUCTS_MODE_ENABLED } from '@/lib/featureFlags'
 import { formatCardNumber, validateCardNumber } from '@/lib/card'
 import { useI18n, codeToEnum, type Locale } from '@/lib/i18n/i18nContext'
 import { useToast } from '@/lib/toast'
@@ -499,7 +500,12 @@ export default function SettingsPage() {
               value={mode} keeps the control bound to the current scalar mode,
               so Cancel reverts it. */}
           <div className="inline-flex bg-surface-2 rounded-lg p-1">
-            {(['SERVICES', 'FREELANCE', 'PRODUCTS'] as const).map((m) => {
+            {/* PRODUCTS mode is parked for launch: hide the option unless the
+                flag is on or this business is already in PRODUCTS mode. */}
+            {(PRODUCTS_MODE_ENABLED || mode === 'PRODUCTS'
+              ? ['SERVICES', 'FREELANCE', 'PRODUCTS']
+              : ['SERVICES', 'FREELANCE']
+            ).map((m) => {
               const active = mode === m
               return (
                 <button

@@ -9,6 +9,7 @@ import { generateCalendarToken } from '../lib/calendarToken.js';
 import { mergeReminderSettings } from '../lib/reminderDefaults.js';
 import { getCardPaymentsEnabled } from '../lib/platformSettings.js';
 import { stopBusinessBot, startBusinessBot } from '../lib/botManager.js';
+import { PRODUCTS_MODE_ENABLED, PRODUCTS_MODE_PARKED_MESSAGE } from '../lib/productsMode.js';
 
 // Owner self-serve account deletion: 30-day recoverable window.
 const DELETION_WINDOW_DAYS = 30;
@@ -359,6 +360,12 @@ export default async function businessRoutes(app: FastifyInstance) {
 
     const { botToken, address, ...rest } = parsed.data;
 
+    // PRODUCTS mode is parked for launch: reject a new selection (this is a
+    // creation path). Existing PRODUCTS businesses are unaffected.
+    if (rest.mode === 'PRODUCTS' && !PRODUCTS_MODE_ENABLED) {
+      return sendError(reply, 400, PRODUCTS_MODE_PARKED_MESSAGE);
+    }
+
     const business = await prisma.business.create({
       data: {
         ...rest,
@@ -383,6 +390,12 @@ export default async function businessRoutes(app: FastifyInstance) {
     if (!parsed.success) return sendError(reply, 400, parsed.error.issues[0].message);
 
     const { botToken, address, ...rest } = parsed.data;
+
+    // PRODUCTS mode is parked for launch: reject switching a non-PRODUCTS
+    // business to PRODUCTS. A business already in PRODUCTS mode can keep it.
+    if (rest.mode === 'PRODUCTS' && business.mode !== 'PRODUCTS' && !PRODUCTS_MODE_ENABLED) {
+      return sendError(reply, 400, PRODUCTS_MODE_PARKED_MESSAGE);
+    }
 
     const updated = await prisma.business.update({
       where: { id: business.id },

@@ -36,6 +36,12 @@ class Business {
   final DateTime? newsletterConsentAt;
   final DateTime? emailPromptDismissedAt;
   final int emailPromptDismissCount;
+  // Self-serve account deletion lifecycle. deletionState is 'ACTIVE' or
+  // 'PENDING_DELETION'; while pending, deletionScheduledAt is the 30-day purge
+  // date. Carried on GET /business and the login response so the client can
+  // show the grace-period banner and the reactivate action.
+  final String? deletionState;
+  final DateTime? deletionScheduledAt;
 
   const Business({
     required this.id,
@@ -60,6 +66,8 @@ class Business {
     this.newsletterConsentAt,
     this.emailPromptDismissedAt,
     this.emailPromptDismissCount = 0,
+    this.deletionState,
+    this.deletionScheduledAt,
   });
 
   factory Business.fromJson(Map<String, dynamic> json) => Business(
@@ -91,7 +99,14 @@ class Business {
             ? DateTime.tryParse(json['emailPromptDismissedAt'] as String)
             : null,
         emailPromptDismissCount: json['emailPromptDismissCount'] as int? ?? 0,
+        deletionState: json['deletionState'] as String?,
+        deletionScheduledAt: json['deletionScheduledAt'] != null
+            ? DateTime.tryParse(json['deletionScheduledAt'] as String)
+            : null,
       );
+
+  /// True while the account is in the 30-day self-serve deletion grace period.
+  bool get isPendingDeletion => deletionState == 'PENDING_DELETION';
 
   /// Whether the analytics email-capture card should show — identical logic on
   /// app + web. Show only if no email yet AND (never dismissed, OR dismissed
@@ -142,5 +157,7 @@ class Business {
         newsletterConsentAt: newsletterConsentAt,
         emailPromptDismissedAt: emailPromptDismissedAt,
         emailPromptDismissCount: emailPromptDismissCount,
+        deletionState: deletionState,
+        deletionScheduledAt: deletionScheduledAt,
       );
 }

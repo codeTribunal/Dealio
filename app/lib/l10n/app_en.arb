@@ -912,5 +912,30 @@
         "type": "int"
       }
     }
-  }
+  },
+  "settingsDeleteAccount": "Delete account",
+  "deleteAccountTitle": "Delete account",
+  "deleteAccountHeading": "Delete your account?",
+  "deleteAccountIntro": "This schedules your account for permanent deletion.",
+  "deleteAccountWhatTitle": "What will be deleted",
+  "deleteAccountWhatBody": "Your business profile, customers, appointments, projects, and all history.",
+  "deleteAccountBotTitle": "What happens to your bot",
+  "deleteAccountBotBody": "Right after the request, your bot stops working and customers can no longer book.",
+  "deleteAccountRecoveryTitle": "Recovery within 30 days",
+  "deleteAccountRecoveryBody": "For 30 days you can restore the account. Log in again and tap Restore account.",
+  "deleteAccountPermanentTitle": "After 30 days",
+  "deleteAccountPermanentBody": "After 30 days, the account and all its data are deleted permanently. This cannot be undone.",
+  "deleteAccountContinueButton": "Delete account",
+  "deleteAccountCancelButton": "Cancel",
+  "deleteAccountDialogTitle": "Confirm deletion",
+  "deleteAccountDialogBody": "To confirm, type this word:",
+  "deleteAccountConfirmWord": "DELETE",
+  "deleteAccountConfirmFieldLabel": "Confirmation word",
+  "deleteAccountConfirmButton": "Delete permanently",
+  "deleteAccountScheduledTitle": "Deletion scheduled",
+  "deleteAccountScheduledBody": "Your account will be deleted in 30 days. To cancel, log in again within 30 days and tap Restore account.",
+  "deleteAccountGraceBanner": "Your account is scheduled for deletion. Restore it to keep working.",
+  "deleteAccountRestoreButton": "Restore account",
+  "deleteAccountRestoredNotice": "Account restored.",
+  "deleteAccountError": "Something went wrong. Please try again."
 }

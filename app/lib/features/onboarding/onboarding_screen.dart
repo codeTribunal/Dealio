@@ -216,14 +216,17 @@ class _Step1BusinessState extends ConsumerState<_Step1Business> {
             selected: state.mode == 'FREELANCE',
             onTap: () => notifier.toggleMode('FREELANCE'),
           ),
-          const SizedBox(height: AppSpacing.s2),
-          _ModeCard(
-            icon: AppIconName.orders,
-            title: l.onboardingModeProductsTitle,
-            subtitle: l.onboardingModeProductsSubtitle,
-            selected: state.mode == 'PRODUCTS',
-            onTap: () => notifier.toggleMode('PRODUCTS'),
-          ),
+          // PRODUCTS mode is parked for launch (AppConfig.productsModeEnabled).
+          if (AppConfig.productsModeEnabled) ...[
+            const SizedBox(height: AppSpacing.s2),
+            _ModeCard(
+              icon: AppIconName.orders,
+              title: l.onboardingModeProductsTitle,
+              subtitle: l.onboardingModeProductsSubtitle,
+              selected: state.mode == 'PRODUCTS',
+              onTap: () => notifier.toggleMode('PRODUCTS'),
+            ),
+          ],
           const SizedBox(height: AppSpacing.s5),
           _FieldLabel(l.onboardingLanguageLabel),
           const SizedBox(height: AppSpacing.s2),

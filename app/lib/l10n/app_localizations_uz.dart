@@ -2157,4 +2157,87 @@ class AppLocalizationsUz extends AppLocalizations {
   String customerHistoryMore(int n) {
     return 'Yana $n ta';
   }
+
+  @override
+  String get settingsDeleteAccount => 'Akkauntni o\'chirish';
+
+  @override
+  String get deleteAccountTitle => 'Akkauntni o\'chirish';
+
+  @override
+  String get deleteAccountHeading => 'Akkauntni o\'chirasizmi?';
+
+  @override
+  String get deleteAccountIntro =>
+      'Bu akkauntingizni butunlay o\'chirishni rejalashtiradi.';
+
+  @override
+  String get deleteAccountWhatTitle => 'Nima o\'chiriladi';
+
+  @override
+  String get deleteAccountWhatBody =>
+      'Biznes profili, mijozlar, navbatlar, loyihalar va butun tarix.';
+
+  @override
+  String get deleteAccountBotTitle => 'Bot bilan nima bo\'ladi';
+
+  @override
+  String get deleteAccountBotBody =>
+      'So\'rovdan so\'ng bot ishlamay qoladi va mijozlar navbatga yozila olmaydi.';
+
+  @override
+  String get deleteAccountRecoveryTitle => '30 kun ichida tiklash';
+
+  @override
+  String get deleteAccountRecoveryBody =>
+      '30 kun ichida akkauntni tiklashingiz mumkin. Qaytadan kiring va «Akkauntni tiklash» tugmasini bosing.';
+
+  @override
+  String get deleteAccountPermanentTitle => '30 kundan keyin';
+
+  @override
+  String get deleteAccountPermanentBody =>
+      '30 kundan keyin akkaunt va uning barcha ma\'lumotlari butunlay o\'chiriladi. Buni qaytarib bo\'lmaydi.';
+
+  @override
+  String get deleteAccountContinueButton => 'Akkauntni o\'chirish';
+
+  @override
+  String get deleteAccountCancelButton => 'Bekor qilish';
+
+  @override
+  String get deleteAccountDialogTitle => 'O\'chirishni tasdiqlang';
+
+  @override
+  String get deleteAccountDialogBody =>
+      'Tasdiqlash uchun ushbu so\'zni kiriting:';
+
+  @override
+  String get deleteAccountConfirmWord => 'OCHIRISH';
+
+  @override
+  String get deleteAccountConfirmFieldLabel => 'Tasdiqlash so\'zi';
+
+  @override
+  String get deleteAccountConfirmButton => 'Butunlay o\'chirish';
+
+  @override
+  String get deleteAccountScheduledTitle => 'O\'chirish rejalashtirildi';
+
+  @override
+  String get deleteAccountScheduledBody =>
+      'Akkaunt 30 kundan keyin o\'chiriladi. Bekor qilish uchun 30 kun ichida qaytadan kiring va «Akkauntni tiklash» tugmasini bosing.';
+
+  @override
+  String get deleteAccountGraceBanner =>
+      'Akkaunt o\'chirishga rejalashtirilgan. Ishni davom ettirish uchun uni tiklang.';
+
+  @override
+  String get deleteAccountRestoreButton => 'Akkauntni tiklash';
+
+  @override
+  String get deleteAccountRestoredNotice => 'Akkaunt tiklandi.';
+
+  @override
+  String get deleteAccountError => 'Xatolik yuz berdi. Qayta urinib ko\'ring.';
 }

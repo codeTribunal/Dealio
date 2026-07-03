@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "876727032554",
-    "project_id": "uzb-crm",
-    "storage_bucket": "uzb-crm.firebasestorage.app"
+    "project_number": "878743019991",
+    "project_id": "dealio-uz",
+    "storage_bucket": "dealio-uz.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:876727032554:android:49638080cf6993d1a11593",
+        "mobilesdk_app_id": "1:878743019991:android:f4dc962f953560ef32eb92",
         "android_client_info": {
-          "package_name": "uz.dealio.crm"
+          "package_name": "uz.dealio.app"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCLw0tFOG2oZfHRHGlEffDCeYMdEf0XDfs"
+          "current_key": "AIzaSyBik7pHw1R4hsoMpWVwBBhZ8Z8Ljtcs1Zc"
         }
       ],
       "services": {

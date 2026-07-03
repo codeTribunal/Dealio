@@ -3993,6 +3993,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'And {n} more'**
   String customerHistoryMore(int n);
+
+  /// No description provided for @settingsDeleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get settingsDeleteAccount;
+
+  /// No description provided for @deleteAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get deleteAccountTitle;
+
+  /// No description provided for @deleteAccountHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete your account?'**
+  String get deleteAccountHeading;
+
+  /// No description provided for @deleteAccountIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'This schedules your account for permanent deletion.'**
+  String get deleteAccountIntro;
+
+  /// No description provided for @deleteAccountWhatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What will be deleted'**
+  String get deleteAccountWhatTitle;
+
+  /// No description provided for @deleteAccountWhatBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your business profile, customers, appointments, projects, and all history.'**
+  String get deleteAccountWhatBody;
+
+  /// No description provided for @deleteAccountBotTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What happens to your bot'**
+  String get deleteAccountBotTitle;
+
+  /// No description provided for @deleteAccountBotBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Right after the request, your bot stops working and customers can no longer book.'**
+  String get deleteAccountBotBody;
+
+  /// No description provided for @deleteAccountRecoveryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery within 30 days'**
+  String get deleteAccountRecoveryTitle;
+
+  /// No description provided for @deleteAccountRecoveryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'For 30 days you can restore the account. Log in again and tap Restore account.'**
+  String get deleteAccountRecoveryBody;
+
+  /// No description provided for @deleteAccountPermanentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'After 30 days'**
+  String get deleteAccountPermanentTitle;
+
+  /// No description provided for @deleteAccountPermanentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'After 30 days, the account and all its data are deleted permanently. This cannot be undone.'**
+  String get deleteAccountPermanentBody;
+
+  /// No description provided for @deleteAccountContinueButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get deleteAccountContinueButton;
+
+  /// No description provided for @deleteAccountCancelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get deleteAccountCancelButton;
+
+  /// No description provided for @deleteAccountDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm deletion'**
+  String get deleteAccountDialogTitle;
+
+  /// No description provided for @deleteAccountDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'To confirm, type this word:'**
+  String get deleteAccountDialogBody;
+
+  /// No description provided for @deleteAccountConfirmWord.
+  ///
+  /// In en, this message translates to:
+  /// **'DELETE'**
+  String get deleteAccountConfirmWord;
+
+  /// No description provided for @deleteAccountConfirmFieldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmation word'**
+  String get deleteAccountConfirmFieldLabel;
+
+  /// No description provided for @deleteAccountConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete permanently'**
+  String get deleteAccountConfirmButton;
+
+  /// No description provided for @deleteAccountScheduledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletion scheduled'**
+  String get deleteAccountScheduledTitle;
+
+  /// No description provided for @deleteAccountScheduledBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account will be deleted in 30 days. To cancel, log in again within 30 days and tap Restore account.'**
+  String get deleteAccountScheduledBody;
+
+  /// No description provided for @deleteAccountGraceBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is scheduled for deletion. Restore it to keep working.'**
+  String get deleteAccountGraceBanner;
+
+  /// No description provided for @deleteAccountRestoreButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore account'**
+  String get deleteAccountRestoreButton;
+
+  /// No description provided for @deleteAccountRestoredNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Account restored.'**
+  String get deleteAccountRestoredNotice;
+
+  /// No description provided for @deleteAccountError.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get deleteAccountError;
 }
 
 class _AppLocalizationsDelegate

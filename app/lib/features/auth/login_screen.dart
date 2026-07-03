@@ -10,6 +10,7 @@ import '../../core/models/business.dart';
 import '../../core/models/user.dart';
 import '../../core/services/fcm_service.dart';
 import '../../core/theme/app_tokens.dart';
+import '../settings/account_deletion_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/phone.dart';
 import '../../shared/widgets/app_button.dart';
@@ -88,6 +89,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           .read(authNotifierProvider)
           .setAuth(result.token, user: user, business: business);
 
+      // Clear the post-deletion notice: the owner has moved on by logging in.
+      // If the business is still pending deletion, the shell shows the grace
+      // banner with the restore action instead.
+      ref.read(accountDeletionScheduledProvider.notifier).state = false;
+
       // Best-effort — register for push after login.
       registerFcmToken(ref.read(apiServiceProvider)).ignore();
 
@@ -113,6 +119,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final t = AppTokens.of(context);
+    final deletionScheduled = ref.watch(accountDeletionScheduledProvider);
     return Scaffold(
       body: SafeArea(
         // Keyboard-safe: when the soft keyboard opens the viewport shrinks, so
@@ -150,6 +157,54 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const LanguageSwitcher(),
                         ],
                       ),
+                      if (deletionScheduled) ...[
+                        const SizedBox(height: AppSpacing.s3),
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.s4),
+                          decoration: BoxDecoration(
+                            color: t.errorSoft,
+                            borderRadius: AppRadii.lg,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      l.deleteAccountScheduledTitle,
+                                      style: TextStyle(
+                                        fontSize: AppTextSizes.base,
+                                        fontWeight: AppFontWeights.bold,
+                                        color: t.errorStrong,
+                                      ),
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () => ref
+                                        .read(accountDeletionScheduledProvider
+                                            .notifier)
+                                        .state = false,
+                                    child: AppIcon(
+                                        name: AppIconName.close,
+                                        size: 18,
+                                        color: t.errorStrong),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.s1),
+                              Text(
+                                l.deleteAccountScheduledBody,
+                                style: TextStyle(
+                                  fontSize: AppTextSizes.sm,
+                                  color: t.text2,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const Spacer(),
                       Center(
                         child: Container(

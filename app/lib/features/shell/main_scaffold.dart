@@ -5,9 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../core/auth/auth_notifier.dart';
 import '../../core/icons/app_icon.dart';
 import '../../core/router/route_observers.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/floating_tab_bar.dart';
 import '../home/home_provider.dart';
+import '../settings/account_deletion_provider.dart';
 
 /// Persistent tab shell for the 4 top-level destinations. The body is the
 /// go_router [StatefulNavigationShell] (an IndexedStack of branches, so each
@@ -126,8 +129,9 @@ class _MainScaffoldState extends ConsumerState<MainScaffold>
 
     // Tab 3 follows business.mode: Appointments (SERVICES) / Projects (FREELANCE)
     // / Orders (PRODUCTS). All three live in shell branch 2.
-    final mode =
-        ref.watch(authNotifierProvider).state?.business?.mode ?? 'SERVICES';
+    final business = ref.watch(authNotifierProvider).state?.business;
+    final mode = business?.mode ?? 'SERVICES';
+    final pendingDeletion = business?.isPendingDeletion ?? false;
     final isFreelance = mode == 'FREELANCE';
     final isProducts = mode == 'PRODUCTS';
     final modeTabIcon = isFreelance
@@ -172,37 +176,105 @@ class _MainScaffoldState extends ConsumerState<MainScaffold>
         // which pushes a focused field up under the app bar and leaves a large
         // empty gap below. Let the inner screen handle the keyboard.
         resizeToAvoidBottomInset: false,
-        body: Stack(
+        // A persistent grace-period banner sits above the tabs while the account
+        // is scheduled for deletion, so the owner is never silently suspended.
+        body: Column(
           children: [
-            // Extra bottom inset so each tab's scrollables (and any FAB) clear
-            // the floating bar; the translucent glass still reveals content
-            // scrolling beneath it.
-            MediaQuery(
-              data: media.copyWith(
-                padding:
-                    media.padding.copyWith(bottom: media.padding.bottom + 76),
-              ),
-              child: widget.navigationShell,
-            ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: FloatingTabBar(
-                items: items,
-                currentIndex: index,
-                onTap: (i) {
-                  if (i == 2) {
-                    // Mode-dependent destination — all live in branch 2.
-                    context.go(modeTabRoute);
-                  } else {
-                    widget.navigationShell.goBranch(
-                      i,
-                      initialLocation: i == widget.navigationShell.currentIndex,
-                    );
-                  }
-                },
+            if (pendingDeletion) const _GraceBanner(),
+            Expanded(
+              child: Stack(
+                children: [
+                  // Extra bottom inset so each tab's scrollables (and any FAB)
+                  // clear the floating bar; the translucent glass still reveals
+                  // content scrolling beneath it.
+                  MediaQuery(
+                    data: media.copyWith(
+                      padding: media.padding
+                          .copyWith(bottom: media.padding.bottom + 76),
+                    ),
+                    child: widget.navigationShell,
+                  ),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: FloatingTabBar(
+                      items: items,
+                      currentIndex: index,
+                      onTap: (i) {
+                        if (i == 2) {
+                          // Mode-dependent destination — all live in branch 2.
+                          context.go(modeTabRoute);
+                        } else {
+                          widget.navigationShell.goBranch(
+                            i,
+                            initialLocation:
+                                i == widget.navigationShell.currentIndex,
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Persistent banner shown while the account is in the 30-day deletion grace
+/// period. Offers an explicit restore action; recovery is never silent. On
+/// success [AccountDeletionNotifier.reactivate] refreshes the business, which
+/// clears [Business.isPendingDeletion] and removes this banner.
+class _GraceBanner extends ConsumerWidget {
+  const _GraceBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    final loading = ref.watch(accountDeletionProvider).loading;
+
+    Future<void> restore() async {
+      final ok = await ref.read(accountDeletionProvider.notifier).reactivate();
+      if (ok && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l.deleteAccountRestoredNotice)),
+        );
+      }
+    }
+
+    return Material(
+      color: t.errorSoft,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.s4, AppSpacing.s3, AppSpacing.s4, AppSpacing.s3),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l.deleteAccountGraceBanner,
+                  style: TextStyle(
+                    fontSize: AppTextSizes.sm,
+                    fontWeight: AppFontWeights.medium,
+                    color: t.errorStrong,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s3),
+              AppButton(
+                label: l.deleteAccountRestoreButton,
+                variant: AppButtonVariant.danger,
+                size: AppButtonSize.sm,
+                loading: loading,
+                onPressed: loading ? null : restore,
+              ),
+            ],
+          ),
         ),
       ),
     );

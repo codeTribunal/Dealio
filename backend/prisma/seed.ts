@@ -229,7 +229,9 @@ async function main() {
     await prisma.appointment.create({
       data: {
         businessId: business.id,
-        customerId: customers[(i + 3) % customers.length].id,
+        // Start at customer 0 so the first customer has orders + an appointment
+        // + a project — the erasure runtime tests need one customer with all three.
+        customerId: customers[i % customers.length].id,
         serviceId: service.id,
         staffId: staff.id,
         startTime: start,

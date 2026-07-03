@@ -24,6 +24,7 @@ import '../../features/analytics/analytics_screen.dart';
 import '../../features/calendar/calendar_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/settings/settings_screen.dart';
+import '../../features/settings/delete_account_screen.dart';
 import '../models/appointment.dart';
 import '../../features/appointments/appointment_calendar_screen.dart';
 import '../../features/appointments/appointment_detail_screen.dart';
@@ -254,6 +255,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         builder: (ctx, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/settings/delete-account',
+        builder: (ctx, state) => const DeleteAccountScreen(),
       ),
       GoRoute(
         path: '/appointments/new',

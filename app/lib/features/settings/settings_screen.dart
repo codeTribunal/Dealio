@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_service.dart';
+import '../../core/config/app_config.dart';
 import '../../core/icons/app_icon.dart';
 import '../../core/locale/locale_provider.dart';
 import '../../core/models/blocked_slot.dart';
@@ -94,9 +95,35 @@ class SettingsScreen extends ConsumerWidget {
               const _CheckoutQuestionsSection(),
               const SizedBox(height: AppSpacing.s3),
               _LanguageSection(data: data),
+              // Visually separated destructive section at the very bottom.
+              const SizedBox(height: AppSpacing.s6),
+              const _DangerZoneSection(),
               const SizedBox(height: AppSpacing.s6),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Final, visually separated destructive section: a single row that opens the
+/// full account-deletion confirmation screen. Styled with the negative color.
+class _DangerZoneSection extends StatelessWidget {
+  const _DangerZoneSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final t = AppTokens.of(context);
+    return AppCard(
+      onTap: () => context.push('/settings/delete-account'),
+      child: Text(
+        l.settingsDeleteAccount,
+        style: TextStyle(
+          fontSize: AppTextSizes.base,
+          fontWeight: AppFontWeights.semibold,
+          color: t.errorStrong,
         ),
       ),
     );
@@ -699,8 +726,12 @@ class _BusinessModeSection extends ConsumerWidget {
             Expanded(child: seg('SERVICES', l.settingsModeNameServices)),
             const SizedBox(width: 2),
             Expanded(child: seg('FREELANCE', l.settingsModeNameFreelance)),
-            const SizedBox(width: 2),
-            Expanded(child: seg('PRODUCTS', l.navOrders)),
+            // PRODUCTS mode is parked for launch: hide the option unless the
+            // flag is on or this business is already in PRODUCTS mode.
+            if (AppConfig.productsModeEnabled || current == 'PRODUCTS') ...[
+              const SizedBox(width: 2),
+              Expanded(child: seg('PRODUCTS', l.navOrders)),
+            ],
           ],
         ),
       ),

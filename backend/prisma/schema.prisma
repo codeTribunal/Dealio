@@ -36,7 +36,7 @@ model Business {
   ownerTelegramChatId   String?
   fcmToken              String?
   ownerId               String    @unique
-  owner        User      @relation(fields: [ownerId], references: [id])
+  owner        User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   // Subscription
   plan            Plan      @default(FREE)
@@ -87,7 +87,7 @@ model Business {
 model SentReminder {
   id           String   @id @default(cuid())
   businessId   String
-  business     Business @relation(fields: [businessId], references: [id])
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   // What this reminder was about
   entityType   String // "APPOINTMENT" | "ORDER" | "MILESTONE" | "PROJECT"
@@ -104,7 +104,7 @@ model SentReminder {
 model DeviceToken {
   id         String   @id @default(cuid())
   businessId String
-  business   Business @relation(fields: [businessId], references: [id])
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   token      String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -143,7 +143,7 @@ model User {
 model ConsentRecord {
   id                 String   @id @default(cuid())
   userId             String
-  user               User     @relation(fields: [userId], references: [id])
+  user               User     @relation(fields: [userId], references: [id], onDelete: Restrict)
   generalConsent     Boolean  @default(false)
   crossBorderConsent Boolean  @default(false)
   policyVersion      String
@@ -157,7 +157,7 @@ model ConsentRecord {
 model Customer {
   id                 String    @id @default(cuid())
   businessId         String
-  business           Business  @relation(fields: [businessId], references: [id])
+  business           Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   telegramUserId     String?
   telegramUsername   String?
   name               String
@@ -166,7 +166,7 @@ model Customer {
   notes              String?
   customFields       Json?
   currentStageId     String?
-  currentStage       CustomerStage? @relation(fields: [currentStageId], references: [id])
+  currentStage       CustomerStage? @relation(fields: [currentStageId], references: [id], onDelete: SetNull)
   languagePreference Language?
   // First-contact data-subject consent (ZRU-547): captured by the bot BEFORE any
   // personal data is stored. "consented" = consentedAt set AND consentVersion ===
@@ -201,7 +201,7 @@ model Customer {
 model Product {
   id          String    @id @default(cuid())
   businessId  String
-  business    Business  @relation(fields: [businessId], references: [id])
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   name        String
   description String?
   price       Int
@@ -222,9 +222,9 @@ model Product {
 model Order {
   id              String         @id @default(cuid())
   businessId      String
-  business        Business       @relation(fields: [businessId], references: [id])
+  business        Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
   customerId      String
-  customer        Customer       @relation(fields: [customerId], references: [id])
+  customer        Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
   orderNumber     Int
   items           OrderItem[]
   total           Int
@@ -262,9 +262,9 @@ model Order {
 model OrderItem {
   id        String  @id @default(cuid())
   orderId   String
-  order     Order   @relation(fields: [orderId], references: [id])
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId String
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
   quantity  Int
   price     Int
   variant   Json?
@@ -273,7 +273,7 @@ model OrderItem {
 model Service {
   id              String    @id @default(cuid())
   businessId      String
-  business        Business  @relation(fields: [businessId], references: [id])
+  business        Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   name            String
   durationMinutes Int
   price           Int
@@ -289,7 +289,7 @@ model Service {
 model Staff {
   id             String    @id @default(cuid())
   businessId     String
-  business       Business  @relation(fields: [businessId], references: [id])
+  business       Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   name           String
   telegramHandle String?
   // Same shape as Business.workingHours: JSON keyed "0".."6" (0=Sunday …
@@ -310,9 +310,9 @@ model Staff {
 
 model StaffService {
   staffId   String
-  staff     Staff   @relation(fields: [staffId], references: [id])
+  staff     Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
   serviceId String
-  service   Service @relation(fields: [serviceId], references: [id])
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@id([staffId, serviceId])
 }
@@ -320,9 +320,12 @@ model StaffService {
 model BlockedSlot {
   id         String   @id @default(cuid())
   businessId String
-  business   Business @relation(fields: [businessId], references: [id])
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   staffId    String? // null = whole-business block
-  staff      Staff?   @relation(fields: [staffId], references: [id])
+  // Cascade, NOT SetNull: staffId=null means a WHOLE-BUSINESS block, so
+  // nulling on staff delete would silently widen a personal block to the
+  // entire business. A staff member's blocks die with them.
+  staff      Staff?   @relation(fields: [staffId], references: [id], onDelete: Cascade)
   startTime  DateTime
   endTime    DateTime
   reason     String?
@@ -334,13 +337,13 @@ model BlockedSlot {
 model Appointment {
   id            String             @id @default(cuid())
   businessId    String
-  business      Business           @relation(fields: [businessId], references: [id])
+  business      Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
   customerId    String
-  customer      Customer           @relation(fields: [customerId], references: [id])
+  customer      Customer           @relation(fields: [customerId], references: [id], onDelete: Restrict)
   serviceId     String
-  service       Service            @relation(fields: [serviceId], references: [id])
+  service       Service            @relation(fields: [serviceId], references: [id], onDelete: Restrict)
   staffId       String?
-  staff         Staff?             @relation(fields: [staffId], references: [id])
+  staff         Staff?             @relation(fields: [staffId], references: [id], onDelete: SetNull)
   startTime     DateTime
   endTime       DateTime
   price         Int
@@ -362,9 +365,9 @@ model Appointment {
 model Project {
   id           String        @id @default(cuid())
   businessId   String
-  business     Business      @relation(fields: [businessId], references: [id])
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   customerId   String
-  customer     Customer      @relation(fields: [customerId], references: [id])
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
   name         String
   description  String?
   paymentTerms String?
@@ -392,7 +395,7 @@ model Project {
 model Milestone {
   id        String          @id @default(cuid())
   projectId String
-  project   Project         @relation(fields: [projectId], references: [id])
+  project   Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   name      String
   dueDate   DateTime?
   amount    Int
@@ -408,7 +411,7 @@ model Milestone {
 model Invoice {
   id            String        @id @default(cuid())
   projectId     String
-  project       Project       @relation(fields: [projectId], references: [id])
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   invoiceNumber String        @unique
   lineItems     Json[]
   total         Int
@@ -421,9 +424,9 @@ model Invoice {
 model CustomerTag {
   id         String   @id @default(cuid())
   customerId String
-  customer   Customer @relation(fields: [customerId], references: [id])
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   businessId String
-  business   Business @relation(fields: [businessId], references: [id])
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   label      String
   color      String   @default("#6366F1")
   createdAt  DateTime @default(now())
@@ -432,9 +435,9 @@ model CustomerTag {
 model Reminder {
   id         String   @id @default(cuid())
   customerId String
-  customer   Customer @relation(fields: [customerId], references: [id])
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   businessId String
-  business   Business @relation(fields: [businessId], references: [id])
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   note       String
   dueDate    DateTime
   done       Boolean  @default(false)
@@ -475,7 +478,7 @@ model LinkToken {
 model BusinessCustomField {
   id         String    @id @default(cuid())
   businessId String
-  business   Business  @relation(fields: [businessId], references: [id])
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   name       String
   fieldType  FieldType @default(TEXT)
   order      Int       @default(0)
@@ -489,9 +492,9 @@ model BusinessCustomField {
 model CustomerFieldValue {
   id       String              @id @default(cuid())
   customerId String
-  customer   Customer            @relation(fields: [customerId], references: [id])
+  customer   Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
   fieldId  String
-  field    BusinessCustomField @relation(fields: [fieldId], references: [id])
+  field    BusinessCustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
   value    String
 
   @@unique([customerId, fieldId])
@@ -500,7 +503,7 @@ model CustomerFieldValue {
 model CustomerStage {
   id         String    @id @default(cuid())
   businessId String
-  business   Business  @relation(fields: [businessId], references: [id])
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   name       String
   color      String    @default("#6366F1")
   order      Int       @default(0)
@@ -514,7 +517,7 @@ model CustomerStage {
 model CheckoutQuestion {
   id         String    @id @default(cuid())
   businessId String
-  business   Business  @relation(fields: [businessId], references: [id])
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   question   String
   required   Boolean   @default(false)
   order      Int       @default(0)
@@ -544,7 +547,7 @@ model AdminUser {
 model AuditLog {
   id          String    @id @default(cuid())
   adminUserId String
-  adminUser   AdminUser @relation(fields: [adminUserId], references: [id])
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Restrict)
   action      String
   targetType  String
   targetId    String
@@ -559,7 +562,7 @@ model AuditLog {
 model UsageLog {
   id           String   @id @default(cuid())
   businessId   String
-  business     Business @relation(fields: [businessId], references: [id])
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   month        String
   orders       Int      @default(0)
   appointments Int      @default(0)

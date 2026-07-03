@@ -2140,4 +2140,87 @@ class AppLocalizationsRu extends AppLocalizations {
   String customerHistoryMore(int n) {
     return 'И ещё $n';
   }
+
+  @override
+  String get settingsDeleteAccount => 'Удалить аккаунт';
+
+  @override
+  String get deleteAccountTitle => 'Удаление аккаунта';
+
+  @override
+  String get deleteAccountHeading => 'Удалить аккаунт?';
+
+  @override
+  String get deleteAccountIntro =>
+      'Это запланирует удаление вашего аккаунта навсегда.';
+
+  @override
+  String get deleteAccountWhatTitle => 'Что будет удалено';
+
+  @override
+  String get deleteAccountWhatBody =>
+      'Профиль бизнеса, клиенты, записи, проекты и вся история.';
+
+  @override
+  String get deleteAccountBotTitle => 'Что будет с ботом';
+
+  @override
+  String get deleteAccountBotBody =>
+      'Сразу после запроса бот перестаёт работать, и клиенты больше не смогут записаться.';
+
+  @override
+  String get deleteAccountRecoveryTitle => 'Восстановление в течение 30 дней';
+
+  @override
+  String get deleteAccountRecoveryBody =>
+      'В течение 30 дней вы можете восстановить аккаунт. Войдите снова и нажмите «Восстановить аккаунт».';
+
+  @override
+  String get deleteAccountPermanentTitle => 'После 30 дней';
+
+  @override
+  String get deleteAccountPermanentBody =>
+      'Через 30 дней аккаунт и все его данные удаляются навсегда. Это действие необратимо.';
+
+  @override
+  String get deleteAccountContinueButton => 'Удалить аккаунт';
+
+  @override
+  String get deleteAccountCancelButton => 'Отмена';
+
+  @override
+  String get deleteAccountDialogTitle => 'Подтвердите удаление';
+
+  @override
+  String get deleteAccountDialogBody => 'Чтобы подтвердить, введите это слово:';
+
+  @override
+  String get deleteAccountConfirmWord => 'УДАЛИТЬ';
+
+  @override
+  String get deleteAccountConfirmFieldLabel => 'Слово подтверждения';
+
+  @override
+  String get deleteAccountConfirmButton => 'Удалить навсегда';
+
+  @override
+  String get deleteAccountScheduledTitle => 'Удаление запланировано';
+
+  @override
+  String get deleteAccountScheduledBody =>
+      'Аккаунт будет удалён через 30 дней. Чтобы отменить, войдите снова в течение 30 дней и нажмите «Восстановить аккаунт».';
+
+  @override
+  String get deleteAccountGraceBanner =>
+      'Аккаунт запланирован к удалению. Восстановите его, чтобы продолжить работу.';
+
+  @override
+  String get deleteAccountRestoreButton => 'Восстановить аккаунт';
+
+  @override
+  String get deleteAccountRestoredNotice => 'Аккаунт восстановлен.';
+
+  @override
+  String get deleteAccountError =>
+      'Не удалось выполнить действие. Попробуйте ещё раз.';
 }

@@ -2130,4 +2130,86 @@ class AppLocalizationsEn extends AppLocalizations {
   String customerHistoryMore(int n) {
     return 'And $n more';
   }
+
+  @override
+  String get settingsDeleteAccount => 'Delete account';
+
+  @override
+  String get deleteAccountTitle => 'Delete account';
+
+  @override
+  String get deleteAccountHeading => 'Delete your account?';
+
+  @override
+  String get deleteAccountIntro =>
+      'This schedules your account for permanent deletion.';
+
+  @override
+  String get deleteAccountWhatTitle => 'What will be deleted';
+
+  @override
+  String get deleteAccountWhatBody =>
+      'Your business profile, customers, appointments, projects, and all history.';
+
+  @override
+  String get deleteAccountBotTitle => 'What happens to your bot';
+
+  @override
+  String get deleteAccountBotBody =>
+      'Right after the request, your bot stops working and customers can no longer book.';
+
+  @override
+  String get deleteAccountRecoveryTitle => 'Recovery within 30 days';
+
+  @override
+  String get deleteAccountRecoveryBody =>
+      'For 30 days you can restore the account. Log in again and tap Restore account.';
+
+  @override
+  String get deleteAccountPermanentTitle => 'After 30 days';
+
+  @override
+  String get deleteAccountPermanentBody =>
+      'After 30 days, the account and all its data are deleted permanently. This cannot be undone.';
+
+  @override
+  String get deleteAccountContinueButton => 'Delete account';
+
+  @override
+  String get deleteAccountCancelButton => 'Cancel';
+
+  @override
+  String get deleteAccountDialogTitle => 'Confirm deletion';
+
+  @override
+  String get deleteAccountDialogBody => 'To confirm, type this word:';
+
+  @override
+  String get deleteAccountConfirmWord => 'DELETE';
+
+  @override
+  String get deleteAccountConfirmFieldLabel => 'Confirmation word';
+
+  @override
+  String get deleteAccountConfirmButton => 'Delete permanently';
+
+  @override
+  String get deleteAccountScheduledTitle => 'Deletion scheduled';
+
+  @override
+  String get deleteAccountScheduledBody =>
+      'Your account will be deleted in 30 days. To cancel, log in again within 30 days and tap Restore account.';
+
+  @override
+  String get deleteAccountGraceBanner =>
+      'Your account is scheduled for deletion. Restore it to keep working.';
+
+  @override
+  String get deleteAccountRestoreButton => 'Restore account';
+
+  @override
+  String get deleteAccountRestoredNotice => 'Account restored.';
+
+  @override
+  String get deleteAccountError => 'Something went wrong. Please try again.';
 }
