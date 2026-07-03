@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { getToken, clearToken } from './auth'
+import { isAdminUiContext } from './adminContext'
 import type {
   AuthResponse,
   Business,
@@ -45,12 +46,11 @@ api.interceptors.response.use(
     const url: string = error.config?.url ?? ''
     const isAuthEndpoint = url.includes('/auth/')
     // Admin routes carry their own auth (httpOnly admin_session) and their own
-    // 401 handling in adminApi. A stray owner-axios 401 on an /admin page must
+    // 401 handling in adminApi. A stray owner-axios 401 in the admin UI must
     // NOT clear the owner token or bounce to /welcome — that would hijack the
-    // admin login. Skip owner 401 handling entirely on admin paths.
-    const onAdminPath =
-      typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
-    if (error.response?.status === 401 && !isAuthEndpoint && !onAdminPath) {
+    // admin login. isAdminUiContext() is host-OR-path aware, so it also covers
+    // the admin host serving the panel at the root path '/'.
+    if (error.response?.status === 401 && !isAuthEndpoint && !isAdminUiContext()) {
       clearToken()
       if (typeof window !== 'undefined' && window.location.pathname !== '/welcome') {
         window.location.href = '/welcome'

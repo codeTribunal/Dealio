@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { getBusiness } from '@/lib/api'
+import { isAdminUiContext } from '@/lib/adminContext'
 import { useToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n/i18nContext'
 import type { Business } from '@/types'
@@ -23,12 +24,13 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const fetchBusiness = useCallback(async () => {
-    // Admin routes (/admin/**) are a SEPARATE app with their own httpOnly
-    // admin_session auth (AdminLayout + adminApi). The owner BusinessProvider
-    // must not run the owner getBusiness() there — its 401 would trip the owner
-    // axios interceptor and bounce the admin login to /welcome. Skip the fetch
-    // on admin paths; behavior on every non-admin path is unchanged.
-    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+    // The admin panel is a SEPARATE app with its own httpOnly admin_session auth
+    // (AdminLayout + adminApi). The owner BusinessProvider must not run the owner
+    // getBusiness() there — its 401 would trip the owner interceptor and bounce
+    // to /welcome. isAdminUiContext() is host-OR-path aware, so it also covers
+    // the admin host (admin.dealio.uz) where the panel is served at the root path
+    // '/' via rewrite. Behavior on every non-admin context is unchanged.
+    if (isAdminUiContext()) {
       setBusiness(null)
       setLoading(false)
       return
