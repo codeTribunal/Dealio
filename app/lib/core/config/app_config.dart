@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class AppConfig {
   // Dev default targets the device's own localhost, bridged to the PC's
   // backend via `adb reverse tcp:3000 tcp:3000` (run once per device session).
@@ -9,5 +11,35 @@ class AppConfig {
     defaultValue: 'http://localhost:3000/api/v1',
   );
 
-  static const String privacyPolicyUrl = 'https://[yourdomain]/privacy';
+  // True when API_BASE_URL was supplied via --dart-define (any value).
+  static const bool _apiBaseOverridden =
+      String.fromEnvironment('API_BASE_URL') != '';
+
+  /// Release-build misconfiguration guard, called first thing in main().
+  ///
+  /// A release binary that silently falls back to the localhost dev default
+  /// ships an app that can never reach the backend — and the failure would
+  /// surface as vague network errors on customers' phones. Failing loudly at
+  /// startup makes the broken build impossible to miss in pre-release
+  /// testing. Debug/profile builds are unaffected.
+  ///
+  /// The pinned build command lives in app/build-release.md:
+  ///   flutter build appbundle --release --dart-define=API_BASE_URL=<prod api>/api/v1
+  static void assertReleaseConfig() {
+    if (kReleaseMode && !_apiBaseOverridden) {
+      throw StateError(
+        'RELEASE BUILD MISCONFIGURED: API_BASE_URL was not provided via '
+        '--dart-define, so this binary would target the localhost dev '
+        'default. Rebuild with:\n'
+        '  flutter build appbundle --release '
+        '--dart-define=API_BASE_URL=https://<prod-api>/api/v1\n'
+        'See app/build-release.md.',
+      );
+    }
+  }
+
+  // The public privacy policy served by the owner web app (web/app/privacy —
+  // same document the in-app consent flow references). Domain pending Judah's
+  // confirmation; the route is /privacy on the owner web app domain.
+  static const String privacyPolicyUrl = 'https://dealio.uz/privacy';
 }

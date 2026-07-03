@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/config/app_config.dart';
 import 'core/locale/locale_provider.dart';
 import 'core/router/router.dart';
 import 'core/theme/app_theme.dart';
@@ -104,6 +105,10 @@ void _showForegroundBanner(RemoteMessage message) {
 }
 
 void main() async {
+  // Fail-fast: a release binary built without --dart-define=API_BASE_URL
+  // would silently target the localhost dev default. Throws before any UI.
+  AppConfig.assertReleaseConfig();
+
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
