@@ -14,8 +14,17 @@ const manrope = Manrope({
 })
 
 export const metadata: Metadata = {
+  // This app is served on the private host app.dealio.uz, so relative OG /
+  // canonical URLs resolve against it. (admin.dealio.uz shares this deployment;
+  // both are private - see app/robots.ts.)
+  metadataBase: new URL('https://app.dealio.uz'),
   title: 'Dealio',
   description: 'Business management platform',
+  // Belt-and-suspenders noindex: app/robots.ts already disallows all crawling,
+  // but this also emits <meta name="robots" content="noindex, nofollow"> on
+  // every page so the private app is never indexed even if a page is fetched
+  // directly. Revisit when the public marketing site launches (see robots.ts).
+  robots: { index: false, follow: false },
   // Static fallback only: /favicon.ico is the LIGHT (slate D) version, served
   // from public/favicon.ico. The faviconThemeScript below overrides this at
   // runtime with the dark/light PNG based on the browser/OS color scheme — the
