@@ -3,9 +3,14 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { sendError } from '../lib/errors.js';
 
+// Public capability-URL reads get their own per-IP budget, well under the
+// global limit: a calendar app or a client refreshing a proposal stays fine
+// at 60/hour, while enumeration attempts trip it fast.
+const PUBLIC_READ_RATE = { rateLimit: { max: 60, timeWindow: 3600000 } };
+
 export default async function proposalRoutes(app: FastifyInstance) {
   // GET /proposals/:projectId — public, no auth required
-  app.get('/proposals/:projectId', async (request, reply) => {
+  app.get('/proposals/:projectId', { config: PUBLIC_READ_RATE }, async (request, reply) => {
     const { projectId } = request.params as { projectId: string };
 
     const project = await prisma.project.findFirst({
@@ -20,7 +25,8 @@ export default async function proposalRoutes(app: FastifyInstance) {
         milestones: {
           where: { deletedAt: null },
           orderBy: { createdAt: 'asc' },
-          select: { id: true, name: true, dueDate: true, amount: true, status: true },
+          // Render-essential only — no row ids on a public page.
+          select: { name: true, dueDate: true, amount: true, status: true },
         },
       },
     });
@@ -83,12 +89,15 @@ export default async function proposalRoutes(app: FastifyInstance) {
     },
   );
 
-  // GET /invoices/:invoiceId — public, no auth required
-  app.get('/invoices/:invoiceId', async (request, reply) => {
+  // GET /invoices/:invoiceId — public, no auth required.
+  // Invoice has no deletedAt of its own; soft deletion happens at the parent
+  // project, so the filter binds through the relation — an invoice of a
+  // deleted project is gone from the public web.
+  app.get('/invoices/:invoiceId', { config: PUBLIC_READ_RATE }, async (request, reply) => {
     const { invoiceId } = request.params as { invoiceId: string };
 
     const invoice = await prisma.invoice.findFirst({
-      where: { id: invoiceId },
+      where: { id: invoiceId, project: { deletedAt: null } },
       include: {
         project: {
           include: {
@@ -109,8 +118,9 @@ export default async function proposalRoutes(app: FastifyInstance) {
       dueDate: invoice.dueDate,
       status: invoice.status,
       createdAt: invoice.createdAt,
+      // Render-essential only: the invoice document + party names. No private
+      // project id for a public reader to pivot on.
       project: {
-        id: invoice.project.id,
         name: invoice.project.name,
       },
       business: invoice.project.business,

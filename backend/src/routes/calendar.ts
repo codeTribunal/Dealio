@@ -6,8 +6,11 @@ export async function calendarRoutes(fastify: FastifyInstance) {
   // GET /calendar/:token.ics
   // Public endpoint — secured by random token in URL.
   // Calendar apps cannot send auth headers, so the token in the URL is the
-  // security mechanism.
-  fastify.get<{ Params: { token: string } }>('/calendar/:token.ics', async (request, reply) => {
+  // security mechanism. Per-IP 60/hour: calendar apps poll at most every few
+  // minutes; token-guessing trips the limit fast.
+  fastify.get<{ Params: { token: string } }>('/calendar/:token.ics', {
+    config: { rateLimit: { max: 60, timeWindow: 3600000 } },
+  }, async (request, reply) => {
     const { token } = request.params;
 
     // Find business by calendar token
