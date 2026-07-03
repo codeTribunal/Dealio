@@ -44,7 +44,7 @@ export default function AdminLoginPage() {
         </div>
 
         <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6 sm:p-8">
-          <h1 className="text-lg font-bold text-white mb-6">Admin sign in</h1>
+          <h1 className="text-lg font-bold text-white mb-6">Admin log in</h1>
 
           <div className="space-y-4">
             <div>
