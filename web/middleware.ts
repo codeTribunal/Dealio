@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { PUBLIC_PATHS } from './lib/publicPaths'
-import { APP_HOST, isMarketingHost } from './lib/hosts'
+import { isMarketingHost } from './lib/hosts'
 
 // Hostname-based routing for the single deployment that serves three hosts:
 //
@@ -56,13 +56,14 @@ export function middleware(request: NextRequest) {
   }
 
   // ── Marketing (apex) host: dealio.uz / www.dealio.uz ────────────────────────
-  // Serves ONLY the coming-soon page and the public legal pages; every dashboard
-  // route is bounced to app.dealio.uz. Scoped to the apex, so app.dealio.uz and
-  // localhost keep serving the dashboard at "/".
+  // A SEPARATE web app: it serves ONLY the coming-soon page and the public legal
+  // pages. Any other path renders the branded MARKETING 404 (HTTP 404) — never a
+  // dashboard page, never a redirect. Scoped to the apex, so app.dealio.uz and
+  // localhost keep serving the full dashboard.
   if (isMarketingHost(host)) {
-    // Never redirect framework/data/asset requests off-host. The matcher already
-    // excludes _next/static, _next/image, favicon and dotted files; this is the
-    // explicit belt-and-suspenders guard for _next/data and any /api route.
+    // Never touch framework/data/asset requests. The matcher already excludes
+    // _next/static, _next/image, favicon and dotted files; this is the explicit
+    // belt-and-suspenders guard for _next/data and any /api route.
     if (pathname.startsWith('/_next') || pathname.startsWith('/api')) {
       return NextResponse.next()
     }
@@ -76,13 +77,15 @@ export function middleware(request: NextRequest) {
     if (PUBLIC_PATHS.includes(pathname)) {
       return NextResponse.next()
     }
-    // Any other path is a dashboard route: 307-redirect to the SAME path + query
-    // on the app host. e.g. dealio.uz/welcome → app.dealio.uz/welcome.
-    const target = request.nextUrl.clone()
-    target.protocol = 'https:'
-    target.hostname = APP_HOST
-    target.port = ''
-    return NextResponse.redirect(target, 307)
+    // Any other path (dashboard route or unknown) → rewrite INTO the /marketing
+    // subtree so the /marketing catch-all calls notFound() and the marketing
+    // not-found page renders with HTTP 404. This is a rewrite (browser URL is
+    // unchanged) that routes to the /marketing segment, so the real dashboard
+    // page component for `pathname` (e.g. /customers) is NEVER rendered on the
+    // apex.
+    const notFoundUrl = request.nextUrl.clone()
+    notFoundUrl.pathname = `/marketing${pathname}`
+    return NextResponse.rewrite(notFoundUrl)
   }
 
   // ── App host / localhost / previews: dashboard app, unchanged ───────────────
