@@ -5,7 +5,7 @@
 // businesses are untouched and their bots keep serving. To un-park, flip this to
 // true (and the app + web flags). The catalog/checkout/order code path stays
 // intact.
-export const PRODUCTS_MODE_ENABLED = false;
+export const PRODUCTS_MODE_ENABLED = true;
 
 // 400 message returned when a new PRODUCTS selection is rejected.
 export const PRODUCTS_MODE_PARKED_MESSAGE =

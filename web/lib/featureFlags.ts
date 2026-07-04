@@ -7,4 +7,4 @@
 // keep working and their bots keep serving. To un-park, flip this to true (and
 // the matching Flutter app + backend flags). The catalog/checkout/order code
 // path is left intact.
-export const PRODUCTS_MODE_ENABLED = false;
+export const PRODUCTS_MODE_ENABLED = true;

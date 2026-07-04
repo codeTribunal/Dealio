@@ -50,5 +50,5 @@ class AppConfig {
   // PRODUCTS businesses keep working and their bots keep serving. To un-park,
   // flip this to true (and the matching web + backend flags). The
   // catalog/checkout/order code path is left intact.
-  static const bool productsModeEnabled = false;
+  static const bool productsModeEnabled = true;
 }
