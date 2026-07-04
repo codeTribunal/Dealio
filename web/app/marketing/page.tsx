@@ -15,7 +15,7 @@ export default function MarketingPage() {
         className="tracking-tight"
         style={{ fontSize: 'var(--fs-h1)', fontWeight: 'var(--fw-extra)', lineHeight: 1.1 }}
       >
-        Dealio
+        Dealio<span className="text-accent">.</span>
       </h1>
       <p
         className="text-text-2"

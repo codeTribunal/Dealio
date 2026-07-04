@@ -1,21 +1,25 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { PUBLIC_PATHS } from './lib/publicPaths'
+import { APP_HOST, isMarketingHost } from './lib/hosts'
 
-// Hostname-based admin isolation.
+// Hostname-based routing for the single deployment that serves three hosts:
 //
-//   • On the dedicated admin host (admin.dealio.uz) the admin panel is served at
-//     the ROOT: every request is internally rewritten to /admin/**, so admins
-//     never see /admin in the URL. Owner routes there resolve to /admin/<owner>
-//     which has no page → Next 404 (the owner app is hidden on the admin host).
-//   • On any other production host (app.dealio.uz, dealio.uz, www.dealio.uz, …)
-//     /admin/** returns 404 — the admin panel is invisible.
-//   • On localhost and Vercel previews (*.vercel.app) the split is NOT enforced:
-//     the admin panel stays reachable by PATH (/admin/**) and the owner app at
-//     '/', so both are testable on one preview URL.
+//   • admin.dealio.uz — admin panel served at the ROOT (every request rewritten
+//     to /admin/**). HIGHEST precedence, unchanged.
+//   • dealio.uz / www.dealio.uz (apex "marketing" host) — serves ONLY the
+//     coming-soon page ("/") and the public legal pages (/privacy, /offer). Every
+//     other (dashboard) path 307-redirects to the same path on app.dealio.uz, so
+//     the marketing host never exposes the dashboard.
+//   • app.dealio.uz, localhost, *.vercel.app previews — the full dashboard app,
+//     unchanged. "/" is the dashboard ROOT here (NOT rewritten to marketing).
+//
+// Host is read from x-forwarded-host (Vercel sets it to the real host behind its
+// proxy), falling back to Host — first value, port stripped, lowercased. This is
+// the same reliable source the admin block already used.
 //
 // The admin host is NEXT_PUBLIC_ADMIN_HOST (inlined at build; defaults to
-// admin.dealio.uz — the production host — so no env var is required unless it
-// differs). The client-side owner-provider guard (lib/adminContext.ts) reads the
-// SAME value, so the server-side rewrite host and the client guard always agree.
+// admin.dealio.uz). The client-side owner-provider guard (lib/adminContext.ts)
+// reads the SAME value, so the server rewrite host and the client guard agree.
 const ADMIN_HOST = (process.env.NEXT_PUBLIC_ADMIN_HOST || 'admin.dealio.uz').toLowerCase()
 
 // Hosts where the admin panel stays reachable by /admin path for testing.
@@ -34,7 +38,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const isAdminPath = pathname === '/admin' || pathname.startsWith('/admin/')
 
-  // ── Dedicated admin host: serve the admin app at the ROOT ──────────────────
+  // ── Dedicated admin host: serve the admin app at the ROOT (FIRST, unchanged) ─
   if (host === ADMIN_HOST) {
     // Canonicalize away any literal /admin (typed, or an internal AdminLayout
     // <Link href="/admin/...">) so there is ONE URL with no /admin prefix:
@@ -51,25 +55,44 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(rewritten)
   }
 
-  // ── Marketing root: the ROOT path "/" shows the "coming soon" placeholder ──
-  // On every NON-admin host (dealio.uz, app.dealio.uz, and localhost/previews for
-  // testability), rewrite ONLY "/" to /marketing. Rewrite (not redirect): the URL
-  // stays "/", the visitor never sees /marketing. The admin host returned above,
-  // so admin.dealio.uz/ (which maps to /admin) is untouched. Every other path
-  // (/login, /customers, /settings, /onboarding, /admin, /privacy, /offer, …)
-  // falls through to the logic below completely unchanged.
-  if (pathname === '/') {
-    const marketing = request.nextUrl.clone()
-    marketing.pathname = '/marketing'
-    return NextResponse.rewrite(marketing)
+  // ── Marketing (apex) host: dealio.uz / www.dealio.uz ────────────────────────
+  // Serves ONLY the coming-soon page and the public legal pages; every dashboard
+  // route is bounced to app.dealio.uz. Scoped to the apex, so app.dealio.uz and
+  // localhost keep serving the dashboard at "/".
+  if (isMarketingHost(host)) {
+    // Never redirect framework/data/asset requests off-host. The matcher already
+    // excludes _next/static, _next/image, favicon and dotted files; this is the
+    // explicit belt-and-suspenders guard for _next/data and any /api route.
+    if (pathname.startsWith('/_next') || pathname.startsWith('/api')) {
+      return NextResponse.next()
+    }
+    // "/" → coming-soon page (rewrite; the browser URL stays dealio.uz/).
+    if (pathname === '/') {
+      const marketing = request.nextUrl.clone()
+      marketing.pathname = '/marketing'
+      return NextResponse.rewrite(marketing)
+    }
+    // Public legal pages render on the apex (bot consent link + pd.gov.uz filing).
+    if (PUBLIC_PATHS.includes(pathname)) {
+      return NextResponse.next()
+    }
+    // Any other path is a dashboard route: 307-redirect to the SAME path + query
+    // on the app host. e.g. dealio.uz/welcome → app.dealio.uz/welcome.
+    const target = request.nextUrl.clone()
+    target.protocol = 'https:'
+    target.hostname = APP_HOST
+    target.port = ''
+    return NextResponse.redirect(target, 307)
   }
 
-  // ── Preview / localhost: keep path-based access so both apps are testable ──
+  // ── App host / localhost / previews: dashboard app, unchanged ───────────────
+  // "/" is the dashboard ROOT here (served by app/page.tsx via AuthLayout) and is
+  // deliberately NOT rewritten to marketing.
   if (isPreviewHost(host)) {
     return NextResponse.next()
   }
 
-  // ── Any other (owner / marketing) host: the admin panel is invisible ───────
+  // ── Any other (owner / app) production host: the admin panel is invisible ───
   if (isAdminPath) {
     return new NextResponse('Not Found', {
       status: 404,
