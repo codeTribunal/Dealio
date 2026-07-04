@@ -51,6 +51,19 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(rewritten)
   }
 
+  // ── Marketing root: the ROOT path "/" shows the "coming soon" placeholder ──
+  // On every NON-admin host (dealio.uz, app.dealio.uz, and localhost/previews for
+  // testability), rewrite ONLY "/" to /marketing. Rewrite (not redirect): the URL
+  // stays "/", the visitor never sees /marketing. The admin host returned above,
+  // so admin.dealio.uz/ (which maps to /admin) is untouched. Every other path
+  // (/login, /customers, /settings, /onboarding, /admin, /privacy, /offer, …)
+  // falls through to the logic below completely unchanged.
+  if (pathname === '/') {
+    const marketing = request.nextUrl.clone()
+    marketing.pathname = '/marketing'
+    return NextResponse.rewrite(marketing)
+  }
+
   // ── Preview / localhost: keep path-based access so both apps are testable ──
   if (isPreviewHost(host)) {
     return NextResponse.next()

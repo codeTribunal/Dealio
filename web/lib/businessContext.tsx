@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { useRouter } from 'next/navigation'
 import { getBusiness } from '@/lib/api'
 import { isAdminUiContext } from '@/lib/adminContext'
+import { isPublicPath } from '@/lib/publicPaths'
 import { useToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n/i18nContext'
 import type { Business } from '@/types'
@@ -30,7 +31,12 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
     // to /welcome. isAdminUiContext() is host-OR-path aware, so it also covers
     // the admin host (admin.dealio.uz) where the panel is served at the root path
     // '/' via rewrite. Behavior on every non-admin context is unchanged.
-    if (isAdminUiContext()) {
+    // Public owner-app routes (marketing root "/", /privacy, /offer) are logged-out
+    // landing pages and must NOT run the owner getBusiness() fetch: its 401 would
+    // trip the interceptor in api.ts and bounce the visitor to /welcome. The set is
+    // defined once in lib/publicPaths (isPublicPath), mirroring the isAdminUiContext
+    // carve-out. SSR-safe.
+    if (isAdminUiContext() || isPublicPath()) {
       setBusiness(null)
       setLoading(false)
       return

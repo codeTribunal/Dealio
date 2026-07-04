@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { getToken, clearToken } from './auth'
 import { isAdminUiContext } from './adminContext'
+import { isPublicPath } from './publicPaths'
 import type {
   AuthResponse,
   Business,
@@ -50,7 +51,12 @@ api.interceptors.response.use(
     // NOT clear the owner token or bounce to /welcome — that would hijack the
     // admin login. isAdminUiContext() is host-OR-path aware, so it also covers
     // the admin host serving the panel at the root path '/'.
-    if (error.response?.status === 401 && !isAuthEndpoint && !isAdminUiContext()) {
+    // Public owner-app routes (marketing root "/", /privacy, /offer) are logged-out
+    // landing pages: an owner 401 there must NOT clear the token or bounce to
+    // /welcome, which would break the bot consent-gate link (dealio.uz/privacy) and
+    // the pd.gov.uz filing URL. The set is defined once in lib/publicPaths
+    // (isPublicPath), mirroring the isAdminUiContext carve-out above.
+    if (error.response?.status === 401 && !isAuthEndpoint && !isAdminUiContext() && !isPublicPath()) {
       clearToken()
       if (typeof window !== 'undefined' && window.location.pathname !== '/welcome') {
         window.location.href = '/welcome'
