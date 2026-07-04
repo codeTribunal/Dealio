@@ -1239,6 +1239,11 @@ export default async function botRoutes(app: FastifyInstance) {
       where: { id: orderId },
       data: {
         paymentStatus: 'CONFIRMED',
+        // Same data-minimization detach as PATCH /orders/:id/payment: drop the
+        // payment screenshot reference on confirmation (irreversible; the proof
+        // proxy 404s afterwards). paymentProofAt is kept as the audit trail.
+        paymentProofFileId: null,
+        paymentProofUrl: null,
         timeline: {
           push: { status: 'PAYMENT_CONFIRMED', at: new Date().toISOString(), by: 'owner_telegram' },
         },

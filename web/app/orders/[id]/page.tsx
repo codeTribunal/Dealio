@@ -93,7 +93,10 @@ export default function OrderDetailPage() {
     setPayError(null)
     try {
       await confirmOrderPayment(order.id)
-      setOrder({ ...order, paymentStatus: 'CONFIRMED' })
+      // The backend detaches the payment proof on confirmation (data
+      // minimization), so clear hasPaymentProof too — this hides the proof
+      // section immediately, matching what a reload would show.
+      setOrder({ ...order, paymentStatus: 'CONFIRMED', hasPaymentProof: false })
       setShowPayConfirm(false)
       showToast(t('payment.confirmedToast', { amount: formatUZS(order.total) }), 'success')
     } catch {

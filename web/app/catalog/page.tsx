@@ -42,6 +42,7 @@ export default function CatalogPage() {
   const [formPrepTimeValue, setFormPrepTimeValue] = useState('')
   const [formPrepTimeUnit, setFormPrepTimeUnit] = useState('hours')
   const [formActive, setFormActive] = useState(true)
+  const [formPhotoUrl, setFormPhotoUrl] = useState('')
 
   function loadProducts() {
     setLoading(true)
@@ -66,6 +67,7 @@ export default function CatalogPage() {
     setFormPrepTimeValue('')
     setFormPrepTimeUnit('hours')
     setFormActive(true)
+    setFormPhotoUrl('')
     setFormError(null)
     setShowDeleteConfirm(false)
     setShowForm(true)
@@ -82,9 +84,22 @@ export default function CatalogPage() {
     setFormPrepTimeValue(match?.[1] || '')
     setFormPrepTimeUnit(match?.[2] || 'hours')
     setFormActive(product.active)
+    // Single owner-facing photo URL: prefill from the first stored photo.
+    setFormPhotoUrl(product.photos[0] ?? '')
     setFormError(null)
     setShowDeleteConfirm(false)
     setShowForm(true)
+  }
+
+  // A trimmed, non-empty photo URL must parse as an http(s) URL — the backend
+  // validates with z.string().url(), so we mirror that here to fail fast.
+  const isValidHttpUrl = (value: string): boolean => {
+    try {
+      const u = new URL(value)
+      return u.protocol === 'http:' || u.protocol === 'https:'
+    } catch {
+      return false
+    }
   }
 
   const handleClose = () => {
@@ -108,6 +123,11 @@ export default function CatalogPage() {
       setFormError(t('catalog.priceInvalid'))
       return
     }
+    const photoUrl = formPhotoUrl.trim()
+    if (photoUrl && !isValidHttpUrl(photoUrl)) {
+      setFormError(t('catalog.photoUrlInvalid'))
+      return
+    }
     setSaving(true)
     setFormError(null)
     try {
@@ -122,6 +142,9 @@ export default function CatalogPage() {
           ? `${formPrepTimeValue} ${formPrepTimeUnit}`
           : undefined,
         active: formActive,
+        // Owner-facing single photo URL (no upload infra yet). Send [url] when
+        // set, else [] so editing can clear a previously-set photo.
+        photos: photoUrl ? [photoUrl] : [],
       }
       if (editingProduct) {
         const updated = await updateProduct(editingProduct.id, payload)
@@ -363,6 +386,50 @@ export default function CatalogPage() {
               onChange={(e) => setFormDescription(e.target.value)}
               placeholder={t('catalog.descriptionPlaceholder')}
             />
+          </div>
+
+          {/* Photo URL (owner-facing single link; no upload infra yet) */}
+          <div>
+            <label className="block text-base font-medium text-text-1 mb-1.5">
+              {t('catalog.photoUrlLabel')}
+            </label>
+            <Input
+              type="url"
+              inputMode="url"
+              value={formPhotoUrl}
+              onChange={(e) => setFormPhotoUrl(e.target.value)}
+              placeholder={t('catalog.photoUrlPlaceholder')}
+            />
+            <p className="mt-1.5 text-sm text-text-3">{t('catalog.photoUrlHint')}</p>
+            {formPhotoUrl.trim() && isValidHttpUrl(formPhotoUrl.trim()) && (
+              <div className="mt-3 h-32 w-32 overflow-hidden rounded-md border border-border bg-surface-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={formPhotoUrl.trim()}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    // Broken/blocked link: swap the preview for a small notice
+                    // rather than a browser broken-image glyph.
+                    const img = e.currentTarget
+                    img.style.display = 'none'
+                    const note = img.nextElementSibling as HTMLElement | null
+                    if (note) note.style.display = 'flex'
+                  }}
+                  onLoad={(e) => {
+                    const img = e.currentTarget
+                    img.style.display = 'block'
+                    const note = img.nextElementSibling as HTMLElement | null
+                    if (note) note.style.display = 'none'
+                  }}
+                />
+                <div
+                  className="hidden h-full w-full items-center justify-center p-2 text-center text-sm text-text-3"
+                >
+                  {t('catalog.photoPreviewFailed')}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Price */}

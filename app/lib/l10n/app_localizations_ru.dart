@@ -1268,6 +1268,24 @@ class AppLocalizationsRu extends AppLocalizations {
   String get productFormDescHint => 'Необязательное описание товара';
 
   @override
+  String get productFormPhotoLabel => 'Ссылка на фото товара';
+
+  @override
+  String get productFormPhotoHint => 'https://example.com/photo.jpg';
+
+  @override
+  String get productFormPhotoHelper =>
+      'Вставьте ссылку на изображение товара (необязательно)';
+
+  @override
+  String get productFormPhotoInvalid =>
+      'Введите корректную ссылку или оставьте поле пустым';
+
+  @override
+  String get productFormPhotoPreviewFailed =>
+      'Не удалось загрузить изображение';
+
+  @override
   String get productFormStockLabel => 'Количество на складе';
 
   @override

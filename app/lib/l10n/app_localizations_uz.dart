@@ -1280,6 +1280,23 @@ class AppLocalizationsUz extends AppLocalizations {
   String get productFormDescHint => 'Ixtiyoriy mahsulot tavsifi';
 
   @override
+  String get productFormPhotoLabel => 'Mahsulot rasmi havolasi';
+
+  @override
+  String get productFormPhotoHint => 'https://example.com/rasm.jpg';
+
+  @override
+  String get productFormPhotoHelper =>
+      'Mahsulot rasmiga havola qo\'ying (ixtiyoriy)';
+
+  @override
+  String get productFormPhotoInvalid =>
+      'To\'g\'ri havola kiriting yoki bo\'sh qoldiring';
+
+  @override
+  String get productFormPhotoPreviewFailed => 'Rasmni yuklab bo\'lmadi';
+
+  @override
   String get productFormStockLabel => 'Zaxira miqdori';
 
   @override

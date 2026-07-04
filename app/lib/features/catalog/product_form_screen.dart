@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,6 +32,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   final _priceCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _stockCtrl = TextEditingController();
+  final _photoCtrl = TextEditingController();
+
+  // Mirrors _photoCtrl.text; drives the live preview (updated on change).
+  String _photoUrl = '';
 
   String _prepTimeValue = '';
   String _prepTimeUnit = 'hours';
@@ -53,6 +58,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     _priceCtrl.dispose();
     _descCtrl.dispose();
     _stockCtrl.dispose();
+    _photoCtrl.dispose();
     super.dispose();
   }
 
@@ -69,6 +75,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       _priceCtrl.text = product.price.toString();
       _descCtrl.text = product.description ?? '';
       _stockCtrl.text = product.stockQty?.toString() ?? '';
+      // Single owner-facing photo URL: prefill from the first stored photo.
+      _photoUrl = product.photos.isNotEmpty ? product.photos.first : '';
+      _photoCtrl.text = _photoUrl;
       if (product.prepTime != null) {
         final parts = product.prepTime!.split(' ');
         if (parts.length >= 2) {
@@ -133,7 +142,20 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       final stock = _stockCtrl.text.trim();
       if (stock.isNotEmpty) data['stockQty'] = int.parse(stock);
     }
+    // Owner-facing single photo URL (no upload infra yet). Always send the key so
+    // editing can clear a previously-set photo: [url] when set, else [].
+    final photo = _photoCtrl.text.trim();
+    data['photos'] = photo.isNotEmpty ? [photo] : <String>[];
     return data;
+  }
+
+  // A trimmed, non-empty photo URL must parse as an http(s) URL — the backend
+  // validates with z.string().url(), so we mirror that here to fail fast.
+  bool _isValidHttpUrl(String value) {
+    final uri = Uri.tryParse(value);
+    return uri != null &&
+        (uri.scheme == 'http' || uri.scheme == 'https') &&
+        uri.host.isNotEmpty;
   }
 
   // Soft-delete (edit mode only), mirroring the Edit Service screen: confirm
@@ -270,6 +292,61 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                   textCapitalization: TextCapitalization.sentences,
                   maxLines: 3,
                 ),
+                const SizedBox(height: AppSpacing.s4),
+                _FieldLabel(l.productFormPhotoLabel),
+                TextFormField(
+                  controller: _photoCtrl,
+                  style: TextStyle(color: t.text1),
+                  decoration:
+                      _decoration(context, hint: l.productFormPhotoHint),
+                  keyboardType: TextInputType.url,
+                  autocorrect: false,
+                  onChanged: (v) => setState(() => _photoUrl = v),
+                  validator: (v) {
+                    final url = (v ?? '').trim();
+                    if (url.isEmpty) return null; // optional
+                    return _isValidHttpUrl(url)
+                        ? null
+                        : l.productFormPhotoInvalid;
+                  },
+                ),
+                const SizedBox(height: AppSpacing.s2),
+                Text(
+                  l.productFormPhotoHelper,
+                  style: TextStyle(
+                      color: t.text3, fontSize: AppTextSizes.caption),
+                ),
+                if (_photoUrl.trim().isNotEmpty &&
+                    _isValidHttpUrl(_photoUrl.trim())) ...[
+                  const SizedBox(height: AppSpacing.s3),
+                  ClipRRect(
+                    borderRadius: AppRadii.md,
+                    child: CachedNetworkImage(
+                      imageUrl: _photoUrl.trim(),
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.cover,
+                      placeholder: (context, _) => const SizedBox(
+                        width: 120,
+                        height: 120,
+                        child: Center(child: AppSpinner(size: 20)),
+                      ),
+                      errorWidget: (context, _, __) => Container(
+                        width: 120,
+                        height: 120,
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.all(AppSpacing.s2),
+                        color: t.surface,
+                        child: Text(
+                          l.productFormPhotoPreviewFailed,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: t.text3, fontSize: AppTextSizes.caption),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

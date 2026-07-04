@@ -662,6 +662,7 @@ export async function createProduct(data: {
   unlimited: boolean
   prepTime?: string
   active: boolean
+  photos?: string[]
 }): Promise<Product> {
   const res = await api.post('/products', data)
   return res.data
@@ -677,6 +678,7 @@ export async function updateProduct(
     unlimited?: boolean
     prepTime?: string
     active?: boolean
+    photos?: string[]
   }
 ): Promise<Product> {
   const res = await api.patch(`/products/${id}`, data)

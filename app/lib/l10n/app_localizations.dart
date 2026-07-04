@@ -2386,6 +2386,36 @@ abstract class AppLocalizations {
   /// **'Optional product description'**
   String get productFormDescHint;
 
+  /// No description provided for @productFormPhotoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Product photo URL'**
+  String get productFormPhotoLabel;
+
+  /// No description provided for @productFormPhotoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'https://example.com/photo.jpg'**
+  String get productFormPhotoHint;
+
+  /// No description provided for @productFormPhotoHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste a link to a product image (optional)'**
+  String get productFormPhotoHelper;
+
+  /// No description provided for @productFormPhotoInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid URL or leave it empty'**
+  String get productFormPhotoInvalid;
+
+  /// No description provided for @productFormPhotoPreviewFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Image could not be loaded'**
+  String get productFormPhotoPreviewFailed;
+
   /// No description provided for @productFormStockLabel.
   ///
   /// In en, this message translates to:

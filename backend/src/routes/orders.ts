@@ -258,11 +258,20 @@ export default async function orderRoutes(app: FastifyInstance) {
       where: { id },
       data: {
         paymentStatus: 'CONFIRMED',
+        // Data minimization: once the owner confirms, the customer's payment
+        // screenshot is no longer needed. Detach the reference permanently so the
+        // proof proxy 404s from here on (irreversible — we keep paymentProofAt as
+        // an audit trail that a proof was once submitted).
+        paymentProofFileId: null,
+        paymentProofUrl: null,
         timeline: { push: timelineEntry },
       },
       include: orderInclude,
     });
-    return reply.send(updated);
+    // Mirror GET /orders/:id: strip the raw file_id, surface only the boolean
+    // (now false, so the client hides the proof section immediately).
+    const { paymentProofFileId, ...rest } = updated;
+    return reply.send({ ...rest, hasPaymentProof: paymentProofFileId != null });
   });
 
   // ── Soft-delete order (recoverable) ─────────────────────────────

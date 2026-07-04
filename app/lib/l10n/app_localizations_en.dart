@@ -1261,6 +1261,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get productFormDescHint => 'Optional product description';
 
   @override
+  String get productFormPhotoLabel => 'Product photo URL';
+
+  @override
+  String get productFormPhotoHint => 'https://example.com/photo.jpg';
+
+  @override
+  String get productFormPhotoHelper =>
+      'Paste a link to a product image (optional)';
+
+  @override
+  String get productFormPhotoInvalid => 'Enter a valid URL or leave it empty';
+
+  @override
+  String get productFormPhotoPreviewFailed => 'Image could not be loaded';
+
+  @override
   String get productFormStockLabel => 'Stock quantity';
 
   @override
