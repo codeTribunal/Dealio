@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import { mergeReminderSettings, ReminderSettings } from '../lib/reminderDefaults.js';
 import { sendTelegramMessage } from '../lib/telegram.js';
+import { escapeHtml } from '../lib/escapeHtml.js';
 import { getBotToken, hasBotToken } from '../lib/getBotToken.js';
 import { sendPushToAll } from '../lib/push.js';
 
@@ -63,7 +64,12 @@ async function deliver(
   title: string,
   body: string,
 ): Promise<void> {
-  const telegramMsg = `📅 ${title}\n\n${body}`;
+  // Telegram is HTML parse_mode, so escape the user-controlled values (customer/
+  // service/project/milestone names live inside `body`). These messages carry no
+  // intended markup, so escaping the assembled Telegram string is equivalent to
+  // value-level escaping and cannot double-escape any tags. Push is plain text —
+  // it keeps the raw title/body so it never shows literal `&amp;`.
+  const telegramMsg = `📅 ${escapeHtml(title)}\n\n${escapeHtml(body)}`;
 
   await Promise.allSettled([
     hasBotToken(business) && business.ownerTelegramChatId

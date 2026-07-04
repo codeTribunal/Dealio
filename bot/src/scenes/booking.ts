@@ -221,7 +221,7 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
   const serviceId = svcCtx.callbackQuery.data.replace('svc:', '');
   const service = services.find((s: ApiService) => s.id === serviceId)!;
 
-  await ctx.reply(t(lang, 'selected', { label: t(lang, 'labelService'), value: service.name }), { parse_mode: 'HTML' });
+  await ctx.reply(t(lang, 'selected', { label: t(lang, 'labelService'), value: escapeHtml(service.name) }), { parse_mode: 'HTML' });
 
   // ── Step 3: Select staff (if multiple available) ──────────────
   const staffList = service.staffServices.map((ss) => ss.staff);
@@ -246,7 +246,7 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
     if (staffCtx.callbackQuery.data !== 'staff:any') {
       staffId = staffCtx.callbackQuery.data.replace('staff:', '');
       staffName = staffList.find((s) => s.id === staffId)?.name;
-      await ctx.reply(t(lang, 'selected', { label: t(lang, 'labelStaff'), value: staffName ?? '' }), { parse_mode: 'HTML' });
+      await ctx.reply(t(lang, 'selected', { label: t(lang, 'labelStaff'), value: escapeHtml(staffName ?? '') }), { parse_mode: 'HTML' });
     }
   } else if (staffList.length === 1) {
     staffId = staffList[0].id;
@@ -283,7 +283,7 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
   if (nameCtx.callbackQuery?.data === 'use_tg_name_booking') {
     name = tgName ?? 'Customer';
     await nameCtx.answerCallbackQuery();
-    await nameCtx.reply(t(lang, 'nameSetLabel', { name }), { parse_mode: 'HTML' });
+    await nameCtx.reply(t(lang, 'nameSetLabel', { name: escapeHtml(name) }), { parse_mode: 'HTML' });
   } else if (nameCtx.message?.text) {
     name = nameCtx.message.text.trim();
   } else {
@@ -305,13 +305,13 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
   if (phoneCtx.message?.contact) {
     phone = phoneCtx.message.contact.phone_number;
     if (!phone.startsWith('+')) phone = '+' + phone;
-    await phoneCtx.reply(t(lang, 'phoneSetLabel', { phone }), {
+    await phoneCtx.reply(t(lang, 'phoneSetLabel', { phone: escapeHtml(phone) }), {
       parse_mode: 'HTML',
       reply_markup: { remove_keyboard: true },
     });
   } else if (phoneCtx.message?.text) {
     phone = phoneCtx.message.text.trim();
-    await phoneCtx.reply(t(lang, 'phoneSetLabel', { phone }), {
+    await phoneCtx.reply(t(lang, 'phoneSetLabel', { phone: escapeHtml(phone) }), {
       parse_mode: 'HTML',
       reply_markup: { remove_keyboard: true },
     });
@@ -322,14 +322,14 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
 
   // ── Step 8: Confirm ───────────────────────────────────────────
   const confirmText = t(lang, 'bookingSummaryFull', {
-    service: service.name,
-    staffLine: staffName ? t(lang, 'bookingStaffLine', { staff: staffName }) : '',
+    service: escapeHtml(service.name),
+    staffLine: staffName ? t(lang, 'bookingStaffLine', { staff: escapeHtml(staffName) }) : '',
     date: formatDateLabel(selectedDate),
     time: formatSlotTime(selectedSlot),
     duration: service.durationMinutes,
     price: formatMoney(lang, service.price),
-    name,
-    phone,
+    name: escapeHtml(name),
+    phone: escapeHtml(phone),
   });
 
   await ctx.reply(confirmText, {
@@ -450,7 +450,7 @@ export async function bookingConversation(conversation: MyConversation, ctx: MyC
       : '';
   await ctx.reply(
     t(lang, 'bookingConfirmedNoPayment', {
-      service: appointment.service.name,
+      service: escapeHtml(appointment.service.name),
       date: formatDateLabel(selectedDate),
       time: selectedSlot.startLabel,
       price: formatMoney(lang, appointment.price),

@@ -1,7 +1,7 @@
 import { InlineKeyboard } from 'grammy';
 import { MyContext, ApiProject } from '../lib/types.js';
 import { getCustomerProjects, approveMilestone, SuspendedError } from '../lib/api.js';
-import { formatDateTZ } from '../lib/format.js';
+import { formatDateTZ, escapeHtml } from '../lib/format.js';
 import {
   t,
   formatMoney,
@@ -28,7 +28,7 @@ const MILESTONE_STATUS_EMOJI: Record<string, string> = {
 
 function formatProject(lang: Lang, project: ApiProject): string {
   const lines: string[] = [];
-  lines.push(`<b>${project.name}</b>`);
+  lines.push(`<b>${escapeHtml(project.name)}</b>`);
   lines.push(
     `${t(lang, 'labelStatus')}: ${STATUS_EMOJI[project.status] ?? ''} ${tProjectStatus(lang, project.status)}`,
   );
@@ -40,7 +40,7 @@ function formatProject(lang: Lang, project: ApiProject): string {
 
   if (project.description) {
     lines.push('');
-    lines.push(`📝 ${project.description}`);
+    lines.push(`📝 ${escapeHtml(project.description)}`);
   }
 
   if (project.milestones.length > 0) {
@@ -48,7 +48,7 @@ function formatProject(lang: Lang, project: ApiProject): string {
     lines.push(`<b>${t(lang, 'labelMilestones')}:</b>`);
     for (const m of project.milestones) {
       const dueStr = m.dueDate ? ` • ${t(lang, 'dueShort', { date: formatDateTZ(m.dueDate) })}` : '';
-      lines.push(`  • ${m.name} — ${formatMoney(lang, m.amount)}${dueStr}`);
+      lines.push(`  • ${escapeHtml(m.name)} — ${formatMoney(lang, m.amount)}${dueStr}`);
       lines.push(`    ${MILESTONE_STATUS_EMOJI[m.status] ?? ''} ${tMilestoneStatus(lang, m.status)}`);
     }
   }
@@ -141,7 +141,7 @@ export function registerProjectHandlers(bot: import('grammy').Bot<MyContext>): v
     try {
       const result = await approveMilestone(ctx.botUsername, milestoneId, true);
       await ctx.reply(
-        t(lang, 'milestoneApprovedMsg', { name: result.milestone.name }),
+        t(lang, 'milestoneApprovedMsg', { name: escapeHtml(result.milestone.name) }),
         { parse_mode: 'HTML' },
       );
     } catch (err) {
@@ -160,7 +160,7 @@ export function registerProjectHandlers(bot: import('grammy').Bot<MyContext>): v
     try {
       const result = await approveMilestone(ctx.botUsername, milestoneId, false);
       await ctx.reply(
-        t(lang, 'milestoneRejectedMsg', { name: result.milestone.name }),
+        t(lang, 'milestoneRejectedMsg', { name: escapeHtml(result.milestone.name) }),
         { parse_mode: 'HTML' },
       );
     } catch (err) {

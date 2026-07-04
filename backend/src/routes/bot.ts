@@ -6,6 +6,7 @@ import { prisma } from '../lib/prisma.js';
 import { sendError } from '../lib/errors.js';
 import { allocateOrderNumber } from '../services/orderNumber.js';
 import { sendTelegramMessage } from '../lib/telegram.js';
+import { escapeHtml } from '../lib/escapeHtml.js';
 import { sendPushToAll } from '../lib/push.js';
 import { getBotToken, hasBotToken } from '../lib/getBotToken.js';
 import { getCardPaymentsEnabled } from '../lib/platformSettings.js';
@@ -1072,8 +1073,8 @@ export default async function botRoutes(app: FastifyInstance) {
 
       if (hasBotToken(business) && business.ownerTelegramChatId) {
         const text =
-          `✅ <b>${customerName}</b> has approved '<b>${updated.name}</b>'.\n\n` +
-          `Project: ${milestone.project.name}\n` +
+          `✅ <b>${escapeHtml(customerName)}</b> has approved '<b>${escapeHtml(updated.name)}</b>'.\n\n` +
+          `Project: ${escapeHtml(milestone.project.name)}\n` +
           `Amount: ${amount} UZS\n\n` +
           `You can now mark payment as received in the app.`;
         sendTelegramMessage(getBotToken(business), business.ownerTelegramChatId, text).catch(
@@ -1149,7 +1150,7 @@ export default async function botRoutes(app: FastifyInstance) {
 
     if (hasBotToken(business) && business.ownerTelegramChatId) {
       const text =
-        `✅ <b>${customerName}</b> accepted the proposal for <b>${project.name}</b>.\n\n` +
+        `✅ <b>${escapeHtml(customerName)}</b> accepted the proposal for <b>${escapeHtml(project.name)}</b>.\n\n` +
         `The project is now in progress.`;
       sendTelegramMessage(getBotToken(business), business.ownerTelegramChatId, text).catch(
         (err: unknown) => console.error('[telegram] accept-proposal notify failed:', err),
@@ -1199,7 +1200,7 @@ export default async function botRoutes(app: FastifyInstance) {
       sendTelegramMessage(
         getBotToken(business),
         business.ownerTelegramChatId,
-        `💬 ${customer.name}: ${text}`,
+        `💬 ${escapeHtml(customer.name)}: ${escapeHtml(text)}`,
       ).catch((err: unknown) => console.error('[telegram] message forward failed:', err));
     }
 

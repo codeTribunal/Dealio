@@ -1,7 +1,7 @@
 import { GrammyError, InlineKeyboard } from 'grammy';
 import { MyContext, ApiProduct } from '../lib/types.js';
 import { getCatalog, SuspendedError } from '../lib/api.js';
-import { buildCartSummary } from '../lib/format.js';
+import { buildCartSummary, escapeHtml } from '../lib/format.js';
 import { t, formatMoney } from '../lib/i18n.js';
 import { getLang } from '../lib/lang.js';
 
@@ -138,11 +138,11 @@ async function showProduct(ctx: MyContext, productId: string) {
       ? t(lang, 'inStock', { qty: product.stockQty })
       : '';
 
-  const prepText = product.prepTime ? t(lang, 'prepTimeLabel', { time: product.prepTime }) : '';
+  const prepText = product.prepTime ? t(lang, 'prepTimeLabel', { time: escapeHtml(product.prepTime) }) : '';
 
   const caption =
-    `<b>${product.name}</b>\n\n` +
-    (product.description ? `${product.description}\n\n` : '') +
+    `<b>${escapeHtml(product.name)}</b>\n\n` +
+    (product.description ? `${escapeHtml(product.description)}\n\n` : '') +
     `💰 <b>${formatMoney(lang, product.price)}</b>` +
     stockText +
     prepText;
@@ -226,7 +226,7 @@ async function addToCart(ctx: MyContext, productId: string, qty: number) {
     ctx,
     t(lang, 'addedToCartFull', {
       qty,
-      name: product.name,
+      name: escapeHtml(product.name),
       count: cartCount,
       total: formatMoney(lang, total),
     }),

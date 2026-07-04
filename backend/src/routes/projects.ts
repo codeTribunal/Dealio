@@ -6,6 +6,7 @@ import { authenticate } from '../middleware/auth.js';
 import { getBusinessOrFail } from '../lib/businessFromUser.js';
 import { sendError } from '../lib/errors.js';
 import { sendTelegramMessage } from '../lib/telegram.js';
+import { escapeHtml } from '../lib/escapeHtml.js';
 import { getBotToken, hasBotToken } from '../lib/getBotToken.js';
 
 const createProjectBody = z.object({
@@ -291,8 +292,8 @@ export default async function projectRoutes(app: FastifyInstance) {
         if (customer?.telegramUserId) {
           const amount = updated.amount.toLocaleString('uz-UZ').replace(/,/g, ' ');
           const text =
-            `<b>${business.name}</b> has submitted '<b>${updated.name}</b>' for your review.\n\n` +
-            `Project: ${project.name}\n` +
+            `<b>${escapeHtml(business.name)}</b> has submitted '<b>${escapeHtml(updated.name)}</b>' for your review.\n\n` +
+            `Project: ${escapeHtml(project.name)}\n` +
             `Amount: ${amount} UZS\n\n` +
             `Reply /projects to view and approve.`;
 

@@ -9,7 +9,7 @@ import {
   SuspendedError,
   SUSPENSION_MESSAGE,
 } from '../lib/api.js';
-import { formatDateTZ, formatTimeTZ } from '../lib/format.js';
+import { formatDateTZ, formatTimeTZ, escapeHtml } from '../lib/format.js';
 import { t, tOrderStatus, tPaymentStatus, formatMoney, type Lang } from '../lib/i18n.js';
 import { getLang, needsLanguagePicker, languageKeyboard } from '../lib/lang.js';
 import { needsConsent, showConsentGate, recordConsent } from '../lib/consent.js';
@@ -397,8 +397,8 @@ async function showAppointments(ctx: MyContext) {
   const lines = appointments.map((a) =>
     t(lang, 'apptLine', {
       icon: APPT_STATUS_EMOJI[a.status] ?? '📋',
-      service: a.service.name,
-      staffLine: a.staff ? t(lang, 'withStaff', { staff: a.staff.name }) : '',
+      service: escapeHtml(a.service.name),
+      staffLine: a.staff ? t(lang, 'withStaff', { staff: escapeHtml(a.staff.name) }) : '',
       date: formatDateTZ(a.startTime),
       time: formatTimeTZ(a.startTime),
       price: formatMoney(lang, a.price),

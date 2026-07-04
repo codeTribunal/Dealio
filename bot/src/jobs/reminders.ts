@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Bot } from 'grammy';
 import { MyContext } from '../lib/types.js';
-import { formatDateTZ, formatTimeTZ } from '../lib/format.js';
+import { formatDateTZ, formatTimeTZ, escapeHtml } from '../lib/format.js';
 import { t, resolveLang, formatMoney } from '../lib/i18n.js';
 import { getLang } from '../lib/lang.js';
 
@@ -74,11 +74,11 @@ async function processReminders(bot: Bot<MyContext>, botUsername: string): Promi
     const lang = resolveLang(customer.languagePreference, business.language);
     const dateLabel = formatDateTZ(appt.startTime);
     const timeLabel = formatTimeTZ(appt.startTime);
-    const staffLine = staff ? t(lang, 'withStaff', { staff: staff.name }) : '';
+    const staffLine = staff ? t(lang, 'withStaff', { staff: escapeHtml(staff.name) }) : '';
 
     const text = t(lang, 'reminderText', {
-      business: business.name,
-      service: service.name,
+      business: escapeHtml(business.name),
+      service: escapeHtml(service.name),
       staffLine,
       date: dateLabel,
       time: timeLabel,
@@ -122,7 +122,7 @@ export function registerCancelReplyHandler(bot: Bot<MyContext>, botUsername: str
 
       await ctx.reply(
         t(lang, 'cancelConfirmed', {
-          service: next.service.name,
+          service: escapeHtml(next.service.name),
           date: formatDateTZ(next.startTime),
         }),
         { parse_mode: 'HTML' },

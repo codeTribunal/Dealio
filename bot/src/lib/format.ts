@@ -40,7 +40,7 @@ export function toTashkentDateStr(date: Date): string {
 export function buildCartSummary(cart: CartItem[], lang: Lang): string {
   if (cart.length === 0) return t(lang, 'cartEmpty');
   const lines = cart.map(
-    (item) => `• ${item.name} × ${item.quantity} — ${formatMoney(lang, item.price * item.quantity)}`,
+    (item) => `• ${escapeHtml(item.name)} × ${item.quantity} — ${formatMoney(lang, item.price * item.quantity)}`,
   );
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   return lines.join('\n') + `\n\n` + t(lang, 'cartTotal', { total: formatMoney(lang, total) });

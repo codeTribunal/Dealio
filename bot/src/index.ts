@@ -15,6 +15,7 @@ import { registerOwnerHandlers } from './handlers/owner.js';
 import { registerProjectHandlers } from './scenes/project.js';
 import { runReminderJob } from './jobs/reminders.js';
 import { saveCustomerMessage, SuspendedError, SUSPENSION_MESSAGE } from './lib/api.js';
+import { escapeHtml } from './lib/format.js';
 import { createPlatformBot } from './platform/bot.js';
 
 interface BusinessRecord {
@@ -239,7 +240,7 @@ function registerHandlers(
         const { chatId, customerName, text: msgText } = result.ownerNotification;
         await ctx.api.sendMessage(
           chatId,
-          `💬 <b>${customerName}:</b> ${msgText}`,
+          `💬 <b>${escapeHtml(customerName)}:</b> ${escapeHtml(msgText)}`,
           { parse_mode: 'HTML' },
         );
       }
